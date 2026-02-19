@@ -1,0 +1,121 @@
+import { DndContext, closestCenter } from '@dnd-kit/core'
+import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { HexColorPicker } from 'react-colorful'
+import { useState } from 'react'
+import { useProjectStore } from '../../store/useProjectStore.js'
+
+function SortableColor({ color, id, onColorChange }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
+  const [open, setOpen] = useState(false)
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="h-10 w-12 rounded border border-zinc-500"
+        style={{ backgroundColor: color }}
+        onDoubleClick={() => setOpen((prev) => !prev)}
+      />
+      {open && (
+        <div className="absolute left-0 z-20 mt-2 rounded border border-zinc-600 bg-zinc-900 p-2">
+          <HexColorPicker color={color} onChange={onColorChange} />
+          <input
+            className="mt-2 w-full rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-xs"
+            value={color}
+            onChange={(event) => onColorChange(event.target.value)}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ColorPalette() {
+  const colors = useProjectStore((state) => state.colors)
+  const setColors = useProjectStore((state) => state.setColors)
+  const addColor = useProjectStore((state) => state.addColor)
+  const removeColor = useProjectStore((state) => state.removeColor)
+  const setColorAt = useProjectStore((state) => state.setColorAt)
+
+  const ids = colors.map((_, index) => `color-${index}`)
+  const presets = {
+    Green: ['#074434', '#0a5845', '#ABC685', '#E8FF99'],
+    Ocean: ['#012a4a', '#01497c', '#2a6f97', '#61a5c2'],
+    Sunset: ['#3f0d12', '#a71d31', '#f46036', '#f7b538'],
+    Mono: ['#111111', '#555555', '#aaaaaa', '#f2f2f2'],
+    Cyberpunk: ['#050014', '#1a1040', '#ff00a8', '#00f5ff']
+  }
+
+  const onDragEnd = ({ active, over }) => {
+    if (!over || active.id === over.id) return
+    const oldIndex = ids.indexOf(active.id)
+    const newIndex = ids.indexOf(over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+    setColors(arrayMove(colors, oldIndex, newIndex))
+  }
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-400">
+        <span>Shadows</span>
+        <span>Highlights</span>
+      </div>
+
+      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
+          <div className="flex gap-2">
+            {colors.map((color, index) => (
+              <SortableColor
+                key={ids[index]}
+                id={ids[index]}
+                color={color}
+                onColorChange={(nextColor) => setColorAt(index, nextColor)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="rounded bg-zinc-700 px-2 py-1 text-xs"
+          onClick={() => addColor()}
+          disabled={colors.length >= 6}
+        >
+          Add
+        </button>
+        <button
+          type="button"
+          className="rounded bg-zinc-700 px-2 py-1 text-xs"
+          onClick={() => removeColor(colors.length - 1)}
+          disabled={colors.length <= 2}
+        >
+          Remove
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(presets).map(([name, value]) => (
+          <button
+            key={name}
+            type="button"
+            className="rounded border border-zinc-600 px-2 py-1 text-xs"
+            onClick={() => setColors(value)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export { ColorPalette }
