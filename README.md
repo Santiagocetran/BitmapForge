@@ -1,129 +1,64 @@
-# ASCII 3D Animation
+# BitmapForge
 
-Render STL models as animated bitmap/dithered art with Three.js.
+BitmapForge is a client-side web app for generating bitmap-style animations from 3D models.
 
-The package is designed for website overlays with transparent backgrounds, container-based sizing, and a React wrapper for Next.js.
+This repository is no longer an npm library package; it is now an application built with React + Vite, with a framework-agnostic rendering engine under `src/engine`.
 
-## Install
+## Current Status
 
-```bash
-npm install @santiagocetran/ascii-3d-animation three
+Phase 1 foundation is implemented:
+
+- React app shell with sidebar + preview layout
+- Three.js scene pipeline via `SceneManager`
+- Bitmap renderer refactor with shared `BaseEffect`
+- Model loading for STL, OBJ, GLTF, GLB
+- Live controls for palette, quality, animation, and light direction
+- Export panel scaffolding (GIF, video, sprite sheet, HTML snippet, code ZIP)
+- Local persistence (`localStorage`) and `.bitmapforge` save/load
+
+ASCII mode is deferred to v1.5.
+
+## Project Structure
+
+```text
+src/
+  app/
+    components/
+    hooks/
+    store/
+    utils/
+    App.jsx
+    main.jsx
+  engine/
+    animation/
+    effects/
+    loaders/
+    SceneManager.js
 ```
-
-If you use the React wrapper, also install:
-
-```bash
-npm install react react-dom
-```
-
-## Core API (vanilla JS)
-
-```js
-import { startModelAnimation } from '@santiagocetran/ascii-3d-animation'
-
-const container = document.getElementById('animation')
-
-const controller = startModelAnimation({
-  container,
-  modelUrl: '/models/router.stl',
-  showPhaseDuration: 20000,
-  effectOptions: {
-    pixelSize: 3,
-    ditherType: 'bayer4x4',
-    colors: ['#021a15', '#053a2a', '#074434', '#ABC685', '#E8FF99'],
-    backgroundColor: 'transparent',
-    animationDuration: 2500
-  }
-})
-
-window.addEventListener('resize', () => controller.resize())
-
-// Later:
-// controller.dispose()
-```
-
-## React / Next.js (`./react` subpath)
-
-### App Router (recommended)
-
-Create a client component:
-
-```tsx
-'use client'
-
-import dynamic from 'next/dynamic'
-
-const AsciiAnimation = dynamic(
-  () => import('@santiagocetran/ascii-3d-animation/react').then((m) => m.AsciiAnimation),
-  { ssr: false }
-)
-
-export function HeroAnimation() {
-  return (
-    <AsciiAnimation
-      modelUrl="/models/router.stl"
-      className="w-full h-[420px]"
-      effectOptions={{
-        backgroundColor: 'transparent',
-        pixelSize: 3
-      }}
-    />
-  )
-}
-```
-
-## API Reference
-
-### `startModelAnimation(options)`
-
-Options:
-
-| Option | Type | Required | Default | Notes |
-| --- | --- | --- | --- | --- |
-| `container` | `HTMLElement` | no | `document.body` | Used after browser guard |
-| `modelUrl` | `string` | yes | - | STL URL/path |
-| `effectOptions` | `object` | no | see below | Bitmap rendering options |
-| `showPhaseDuration` | `number` | no | `20000` | Show phase duration in ms |
-
-Effect options:
-
-| Option | Type | Default |
-| --- | --- | --- |
-| `pixelSize` | `number` | `3` |
-| `ditherType` | `'bayer4x4' \| 'bayer8x8' \| 'variableDot'` | `'bayer4x4'` |
-| `colors` | `string[]` | green gradient |
-| `backgroundColor` | `string` | `'transparent'` |
-| `invert` | `boolean` | `false` |
-| `minBrightness` | `number` | `0.05` |
-| `animationDuration` | `number` | `2500` |
-
-Returns:
-
-- `resize(width?, height?)`: resizes to provided dimensions, or re-measures the container if omitted.
-- `dispose()`: stops animation loop, disposes WebGL/material resources, removes DOM element.
-
-## Notes
-
-- Requires a browser environment. Calling `startModelAnimation` on the server throws a descriptive error.
-- The renderer uses alpha and transparent clear color for real transparency.
-- STL loading errors are logged with the failing URL.
 
 ## Development
 
 ```bash
 npm install
 npm run dev
-npm run build:lib
 ```
 
-Library output is generated in `lib/`.
+Open the local URL shown by Vite (typically `http://127.0.0.1:5173/` or similar).
 
-## Publish Checklist
+### Production Build
 
-1. Set `"private": false` in `package.json`.
-2. Run `npm run build:lib`.
-3. Optional sanity check: `npm pack --dry-run`.
-4. Publish: `npm publish --access public`.
+```bash
+npm run build
+npm run preview
+```
+
+## Roadmap
+
+- **Phase 1 (v1):** Core editor, live preview, exports, and persistence
+- **Phase 1.5:** ASCII rendering mode, extra presets, performance improvements
+- **Phase 2:** Accounts, cloud storage, sharing, and platform features
+
+Detailed scope and architecture decisions are documented in `PROJECT_SPEC.md`.
 
 ## License
 
