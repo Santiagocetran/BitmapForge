@@ -1,0 +1,63 @@
+{
+  "name": "@santiagocetran/ascii-3d-animation",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "A beautiful ASCII/bitmap effect for rendering 3D models with Three.js",
+  "main": "./lib/ascii-3d-animation.js",
+  "module": "./lib/ascii-3d-animation.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./lib/ascii-3d-animation.js",
+      "types": "./lib/index.d.ts"
+    },
+    "./react": {
+      "import": "./lib/react.js",
+      "types": "./lib/react/index.d.ts"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:lib": "vite build --config vite.config.lib.js && cp src/index.d.ts lib/ && mkdir -p lib/react && cp src/react/index.d.ts lib/react/",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "three.js",
+    "3d",
+    "ascii",
+    "bitmap",
+    "animation",
+    "webgl",
+    "effect"
+  ],
+  "author": "santiagocetran <santiagorcetran236@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Santiagocetran/my-ascii-three.git"
+  },
+  "peerDependencies": {
+    "three": ">=0.150.0",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "three": "^0.182.0",
+    "vite": "^7.2.4"
+  }
+}

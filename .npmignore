@@ -1,0 +1,25 @@
+# Development files
+src/
+public/
+index.html
+vite.config.js
+
+# Git
+.git
+.gitignore
+
+# Node
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Only include the built lib folder
+!lib/
