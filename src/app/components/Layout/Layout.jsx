@@ -28,7 +28,9 @@ function Layout() {
     <main className="grid min-h-screen grid-cols-1 gap-4 p-4 lg:h-screen lg:overflow-hidden lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="order-2 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto lg:order-1 lg:max-h-full">
         <Section title={model ? 'Replace Model' : 'Upload Model'}>
-          <ModelUploader compact={Boolean(model)} />
+          <div className="flex min-h-[260px] w-full flex-col items-center justify-center">
+            <ModelUploader compact={Boolean(model)} />
+          </div>
         </Section>
         <Section title="Color Strip">
           <ColorPalette />

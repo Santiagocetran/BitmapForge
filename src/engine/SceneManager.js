@@ -100,11 +100,13 @@ class SceneManager {
   }
 
   updateAnimationOptions(options) {
-    if (options.animationPreset) this.animationEngine.setPreset(options.animationPreset)
-    if (typeof options.animationSpeed === 'number') this.animationEngine.setSpeed(options.animationSpeed)
     this.animationEngine.setFadeOptions({
+      useFadeInOut: options.useFadeInOut,
+      animationEffects: options.animationEffects,
+      animationSpeed: options.animationSpeed,
       showPhaseDuration: options.showPhaseDuration,
       animationDuration: options.animationDuration,
+      animationPreset: options.animationPreset,
       rotateOnShow: options.rotateOnShow,
       showPreset: options.showPreset
     })

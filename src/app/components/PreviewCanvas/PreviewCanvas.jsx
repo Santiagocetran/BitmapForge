@@ -44,10 +44,12 @@ function PreviewCanvas({ sceneManagerRef }) {
         animationDuration: state.animationDuration
       })
       manager.updateAnimationOptions({
-        animationPreset: state.animationPreset,
+        useFadeInOut: state.useFadeInOut,
+        animationEffects: state.animationEffects,
         animationSpeed: state.animationSpeed,
         showPhaseDuration: state.showPhaseDuration,
         animationDuration: state.animationDuration,
+        animationPreset: state.animationPreset,
         rotateOnShow: state.rotateOnShow,
         showPreset: state.showPreset
       })

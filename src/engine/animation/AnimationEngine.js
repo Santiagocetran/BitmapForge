@@ -1,63 +1,61 @@
 import { ANIMATION_PRESETS } from './presets.js'
 
+const FLOAT_PRESET = ANIMATION_PRESETS.float
+
 class AnimationEngine {
   constructor() {
-    this.presetKey = 'spinY'
+    this.useFadeInOut = true
+    this.animationEffects = { spinX: false, spinY: true, spinZ: false, float: false }
     this.speed = ANIMATION_PRESETS.spinY.defaultSpeed
     this.showPhaseDuration = 20000
     this.animationDuration = 2500
-    this.rotateOnShow = false
-    this.showPreset = 'spinY'
     this.phaseStartTime = performance.now()
     this.time = 0
   }
 
-  setPreset(presetKey) {
-    this.presetKey = presetKey
-    const preset = ANIMATION_PRESETS[presetKey]
-    if (preset?.type === 'fadeInOut') {
-      this.showPhaseDuration = preset.showDuration
-      this.animationDuration = preset.animationDuration
-      this.rotateOnShow = preset.rotateOnShow
-      this.showPreset = preset.showPreset
+  setFadeOptions(options = {}) {
+    if (typeof options.useFadeInOut === 'boolean') this.useFadeInOut = options.useFadeInOut
+    if (options.animationEffects && typeof options.animationEffects === 'object') {
+      this.animationEffects = { ...this.animationEffects, ...options.animationEffects }
+    }
+    if (typeof options.animationSpeed === 'number') this.speed = Math.max(0.01, options.animationSpeed)
+    if (typeof options.showPhaseDuration === 'number') this.showPhaseDuration = options.showPhaseDuration
+    if (typeof options.animationDuration === 'number') this.animationDuration = options.animationDuration
+    // legacy
+    if (options.animationPreset) {
+      const preset = ANIMATION_PRESETS[options.animationPreset]
+      if (preset?.type === 'fadeInOut') this.useFadeInOut = true
+    }
+    if (typeof options.rotateOnShow === 'boolean' && options.rotateOnShow && options.showPreset) {
+      const p = ANIMATION_PRESETS[options.showPreset]
+      if (p?.type === 'spin') this.animationEffects = { ...this.animationEffects, [options.showPreset]: true }
+      if (p?.type === 'float') this.animationEffects = { ...this.animationEffects, float: true }
     }
   }
 
-  setSpeed(speedRadPerSec) {
-    this.speed = Math.max(0.01, speedRadPerSec)
-  }
+  applyEffects(modelGroup, deltaSeconds) {
+    if (!modelGroup) return
+    const e = this.animationEffects
+    const speed = this.speed * deltaSeconds
 
-  setFadeOptions({ showPhaseDuration, animationDuration, rotateOnShow, showPreset }) {
-    if (typeof showPhaseDuration === 'number') this.showPhaseDuration = showPhaseDuration
-    if (typeof animationDuration === 'number') this.animationDuration = animationDuration
-    if (typeof rotateOnShow === 'boolean') this.rotateOnShow = rotateOnShow
-    if (typeof showPreset === 'string') this.showPreset = showPreset
-  }
-
-  applyModelTransform(modelGroup, presetKey, deltaSeconds) {
-    const preset = ANIMATION_PRESETS[presetKey]
-    if (!modelGroup || !preset) return
-
-    if (preset.type === 'spin') {
-      modelGroup.rotation[preset.axis] += this.speed * deltaSeconds
-      return
-    }
-
-    if (preset.type === 'float') {
+    if (e.spinX) modelGroup.rotation.x += speed
+    if (e.spinY) modelGroup.rotation.y += speed
+    if (e.spinZ) modelGroup.rotation.z += speed
+    if (e.float) {
       this.time += deltaSeconds
-      modelGroup.rotation.y += this.speed * deltaSeconds
-      modelGroup.rotation.x = Math.sin(this.time * 0.5) * preset.oscillateX
-      modelGroup.rotation.z = Math.sin(this.time * 0.3) * preset.oscillateZ
+      const ox = FLOAT_PRESET?.oscillateX ?? 0.15
+      const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
+      modelGroup.rotation.x += Math.sin(this.time * 0.5) * ox * deltaSeconds * 2
+      modelGroup.rotation.z += Math.sin(this.time * 0.3) * oz * deltaSeconds * 2
     }
   }
 
   update(modelGroup, effect, deltaSeconds = 1 / 60) {
-    const preset = ANIMATION_PRESETS[this.presetKey] ?? ANIMATION_PRESETS.spinY
-    if (preset.type !== 'fadeInOut') {
+    if (!this.useFadeInOut) {
       if (effect.getAnimationPhase() !== 'show') {
         effect.startAnimation('show')
       }
-      this.applyModelTransform(modelGroup, this.presetKey, deltaSeconds)
+      this.applyEffects(modelGroup, deltaSeconds)
       return
     }
 
@@ -67,9 +65,7 @@ class AnimationEngine {
       effect.startAnimation('show')
       this.phaseStartTime = now
     } else if (currentPhase === 'show') {
-      if (this.rotateOnShow) {
-        this.applyModelTransform(modelGroup, this.showPreset, deltaSeconds)
-      }
+      this.applyEffects(modelGroup, deltaSeconds)
       if (now - this.phaseStartTime >= this.showPhaseDuration) {
         effect.startAnimation('fadeOut')
       }
@@ -79,12 +75,10 @@ class AnimationEngine {
   }
 
   getLoopDurationMs() {
-    const preset = ANIMATION_PRESETS[this.presetKey] ?? ANIMATION_PRESETS.spinY
-    if (preset.type === 'fadeInOut') {
-      return this.animationDuration * 2 + this.showPhaseDuration
+    if (!this.useFadeInOut) {
+      return Math.round((2 * Math.PI / this.speed) * 1000)
     }
-    // full 2pi revolution
-    return Math.round((2 * Math.PI / this.speed) * 1000)
+    return this.animationDuration * 2 + this.showPhaseDuration
   }
 }
 

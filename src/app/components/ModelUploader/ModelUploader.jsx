@@ -79,9 +79,9 @@ function ModelUploader({ compact = false }) {
   return (
     <div
       {...getRootProps()}
-      className={`rounded-xl border border-dashed p-4 transition ${
+      className={`w-full max-w-[280px] rounded-xl border border-dashed p-4 transition ${
         isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-900'
-      } flex h-full min-h-[260px] flex-col items-center justify-center gap-3`}
+      } flex min-h-[200px] flex-col items-center justify-center gap-3`}
     >
       <input {...getInputProps()} />
       <p className="text-sm text-zinc-200">

@@ -8,13 +8,16 @@ const DEFAULT_STATE = {
   invert: false,
   minBrightness: 0.05,
   backgroundColor: '#0a0a0a',
-  animationPreset: 'spinY',
+  useFadeInOut: true,
+  animationEffects: { spinX: false, spinY: true, spinZ: false, float: false },
   animationSpeed: 0.36,
   showPhaseDuration: 20000,
   animationDuration: 2500,
+  lightDirection: { x: 3, y: 4, z: 5 },
+  // legacy (kept for migration; prefer animationEffects)
+  animationPreset: 'spinY',
   rotateOnShow: false,
   showPreset: 'spinY',
-  lightDirection: { x: 3, y: 4, z: 5 },
   status: { loading: false, error: '', exporting: false, message: '' }
 }
 
@@ -68,6 +71,11 @@ const useProjectStore = create((set, get) => ({
   setInvert: (invert) => set({ invert }),
   setMinBrightness: (minBrightness) => set({ minBrightness: clamp(minBrightness, 0.01, 0.5) }),
   setBackgroundColor: (backgroundColor) => set({ backgroundColor }),
+  setUseFadeInOut: (useFadeInOut) => set({ useFadeInOut }),
+  setAnimationEffect: (key, value) =>
+    set((state) => ({
+      animationEffects: { ...state.animationEffects, [key]: Boolean(value) }
+    })),
   setAnimationPreset: (animationPreset) => set({ animationPreset }),
   setAnimationSpeed: (animationSpeed) => set({ animationSpeed: Math.max(0.01, animationSpeed) }),
   setShowPhaseDuration: (showPhaseDuration) => set({ showPhaseDuration: Math.max(100, showPhaseDuration) }),
