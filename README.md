@@ -1,64 +1,62 @@
 # BitmapForge
 
-BitmapForge is a client-side web app for generating bitmap-style animations from 3D models.
+BitmapForge is a web application that turns 3D models into stylized bitmap animations.
 
-This repository is no longer an npm library package; it is now an application built with React + Vite, with a framework-agnostic rendering engine under `src/engine`.
+You can upload a model, tune the visual style (pixel size, dithering, palette, animation, light direction), preview changes in real time, and export the result in multiple formats.
 
-## Current Status
+## What It Does
 
-Phase 1 foundation is implemented:
+- Loads 3D model files: STL, OBJ, GLTF, GLB
+- Renders models with a bitmap/dithered look
+- Lets you control:
+  - palette (2-6 colors, shadows -> highlights)
+  - quality settings (pixel size, dither type, invert, min brightness, background)
+  - animation presets (spin axes, float, fade in/out)
+  - key light direction
+- Exports outputs as:
+  - GIF
+  - MP4/WebM video
+  - PNG sprite sheet
+  - embeddable HTML snippet
+  - full code ZIP
+- Saves work automatically in localStorage and supports `.bitmapforge` project files
 
-- React app shell with sidebar + preview layout
-- Three.js scene pipeline via `SceneManager`
-- Bitmap renderer refactor with shared `BaseEffect`
-- Model loading for STL, OBJ, GLTF, GLB
-- Live controls for palette, quality, animation, and light direction
-- Export panel scaffolding (GIF, video, sprite sheet, HTML snippet, code ZIP)
-- Local persistence (`localStorage`) and `.bitmapforge` save/load
+## How It Works
 
-ASCII mode is deferred to v1.5.
+1. Three.js renders the 3D scene to a WebGL canvas.
+2. The bitmap effect samples brightness values from that render.
+3. Brightness is converted into dithered pixel blocks/dots using the selected algorithm.
+4. Brightness values are mapped to your color strip (left = shadows, right = highlights).
+5. Animation and lighting controls update the scene continuously.
+6. Export tools capture one full loop from the preview canvas.
 
-## Project Structure
-
-```text
-src/
-  app/
-    components/
-    hooks/
-    store/
-    utils/
-    App.jsx
-    main.jsx
-  engine/
-    animation/
-    effects/
-    loaders/
-    SceneManager.js
-```
-
-## Development
+## Quick Start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL shown by Vite (typically `http://127.0.0.1:5173/` or similar).
+Open the local URL printed by Vite.
 
-### Production Build
+## Build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Roadmap
+## Typical Workflow
 
-- **Phase 1 (v1):** Core editor, live preview, exports, and persistence
-- **Phase 1.5:** ASCII rendering mode, extra presets, performance improvements
-- **Phase 2:** Accounts, cloud storage, sharing, and platform features
+1. Upload a model.
+2. Adjust palette, quality, animation, and light direction.
+3. Preview until satisfied.
+4. Export to your target format.
+5. Save a `.bitmapforge` project file if you want to continue later.
 
-Detailed scope and architecture decisions are documented in `PROJECT_SPEC.md`.
+## Documentation
+
+- Product and technical specification: `PROJECT_SPEC.md`
 
 ## License
 
