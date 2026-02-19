@@ -108,6 +108,7 @@ class BaseEffect {
 
   getColorForBrightness(brightness) {
     const colors = this.options.colors
+    if (!colors || colors.length === 0) return '#000000'
     if (colors.length === 1) return colors[0]
 
     const scaledPos = brightness * (colors.length - 1)

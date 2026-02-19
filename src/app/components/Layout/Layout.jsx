@@ -25,8 +25,8 @@ function Layout() {
   const hasError = useMemo(() => Boolean(status.error), [status.error])
 
   return (
-    <main className="grid min-h-screen grid-cols-1 gap-4 p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <aside className="order-2 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto lg:order-1">
+    <main className="grid min-h-screen grid-cols-1 gap-4 p-4 lg:h-screen lg:overflow-hidden lg:grid-cols-[340px_minmax(0,1fr)]">
+      <aside className="order-2 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto lg:order-1 lg:max-h-full">
         <Section title={model ? 'Replace Model' : 'Upload Model'}>
           <ModelUploader compact={Boolean(model)} />
         </Section>
@@ -47,12 +47,7 @@ function Layout() {
         </Section>
       </aside>
 
-      <section className="order-1 flex min-h-[360px] flex-col gap-2 lg:order-2">
-        {!model && (
-          <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-3 text-sm text-zinc-300">
-            No model loaded yet. Upload an STL, OBJ, GLTF or GLB file to begin.
-          </div>
-        )}
+      <section className="order-1 flex min-h-[360px] flex-col gap-2 lg:order-2 lg:min-h-0">
         {status.message && (
           <div className="rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">{status.message}</div>
         )}
@@ -62,14 +57,8 @@ function Layout() {
         {status.loading && (
           <div className="rounded bg-emerald-900/40 px-3 py-2 text-xs text-emerald-200">Loading model...</div>
         )}
-        <div className="h-[70vh] lg:h-full">
-          {!model ? (
-            <div className="h-full">
-              <ModelUploader />
-            </div>
-          ) : (
-            <PreviewCanvas sceneManagerRef={sceneManagerRef} />
-          )}
+        <div className="h-[70vh] lg:flex-1 lg:min-h-0">
+          <PreviewCanvas sceneManagerRef={sceneManagerRef} />
         </div>
       </section>
     </main>

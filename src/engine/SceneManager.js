@@ -11,12 +11,16 @@ class SceneManager {
     this.camera.position.set(0, 0.5, 5)
     this.camera.lookAt(0, 0, 0)
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
     this.renderer.setClearColor(0x000000, 0)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
 
     this.effect = new BitmapEffect(this.renderer, effectOptions)
     this.container.appendChild(this.effect.domElement)
+
+    if (effectOptions.backgroundColor && effectOptions.backgroundColor !== 'transparent') {
+      this.scene.background = new THREE.Color(effectOptions.backgroundColor)
+    }
 
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.15)
     this.keyLight = new THREE.DirectionalLight(0xffffff, 1.5)
@@ -52,12 +56,18 @@ class SceneManager {
   }
 
   async loadModel(file) {
-    const { group, objectUrl } = await loadModel(file)
-    this.disposeModel()
-    this.modelGroup = group
-    this.currentObjectUrl = objectUrl
-    this.scene.add(this.modelGroup)
-    this.effect.startAnimation('fadeIn')
+    if (this._loading) return
+    this._loading = true
+    try {
+      const { group, objectUrl } = await loadModel(file)
+      this.disposeModel()
+      this.modelGroup = group
+      this.currentObjectUrl = objectUrl
+      this.scene.add(this.modelGroup)
+      this.effect.startAnimation('fadeIn')
+    } finally {
+      this._loading = false
+    }
   }
 
   disposeModel() {
@@ -115,6 +125,7 @@ class SceneManager {
   dispose() {
     this.renderer.setAnimationLoop(null)
     this.disposeModel()
+    this.effect.dispose()
     this.renderer.dispose()
     if (this.effect.domElement.parentNode) {
       this.effect.domElement.parentNode.removeChild(this.effect.domElement)

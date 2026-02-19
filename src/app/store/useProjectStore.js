@@ -2,12 +2,12 @@ import { create } from 'zustand'
 
 const DEFAULT_STATE = {
   model: null,
-  colors: ['#074434', '#0a5845', '#ABC685', '#E8FF99'],
+  colors: ['#021a15', '#074434', '#ABC685', '#E8FF99'],
   pixelSize: 3,
   ditherType: 'bayer4x4',
   invert: false,
   minBrightness: 0.05,
-  backgroundColor: 'transparent',
+  backgroundColor: '#0a0a0a',
   animationPreset: 'spinY',
   animationSpeed: 0.36,
   showPhaseDuration: 20000,

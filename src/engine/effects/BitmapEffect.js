@@ -88,6 +88,17 @@ class BitmapEffect extends BaseEffect {
     this.bitmapCtx.fillRect(x, y, this.options.pixelSize, this.options.pixelSize)
   }
 
+  dispose() {
+    if (this.bitmapCanvas?.parentNode) {
+      this.bitmapCanvas.parentNode.removeChild(this.bitmapCanvas)
+    }
+    this.bitmapCanvas = null
+    this.bitmapCtx = null
+    this.sampleCanvas = null
+    this.sampleCtx = null
+    this.particles = []
+  }
+
   renderBitmap() {
     if (!this.sampleCtx || !this.bitmapCtx) return
 

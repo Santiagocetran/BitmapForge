@@ -5,7 +5,7 @@ const DIRECTIONS = [
   { label: 'N', x: 0, y: 5, z: 5 },
   { label: 'NE', x: 3, y: 4, z: 5 },
   { label: 'W', x: -5, y: 2, z: 3 },
-  { label: 'C', x: 3, y: 4, z: 5 },
+  { label: 'C', x: 0, y: 3, z: 5 },
   { label: 'E', x: 5, y: 2, z: 3 },
   { label: 'SW', x: -3, y: 1, z: -4 },
   { label: 'S', x: 0, y: 1, z: -5 },

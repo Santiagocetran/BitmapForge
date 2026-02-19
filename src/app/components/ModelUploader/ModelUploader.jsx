@@ -33,12 +33,55 @@ function ModelUploader({ compact = false }) {
     noClick: true
   })
 
+  if (compact && model) {
+    return (
+      <div
+        {...getRootProps()}
+        className={`rounded-xl border border-dashed p-3 transition ${
+          isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-800'
+        } flex flex-col gap-2`}
+      >
+        <input {...getInputProps()} />
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-xs text-zinc-300" title={model.name}>
+            {model.name}
+          </span>
+          <span className="shrink-0 text-xs text-zinc-500">
+            {(model.size / 1024).toFixed(1)} KB
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="flex-1 rounded-md bg-zinc-700 px-2 py-1 text-xs hover:bg-zinc-600"
+            onClick={open}
+          >
+            Replace
+          </button>
+          <button
+            type="button"
+            className="flex-1 rounded-md bg-red-900 px-2 py-1 text-xs text-red-200 hover:bg-red-800"
+            onClick={() => {
+              setModel(null)
+              setStatus({ error: '', message: '' })
+            }}
+          >
+            Remove
+          </button>
+        </div>
+        {isDragActive && (
+          <p className="text-center text-xs text-emerald-400">Drop to replace model</p>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div
       {...getRootProps()}
       className={`rounded-xl border border-dashed p-4 transition ${
         isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-900'
-      } ${compact ? '' : 'h-full min-h-[260px]'} flex flex-col items-center justify-center gap-3`}
+      } flex h-full min-h-[260px] flex-col items-center justify-center gap-3`}
     >
       <input {...getInputProps()} />
       <p className="text-sm text-zinc-200">
@@ -51,11 +94,6 @@ function ModelUploader({ compact = false }) {
       >
         Choose File
       </button>
-      {model && (
-        <p className="text-xs text-zinc-400">
-          {model.name} ({(model.size / 1024).toFixed(1)} KB)
-        </p>
-      )}
     </div>
   )
 }

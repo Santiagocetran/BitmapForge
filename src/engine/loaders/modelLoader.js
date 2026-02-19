@@ -20,7 +20,16 @@ function centerAndScale(group) {
   const maxDim = Math.max(size.x, size.y, size.z, 1e-6)
   const scale = 3 / maxDim
 
-  group.position.sub(center)
+  // Move all children into an inner offset group so the bounding-box center
+  // lands at the outer group's local origin. This way, rotating the outer
+  // group spins the model in place instead of orbiting it around a distant
+  // point (which is what group.position offset would cause).
+  const inner = new THREE.Group()
+  inner.position.set(-center.x, -center.y, -center.z)
+  while (group.children.length > 0) {
+    inner.add(group.children[0])
+  }
+  group.add(inner)
   group.scale.setScalar(scale)
   group.updateMatrixWorld(true)
 }
@@ -51,6 +60,7 @@ async function loadModel(file) {
     if (extension === 'stl') {
       const stlLoader = new STLLoader()
       const geometry = await loadWithCallback(stlLoader, objectUrl)
+      geometry.computeVertexNormals()
       const mesh = new THREE.Mesh(geometry, WHITE_MATERIAL.clone())
       mesh.rotation.x = -Math.PI / 2
       group = new THREE.Group()
