@@ -119,29 +119,59 @@ function useExport(sceneManagerRef) {
       const loopMs = manager.getLoopDurationMs()
       const state = getState()
 
-      // Pick the best codec supported by this browser
+      // MediaRecorder encodes in YCbCr limited-range (16-235) by default.
+      // Without proper color-space metadata, players decode it as full-range,
+      // compressing all colors toward grey (lost brightness/saturation).
+      //
+      // Mitigations applied here:
+      //   1. Explicit full-range VP9 codec string so metadata is correct.
+      //   2. Scale canvas up to ≥720 px tall — below that many players
+      //      default to BT.601 (SD matrix) instead of BT.709, shifting hues.
+      //   3. Opaque composite canvas (no alpha bleed against black).
+      //   4. imageSmoothingEnabled=false keeps pixel art sharp after scaling.
+
+      // Scale so the taller dimension reaches at least 720px.
+      const minDim = 720
+      const scale = Math.max(1, Math.ceil(minDim / Math.max(canvas.width, canvas.height)))
+
+      // Pick codec — prefer explicit full-range VP9 so color metadata is embedded.
       const candidates = format === 'mp4'
-        ? ['video/mp4; codecs="avc1.42E01E"', 'video/mp4']
-        : ['video/webm; codecs=vp9', 'video/webm; codecs=vp8', 'video/webm']
+        ? [
+            'video/mp4; codecs="avc1.64001F"',  // H.264 High 3.1 — forces BT.709
+            'video/mp4; codecs="avc1.42E01E"',
+            'video/mp4'
+          ]
+        : [
+            // vp09.profile.level.bitDepth.chromaSubsampling.colorPrimaries.transferChar.matrixCoeffs.blackLevel
+            // 00=BT.709 primaries, 01=BT.709 transfer, 01=BT.709 matrix, 01=full range
+            'video/webm; codecs="vp09.00.31.08.00.01.01.01.01.00"',
+            'video/webm; codecs=vp9',
+            'video/webm; codecs=vp8',
+            'video/webm'
+          ]
       const mimeType = candidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? 'video/webm'
       const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm'
 
-      // Capture through an opaque composite canvas so the encoder never sees
-      // semi-transparent pixels (which get composited against black in the
-      // encoded stream, causing colors to appear darker than the preview).
       const solidBg = (!state.backgroundColor || state.backgroundColor === 'transparent')
         ? '#000000'
         : state.backgroundColor
-      const compositeCanvas = document.createElement('canvas')
-      compositeCanvas.width = canvas.width
-      compositeCanvas.height = canvas.height
-      const compositeCtx = compositeCanvas.getContext('2d')
 
-      manager.setOnFrameRendered(() => {
+      const compositeCanvas = document.createElement('canvas')
+      compositeCanvas.width = canvas.width * scale
+      compositeCanvas.height = canvas.height * scale
+      // alpha:false → opaque context; avoids premultiplied-alpha colour shift
+      const compositeCtx = compositeCanvas.getContext('2d', { alpha: false })
+      compositeCtx.imageSmoothingEnabled = false
+
+      const drawFrame = () => {
         compositeCtx.fillStyle = solidBg
         compositeCtx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height)
-        compositeCtx.drawImage(canvas, 0, 0)
-      })
+        compositeCtx.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height)
+      }
+
+      // Pre-draw so captureStream has a valid first frame immediately.
+      drawFrame()
+      manager.setOnFrameRendered(drawFrame)
 
       // Snap animation back to the start of the loop before recording
       manager.resetToLoopStart()
@@ -149,7 +179,7 @@ function useExport(sceneManagerRef) {
       const stream = compositeCanvas.captureStream(30)
       const recorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 12_000_000
+        videoBitsPerSecond: 20_000_000
       })
       const chunks = []
 
