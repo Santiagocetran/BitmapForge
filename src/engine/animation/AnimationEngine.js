@@ -80,6 +80,51 @@ class AnimationEngine {
     }
     return this.animationDuration * 2 + this.showPhaseDuration
   }
+
+  resetToStart() {
+    this.time = 0
+    this.phaseStartTime = 0
+  }
+
+  // Apply the animation state for an absolute position within the loop.
+  // Sets model rotation from t=0 and configures effect phase/progress.
+  // Safe to call with a paused renderer loop.
+  seekTo(absoluteTimeMs, modelGroup, effect) {
+    const ts = absoluteTimeMs / 1000
+
+    if (modelGroup) {
+      modelGroup.rotation.set(0, 0, 0)
+      const e = this.animationEffects
+      const speed = this.speed
+      if (e.spinX) modelGroup.rotation.x += speed * ts
+      if (e.spinY) modelGroup.rotation.y += speed * ts
+      if (e.spinZ) modelGroup.rotation.z += speed * ts
+      if (e.float) {
+        const ox = FLOAT_PRESET?.oscillateX ?? 0.15
+        const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
+        // Analytical integral of the incremental float deltas applied each frame
+        modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * ts))
+        modelGroup.rotation.z += (oz * 2 / 0.3) * (1 - Math.cos(0.3 * ts))
+      }
+    }
+
+    if (effect) {
+      if (this.useFadeInOut) {
+        const dur = this.animationDuration
+        const show = this.showPhaseDuration
+        const t = absoluteTimeMs
+        if (t < dur) {
+          effect.setPhaseProgress('fadeIn', t / dur)
+        } else if (t < dur + show) {
+          effect.setPhaseProgress('show', 1)
+        } else {
+          effect.setPhaseProgress('fadeOut', (t - dur - show) / dur)
+        }
+      } else {
+        effect.setPhaseProgress('show', 1)
+      }
+    }
+  }
 }
 
 export { AnimationEngine }

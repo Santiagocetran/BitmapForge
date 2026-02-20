@@ -1,4 +1,5 @@
 import GIF from 'gif.js'
+import gifWorkerUrl from 'gif.js/dist/gif.worker.js?url'
 import { useProjectStore } from '../store/useProjectStore.js'
 import { buildCodeZip } from '../utils/codeExport.js'
 import { saveProjectFile } from '../utils/projectFile.js'
@@ -10,6 +11,16 @@ function downloadBlob(blob, fileName) {
   anchor.download = fileName
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+// Pause the live preview loop, run fn(), then always resume.
+async function withPausedScene(manager, fn) {
+  manager.pauseLoop()
+  try {
+    await fn()
+  } finally {
+    manager.resumeLoop()
+  }
 }
 
 function useExport(sceneManagerRef) {
@@ -27,18 +38,19 @@ function useExport(sceneManagerRef) {
       const width = sourceCanvas.width
       const height = sourceCanvas.height
       const rows = Math.ceil(frameCount / columns)
+      const loopMs = manager.getLoopDurationMs()
 
       const outCanvas = document.createElement('canvas')
       outCanvas.width = columns * width
       outCanvas.height = rows * height
       const outCtx = outCanvas.getContext('2d')
-      const loopMs = manager.getLoopDurationMs()
 
-      for (let i = 0; i < frameCount; i++) {
-        const frameDelay = (loopMs / frameCount) * i
-        await new Promise((resolve) => setTimeout(resolve, frameDelay === 0 ? 0 : 1))
-        outCtx.drawImage(sourceCanvas, (i % columns) * width, Math.floor(i / columns) * height)
-      }
+      await withPausedScene(manager, async () => {
+        for (let i = 0; i < frameCount; i++) {
+          manager.renderAtTime((i / frameCount) * loopMs)
+          outCtx.drawImage(sourceCanvas, (i % columns) * width, Math.floor(i / columns) * height)
+        }
+      })
 
       await new Promise((resolve) => {
         outCanvas.toBlob((blob) => {
@@ -61,21 +73,24 @@ function useExport(sceneManagerRef) {
     setStatus({ exporting: true, message: 'Encoding GIF...' })
 
     try {
+      const loopMs = manager.getLoopDurationMs()
+      const frameCount = Math.max(12, Math.round((loopMs / 1000) * fps))
+      const frameDelay = Math.round(loopMs / frameCount)
+
       const gif = new GIF({
         workers: 2,
         quality: 10,
         width: canvas.width,
-        height: canvas.height
+        height: canvas.height,
+        workerScript: gifWorkerUrl
       })
 
-      const loopMs = manager.getLoopDurationMs()
-      const frameCount = Math.max(12, Math.round((loopMs / 1000) * fps))
-      const frameDelay = Math.round(1000 / fps)
-
-      for (let i = 0; i < frameCount; i++) {
-        gif.addFrame(canvas, { copy: true, delay: frameDelay })
-        await new Promise((resolve) => setTimeout(resolve, 0))
-      }
+      await withPausedScene(manager, async () => {
+        for (let i = 0; i < frameCount; i++) {
+          manager.renderAtTime((i / frameCount) * loopMs)
+          gif.addFrame(canvas, { copy: true, delay: frameDelay })
+        }
+      })
 
       await new Promise((resolve, reject) => {
         gif.on('finished', (blob) => {
@@ -101,9 +116,41 @@ function useExport(sceneManagerRef) {
     setStatus({ exporting: true, message: 'Recording video...' })
 
     try {
-      const stream = canvas.captureStream(30)
-      const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm'
-      const recorder = new MediaRecorder(stream, { mimeType })
+      const loopMs = manager.getLoopDurationMs()
+      const state = getState()
+
+      // Pick the best codec supported by this browser
+      const candidates = format === 'mp4'
+        ? ['video/mp4; codecs="avc1.42E01E"', 'video/mp4']
+        : ['video/webm; codecs=vp9', 'video/webm; codecs=vp8', 'video/webm']
+      const mimeType = candidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? 'video/webm'
+      const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm'
+
+      // Capture through an opaque composite canvas so the encoder never sees
+      // semi-transparent pixels (which get composited against black in the
+      // encoded stream, causing colors to appear darker than the preview).
+      const solidBg = (!state.backgroundColor || state.backgroundColor === 'transparent')
+        ? '#000000'
+        : state.backgroundColor
+      const compositeCanvas = document.createElement('canvas')
+      compositeCanvas.width = canvas.width
+      compositeCanvas.height = canvas.height
+      const compositeCtx = compositeCanvas.getContext('2d')
+
+      manager.setOnFrameRendered(() => {
+        compositeCtx.fillStyle = solidBg
+        compositeCtx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height)
+        compositeCtx.drawImage(canvas, 0, 0)
+      })
+
+      // Snap animation back to the start of the loop before recording
+      manager.resetToLoopStart()
+
+      const stream = compositeCanvas.captureStream(30)
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 12_000_000
+      })
       const chunks = []
 
       recorder.ondataavailable = (event) => {
@@ -116,13 +163,15 @@ function useExport(sceneManagerRef) {
       })
 
       recorder.start()
-      await new Promise((resolve) => setTimeout(resolve, manager.getLoopDurationMs()))
+      await new Promise((resolve) => setTimeout(resolve, loopMs))
       recorder.stop()
 
       const blob = await result
-      downloadBlob(blob, `bitmapforge-${Date.now()}.${format === 'mp4' ? 'mp4' : 'webm'}`)
+      manager.clearOnFrameRendered()
+      downloadBlob(blob, `bitmapforge-${Date.now()}.${ext}`)
       setStatus({ exporting: false, message: 'Video exported.' })
     } catch (error) {
+      manager.clearOnFrameRendered()
       setStatus({ exporting: false, error: `Video export failed: ${error.message}` })
     }
   }
