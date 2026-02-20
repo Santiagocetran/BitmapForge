@@ -36,7 +36,8 @@ class SceneManager {
     this.currentObjectUrl = null
     this.lastFrameTime = performance.now()
 
-    this.renderer.setAnimationLoop(() => {
+    this._onFrameRendered = null
+    this._animationLoop = () => {
       const now = performance.now()
       const deltaSeconds = Math.max(0, Math.min((now - this.lastFrameTime) / 1000, 0.25))
       this.lastFrameTime = now
@@ -44,7 +45,9 @@ class SceneManager {
         this.animationEngine.update(this.modelGroup, this.effect, deltaSeconds)
       }
       this.effect.render(this.scene, this.camera)
-    })
+      this._onFrameRendered?.()
+    }
+    this.renderer.setAnimationLoop(this._animationLoop)
   }
 
   setSize(width, height) {
@@ -122,6 +125,49 @@ class SceneManager {
 
   getLoopDurationMs() {
     return this.animationEngine.getLoopDurationMs()
+  }
+
+  // Pause the live animation loop for frame-stepping during export.
+  pauseLoop() {
+    this.renderer.setAnimationLoop(null)
+  }
+
+  // Resume the live animation loop after export. Resets lastFrameTime to
+  // avoid a large delta spike on the first resumed frame.
+  resumeLoop() {
+    this.lastFrameTime = performance.now()
+    this.renderer.setAnimationLoop(this._animationLoop)
+  }
+
+  // Render a single frame with the current engine state.
+  renderOnce() {
+    this.effect.render(this.scene, this.camera)
+  }
+
+  // Seek the animation to absoluteTimeMs within the loop and render one frame.
+  renderAtTime(absoluteTimeMs) {
+    this.animationEngine.seekTo(absoluteTimeMs, this.modelGroup, this.effect)
+    this.renderOnce()
+  }
+
+  setOnFrameRendered(callback) {
+    this._onFrameRendered = callback
+  }
+
+  clearOnFrameRendered() {
+    this._onFrameRendered = null
+  }
+
+  // Reset animation to t=0 and render the first frame. Used before video recording.
+  resetToLoopStart() {
+    this.animationEngine.resetToStart()
+    if (this.modelGroup) this.modelGroup.rotation.set(0, 0, 0)
+    if (this.animationEngine.useFadeInOut) {
+      this.effect.startAnimation('fadeIn')
+    } else {
+      this.effect.startAnimation('show')
+    }
+    this.renderOnce()
   }
 
   dispose() {

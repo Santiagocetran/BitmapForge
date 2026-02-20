@@ -73,6 +73,22 @@ class BaseEffect {
     }
   }
 
+  // Set phase and progress directly for frame-stepping during export.
+  // Adjusts animationStartTime so tickAnimation() stays consistent.
+  setPhaseProgress(phase, progress) {
+    const clamped = Math.max(0, Math.min(1, progress))
+    this.animationPhase = phase
+    if (phase === 'fadeIn' || phase === 'fadeOut') {
+      this.isAnimating = true
+      this.animationStartTime = performance.now() - clamped * this.options.animationDuration
+      this.animationProgress = clamped
+      if (clamped === 0) this.resetParticles()
+    } else {
+      this.isAnimating = false
+      this.animationProgress = 1
+    }
+  }
+
   tickAnimation() {
     if (!this.isAnimating) return
     const elapsed = performance.now() - this.animationStartTime
