@@ -1,6 +1,6 @@
 # BitmapForge
 
-<img src="./BitmapForgeLogo.png" alt="BitmapForge Logo" width="512" />
+<img src="./BitmapForgeLogo.png" alt="BitmapForge Logo" width="256" />
 
 ![BitmapForge Demo](./demo.gif)
 
