@@ -1,5 +1,9 @@
 # BitmapForge
 
+<img src="./BitmapForgeLogo.png" alt="BitmapForge Logo" width="256" />
+
+![BitmapForge Demo](./demo.gif)
+
 BitmapForge is a web application that turns 3D models into stylized bitmap animations.
 
 You can upload a model, tune the visual style (pixel size, dithering, palette, animation, light direction), preview changes in real time, and export the result in multiple formats.
