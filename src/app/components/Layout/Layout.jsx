@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { ModelUploader } from '../ModelUploader/ModelUploader.jsx'
 import { PreviewCanvas } from '../PreviewCanvas/PreviewCanvas.jsx'
 import { ColorPalette } from '../ColorPalette/ColorPalette.jsx'
@@ -18,7 +18,6 @@ function Section({ title, children }) {
 }
 
 function Layout() {
-  const sceneManagerRef = useRef(null)
   const model = useProjectStore((state) => state.model)
   const status = useProjectStore((state) => state.status)
 
@@ -45,7 +44,7 @@ function Layout() {
           <LightDirection />
         </Section>
         <Section title="Export & Project">
-          <ExportPanel sceneManagerRef={sceneManagerRef} />
+          <ExportPanel />
         </Section>
       </aside>
 
@@ -60,7 +59,7 @@ function Layout() {
           <div className="rounded bg-emerald-900/40 px-3 py-2 text-xs text-emerald-200">Loading model...</div>
         )}
         <div className="h-[70vh] lg:flex-1 lg:min-h-0">
-          <PreviewCanvas sceneManagerRef={sceneManagerRef} />
+          <PreviewCanvas />
         </div>
       </section>
     </main>

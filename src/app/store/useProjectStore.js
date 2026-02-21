@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_ANIMATION_EFFECTS } from '../../engine/animation/effectTypes.js'
 
 const DEFAULT_STATE = {
   model: null,
@@ -9,7 +10,7 @@ const DEFAULT_STATE = {
   minBrightness: 0.05,
   backgroundColor: '#0a0a0a',
   useFadeInOut: true,
-  animationEffects: { spinX: false, spinY: true, spinZ: false, float: false },
+  animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 0.36,
   showPhaseDuration: 20000,
   animationDuration: 2500,
@@ -86,7 +87,7 @@ const useProjectStore = create((set, get) => ({
   setStatus: (partialStatus) => {
     set({ status: { ...get().status, ...partialStatus } })
   },
-  resetToDefaults: () => set({ ...DEFAULT_STATE })
+  resetToDefaults: () => set({ ...DEFAULT_STATE, animationEffects: { ...DEFAULT_ANIMATION_EFFECTS } })
 }))
 
 export { useProjectStore, DEFAULT_STATE }

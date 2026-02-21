@@ -1,11 +1,12 @@
 import { ANIMATION_PRESETS } from './presets.js'
+import { DEFAULT_ANIMATION_EFFECTS } from './effectTypes.js'
 
 const FLOAT_PRESET = ANIMATION_PRESETS.float
 
 class AnimationEngine {
   constructor() {
     this.useFadeInOut = true
-    this.animationEffects = { spinX: false, spinY: true, spinZ: false, float: false }
+    this.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS }
     this.speed = ANIMATION_PRESETS.spinY.defaultSpeed
     this.showPhaseDuration = 20000
     this.animationDuration = 2500
