@@ -1,11 +1,12 @@
+import { ANIMATION_EFFECT_KEYS } from '../../../engine/animation/effectTypes.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 
-const EFFECT_KEYS = [
-  { key: 'spinX', label: 'Spin X' },
-  { key: 'spinY', label: 'Spin Y' },
-  { key: 'spinZ', label: 'Spin Z' },
-  { key: 'float', label: 'Float' }
-]
+const EFFECT_LABELS = {
+  spinX: 'Spin X',
+  spinY: 'Spin Y',
+  spinZ: 'Spin Z',
+  float: 'Float',
+}
 
 function AnimationControls() {
   const useFadeInOut = useProjectStore((state) => state.useFadeInOut)
@@ -33,16 +34,19 @@ function AnimationControls() {
       <div className="space-y-1.5">
         <span className="text-xs font-medium text-zinc-400">Effects (combine any)</span>
         <div className="flex flex-wrap gap-2">
-          {EFFECT_KEYS.map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
-              <input
-                type="checkbox"
-                checked={animationEffects[key] ?? false}
-                onChange={(e) => setAnimationEffect(key, e.target.checked)}
-              />
-              {label}
-            </label>
-          ))}
+          {ANIMATION_EFFECT_KEYS.map((key) => {
+            const label = EFFECT_LABELS[key] ?? key
+            return (
+              <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={animationEffects[key] ?? false}
+                  onChange={(e) => setAnimationEffect(key, e.target.checked)}
+                />
+                {label}
+              </label>
+            )
+          })}
         </div>
       </div>
 

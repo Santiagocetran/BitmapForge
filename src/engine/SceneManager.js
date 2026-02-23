@@ -3,7 +3,24 @@ import { BitmapEffect } from './effects/BitmapEffect.js'
 import { loadModel } from './loaders/modelLoader.js'
 import { AnimationEngine } from './animation/AnimationEngine.js'
 
+/**
+ * Facade for the rendering engine. Manages the Three.js scene, camera, lights,
+ * BitmapEffect post-processing, model loading, and animation loop.
+ *
+ * Lifecycle: created by PreviewCanvas on mount, disposed on unmount.
+ * All methods must be called on the UI thread.
+ *
+ * @example
+ * const manager = new SceneManager(containerDiv, { pixelSize: 3, colors: ['#000', '#fff'] })
+ * await manager.loadModel(file)
+ * // ... later
+ * manager.dispose()
+ */
 class SceneManager {
+  /**
+   * @param {HTMLElement} container - DOM element to render into. The effect canvas is appended as a child.
+   * @param {object} [effectOptions] - Initial BitmapEffect options (pixelSize, ditherType, colors, backgroundColor, etc.)
+   */
   constructor(container, effectOptions = {}) {
     this.container = container
     this.scene = new THREE.Scene()
@@ -50,6 +67,11 @@ class SceneManager {
     this.renderer.setAnimationLoop(this._animationLoop)
   }
 
+  /**
+   * Resize the rendering viewport.
+   * @param {number} width - Width in CSS pixels
+   * @param {number} height - Height in CSS pixels
+   */
   setSize(width, height) {
     const w = Math.max(1, Math.floor(width))
     const h = Math.max(1, Math.floor(height))
@@ -58,6 +80,13 @@ class SceneManager {
     this.effect.setSize(w, h)
   }
 
+  /**
+   * Load a 3D model file into the scene. Disposes any previous model.
+   * Triggers a fadeIn animation on success.
+   * Supported formats: .stl, .obj, .gltf, .glb
+   * @param {File} file - The model file to load
+   * @returns {Promise<void>}
+   */
   async loadModel(file) {
     if (this._loading) return
     this._loading = true
@@ -73,6 +102,10 @@ class SceneManager {
     }
   }
 
+  /**
+   * Remove and dispose the current 3D model, freeing GPU resources.
+   * Safe to call when no model is loaded (no-op).
+   */
   disposeModel() {
     if (!this.modelGroup) return
     this.scene.remove(this.modelGroup)
@@ -93,6 +126,10 @@ class SceneManager {
     }
   }
 
+  /**
+   * Update bitmap rendering options. Changes apply on the next render frame.
+   * @param {{ pixelSize?: number, ditherType?: string, colors?: string[], invert?: boolean, minBrightness?: number, backgroundColor?: string, animationDuration?: number }} options
+   */
   updateEffectOptions(options) {
     this.effect.updateOptions(options)
     if (options.backgroundColor && options.backgroundColor !== 'transparent') {
@@ -102,6 +139,10 @@ class SceneManager {
     }
   }
 
+  /**
+   * Update animation behavior. Changes apply on the next animation frame.
+   * @param {{ useFadeInOut?: boolean, animationEffects?: Record<string, boolean>, animationSpeed?: number, showPhaseDuration?: number, animationDuration?: number, animationPreset?: string, rotateOnShow?: boolean, showPreset?: string }} options
+   */
   updateAnimationOptions(options) {
     this.animationEngine.setFadeOptions({
       useFadeInOut: options.useFadeInOut,
@@ -115,50 +156,88 @@ class SceneManager {
     })
   }
 
+  /**
+   * Move the key directional light to a new position.
+   * @param {number} x
+   * @param {number} y
+   * @param {number} z
+   */
   setLightDirection(x, y, z) {
     this.keyLight.position.set(x, y, z)
   }
 
+  /**
+   * Get the bitmap output canvas element (the visible canvas with the dithered effect).
+   * Used by export functions to capture frames.
+   * @returns {HTMLCanvasElement | null}
+   */
   getCanvas() {
     return this.effect.bitmapCanvas ?? this.effect.domElement.querySelector('canvas')
   }
 
+  /**
+   * Get the total duration of one animation loop in milliseconds.
+   * Used by export functions to know how many frames to capture.
+   * @returns {number}
+   */
   getLoopDurationMs() {
     return this.animationEngine.getLoopDurationMs()
   }
 
-  // Pause the live animation loop for frame-stepping during export.
+  /**
+   * Pause the live animation loop. Use before frame-stepping during export.
+   * Always call resumeLoop() when done.
+   */
   pauseLoop() {
     this.renderer.setAnimationLoop(null)
   }
 
-  // Resume the live animation loop after export. Resets lastFrameTime to
-  // avoid a large delta spike on the first resumed frame.
+  /**
+   * Resume the live animation loop after export or pause.
+   * Resets lastFrameTime to avoid a large delta spike on the first resumed frame.
+   */
   resumeLoop() {
     this.lastFrameTime = performance.now()
     this.renderer.setAnimationLoop(this._animationLoop)
   }
 
-  // Render a single frame with the current engine state.
+  /**
+   * Render a single frame with the current scene state. Does not advance animation time.
+   */
   renderOnce() {
     this.effect.render(this.scene, this.camera)
   }
 
-  // Seek the animation to absoluteTimeMs within the loop and render one frame.
+  /**
+   * Seek the animation to a specific time within the loop and render one frame.
+   * Used for export: step through the loop to capture frames at precise timestamps.
+   * @param {number} absoluteTimeMs - Time in milliseconds within the loop (0 to getLoopDurationMs())
+   */
   renderAtTime(absoluteTimeMs) {
     this.animationEngine.seekTo(absoluteTimeMs, this.modelGroup, this.effect)
     this.renderOnce()
   }
 
+  /**
+   * Register a callback invoked once per animation frame, after the bitmap effect renders.
+   * Used by video export to composite frames to a recording canvas.
+   * @param {(() => void) | null} callback
+   */
   setOnFrameRendered(callback) {
     this._onFrameRendered = callback
   }
 
+  /**
+   * Remove the frame-rendered callback.
+   */
   clearOnFrameRendered() {
     this._onFrameRendered = null
   }
 
-  // Reset animation to t=0 and render the first frame. Used before video recording.
+  /**
+   * Reset animation to t=0 and render the first frame.
+   * Used before video recording to ensure the loop starts from the beginning.
+   */
   resetToLoopStart() {
     this.animationEngine.resetToStart()
     if (this.modelGroup) this.modelGroup.rotation.set(0, 0, 0)
@@ -170,6 +249,11 @@ class SceneManager {
     this.renderOnce()
   }
 
+  /**
+   * Fully dispose the SceneManager: stops the animation loop, disposes the model,
+   * effect, and WebGL renderer, and removes the canvas from the DOM.
+   * Safe to call multiple times (idempotent for the model and renderer).
+   */
   dispose() {
     this.renderer.setAnimationLoop(null)
     this.disposeModel()

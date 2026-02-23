@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useExport } from '../../hooks/useExport.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { useSceneManager } from '../../context/SceneManagerContext.jsx'
 import { loadProjectFile } from '../../utils/projectFile.js'
 
 const FORMAT_OPTIONS = [
@@ -12,7 +13,8 @@ const FORMAT_OPTIONS = [
   { value: 'zip',         label: 'Code ZIP' },
 ]
 
-function ExportPanel({ sceneManagerRef }) {
+function ExportPanel() {
+  const sceneManagerRef = useSceneManager()
   const { exportSpriteSheet, exportGif, exportVideo, exportHtmlSnippet, exportCodeZip, saveProject } = useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)

@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { useSceneManager } from '../../context/SceneManagerContext.jsx'
 
-function PreviewCanvas({ sceneManagerRef }) {
+function PreviewCanvas() {
+  const sceneManagerRef = useSceneManager()
   const containerRef = useRef(null)
 
   useEffect(() => {
