@@ -96,4 +96,4 @@ console.log('BitmapForge export config', config, manager)
   return zip.generateAsync({ type: 'blob' })
 }
 
-export { buildCodeZip }
+export { buildCodeZip, createAnimationConfig }
