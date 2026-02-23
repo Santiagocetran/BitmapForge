@@ -65,10 +65,22 @@ class SceneManager {
       this._onFrameRendered?.()
     }
     this.renderer.setAnimationLoop(this._animationLoop)
+
+    this._onContextLost = (event) => {
+      event.preventDefault()
+      this.renderer.setAnimationLoop(null)
+    }
+    this._onContextRestored = () => {
+      this.renderer.setAnimationLoop(this._animationLoop)
+    }
+    this.renderer.domElement.addEventListener('webglcontextlost', this._onContextLost)
+    this.renderer.domElement.addEventListener('webglcontextrestored', this._onContextRestored)
   }
 
   /**
    * Resize the rendering viewport.
+   * Called by the React integration layer (PreviewCanvas) on container resize.
+   * The engine intentionally does not observe resize itself to stay framework-agnostic.
    * @param {number} width - Width in CSS pixels
    * @param {number} height - Height in CSS pixels
    */
@@ -172,7 +184,10 @@ class SceneManager {
    * @returns {HTMLCanvasElement | null}
    */
   getCanvas() {
-    return this.effect.bitmapCanvas ?? this.effect.domElement.querySelector('canvas')
+    if (!this.effect.bitmapCanvas) {
+      throw new Error('BitmapEffect canvas not available — was dispose() called?')
+    }
+    return this.effect.bitmapCanvas
   }
 
   /**
@@ -256,6 +271,9 @@ class SceneManager {
    */
   dispose() {
     this.renderer.setAnimationLoop(null)
+    this._onFrameRendered = null
+    this.renderer.domElement.removeEventListener('webglcontextlost', this._onContextLost)
+    this.renderer.domElement.removeEventListener('webglcontextrestored', this._onContextRestored)
     this.disposeModel()
     this.effect.dispose()
     this.renderer.dispose()

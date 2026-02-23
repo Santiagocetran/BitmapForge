@@ -21,6 +21,9 @@ class BaseEffect {
 
     this.domElement = document.createElement('div')
     this.domElement.style.cursor = 'default'
+
+    this._colorLUT = null
+    this._buildColorLUT()
   }
 
   setSize(width, height) {
@@ -37,6 +40,9 @@ class BaseEffect {
       this.onStructuralOptionChange()
     } else {
       this.onOptionChange()
+    }
+    if (nextOptions.colors || nextOptions.invert !== undefined) {
+      this._buildColorLUT()
     }
   }
 
@@ -121,7 +127,7 @@ class BaseEffect {
     return `rgb(${r},${g},${b})`
   }
 
-  getColorForBrightness(brightness) {
+  _computeColorForBrightness(brightness) {
     const colors = this.options.colors
     if (!colors || colors.length === 0) return '#000000'
     if (colors.length === 1) return colors[0]
@@ -131,6 +137,19 @@ class BaseEffect {
     const upperIdx = Math.min(lowerIdx + 1, colors.length - 1)
     const t = scaledPos - lowerIdx
     return this.lerpColor(colors[lowerIdx], colors[upperIdx], t)
+  }
+
+  _buildColorLUT() {
+    const lut = new Array(256)
+    for (let i = 0; i < 256; i++) {
+      lut[i] = this._computeColorForBrightness(i / 255)
+    }
+    this._colorLUT = lut
+  }
+
+  getColorForBrightness(brightness) {
+    if (!this._colorLUT) this._buildColorLUT()
+    return this._colorLUT[Math.round(brightness * 255)]
   }
 
   applyAlpha(color, alpha) {
@@ -200,6 +219,13 @@ class BaseEffect {
     }
 
     this.particlesInitialized = true
+  }
+
+  dispose() {
+    this.particles = []
+    this.particlesInitialized = false
+    this.isAnimating = false
+    this.animationProgress = 0
   }
 }
 

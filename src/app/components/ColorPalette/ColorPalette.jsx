@@ -3,7 +3,9 @@ import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove 
 import { CSS } from '@dnd-kit/utilities'
 import { HexColorPicker } from 'react-colorful'
 import { useState, useRef, useEffect } from 'react'
+import { useShallow } from 'zustand/shallow'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { BTN } from '../../styles/buttonStyles.js'
 
 function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
@@ -12,6 +14,15 @@ function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
     transform: CSS.Transform.toString(transform),
     transition
   }
+
+  // Finding 25: overflow detection — flip popup to right-aligned if it would overflow viewport
+  const [flipSide, setFlipSide] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen || !popupRef.current) return
+    const rect = popupRef.current.getBoundingClientRect()
+    setFlipSide(rect.right > window.innerWidth - 8)
+  }, [isOpen])
 
   // Close when clicking outside the popup
   useEffect(() => {
@@ -37,6 +48,7 @@ function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
+      {/* Finding 12: aria-label for accessibility */}
       <button
         type="button"
         {...attributes}
@@ -44,9 +56,15 @@ function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
         className="h-10 w-12 rounded border border-zinc-500"
         style={{ backgroundColor: color }}
         onDoubleClick={() => (isOpen ? onClose() : onOpen())}
+        aria-label={`Color ${id.replace('color-', '')}: ${color}. Double-click to edit.`}
       />
       {isOpen && (
-        <div ref={popupRef} className="absolute left-0 z-20 mt-2 rounded border border-zinc-600 bg-zinc-900 p-2">
+        <div
+          ref={popupRef}
+          className={`absolute z-20 mt-2 rounded border border-zinc-600 bg-zinc-900 p-2 ${
+            flipSide ? 'right-0' : 'left-0'
+          }`}
+        >
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs text-zinc-400">Edit color</span>
             <button
@@ -71,11 +89,16 @@ function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
 }
 
 function ColorPalette() {
-  const colors = useProjectStore((state) => state.colors)
-  const setColors = useProjectStore((state) => state.setColors)
-  const addColor = useProjectStore((state) => state.addColor)
-  const removeColor = useProjectStore((state) => state.removeColor)
-  const setColorAt = useProjectStore((state) => state.setColorAt)
+  // Finding 19: combine selectors with useShallow
+  const { colors, setColors, addColor, removeColor, setColorAt } = useProjectStore(
+    useShallow((state) => ({
+      colors: state.colors,
+      setColors: state.setColors,
+      addColor: state.addColor,
+      removeColor: state.removeColor,
+      setColorAt: state.setColorAt
+    }))
+  )
 
   const [openPickerId, setOpenPickerId] = useState(null)
 
@@ -98,9 +121,15 @@ function ColorPalette() {
 
   return (
     <section className="space-y-2">
-      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-400">
-        <span>Shadows</span>
-        <span>Highlights</span>
+      {/* Finding 26: clearer label with tooltip */}
+      <div className="flex items-center justify-between text-xs tracking-wide text-zinc-400">
+        <span>Dark (shadows)</span>
+        <span className="flex items-center gap-1">
+          Bright (highlights)
+          <span title="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder.">
+            ⓘ
+          </span>
+        </span>
       </div>
 
       <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -121,10 +150,11 @@ function ColorPalette() {
         </SortableContext>
       </DndContext>
 
+      {/* Finding 22: standardized button styles */}
       <div className="flex gap-2">
         <button
           type="button"
-          className="rounded bg-zinc-700 px-2 py-1 text-xs"
+          className={`${BTN.base} ${BTN.secondary}`}
           onClick={() => addColor()}
           disabled={colors.length >= 6}
         >
@@ -132,7 +162,7 @@ function ColorPalette() {
         </button>
         <button
           type="button"
-          className="rounded bg-zinc-700 px-2 py-1 text-xs"
+          className={`${BTN.base} ${BTN.secondary}`}
           onClick={() => removeColor(colors.length - 1)}
           disabled={colors.length <= 2}
         >
@@ -142,12 +172,7 @@ function ColorPalette() {
 
       <div className="flex flex-wrap gap-2">
         {Object.entries(presets).map(([name, value]) => (
-          <button
-            key={name}
-            type="button"
-            className="rounded border border-zinc-600 px-2 py-1 text-xs"
-            onClick={() => setColors(value)}
-          >
+          <button key={name} type="button" className={`${BTN.base} ${BTN.ghost}`} onClick={() => setColors(value)}>
             {name}
           </button>
         ))}

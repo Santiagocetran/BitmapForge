@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { shallow } from 'zustand/shallow'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { useSceneManager } from '../../context/SceneManagerContext.jsx'
@@ -35,8 +36,9 @@ function PreviewCanvas() {
     })
     resizeObserver.observe(container)
 
-    const unsubscribe = useProjectStore.subscribe((state) => {
-      manager.updateEffectOptions({
+    // Finding 4: targeted subscriptions to avoid unnecessary updates
+    const unsubEffect = useProjectStore.subscribe(
+      (state) => ({
         pixelSize: state.pixelSize,
         ditherType: state.ditherType,
         colors: state.colors,
@@ -44,8 +46,13 @@ function PreviewCanvas() {
         minBrightness: state.minBrightness,
         backgroundColor: state.backgroundColor,
         animationDuration: state.animationDuration
-      })
-      manager.updateAnimationOptions({
+      }),
+      (slice) => manager.updateEffectOptions(slice),
+      { equalityFn: shallow }
+    )
+
+    const unsubAnim = useProjectStore.subscribe(
+      (state) => ({
         useFadeInOut: state.useFadeInOut,
         animationEffects: state.animationEffects,
         animationSpeed: state.animationSpeed,
@@ -54,13 +61,21 @@ function PreviewCanvas() {
         animationPreset: state.animationPreset,
         rotateOnShow: state.rotateOnShow,
         showPreset: state.showPreset
-      })
-      const ld = state.lightDirection
-      manager.setLightDirection(ld.x, ld.y, ld.z)
-    })
+      }),
+      (slice) => manager.updateAnimationOptions(slice),
+      { equalityFn: shallow }
+    )
+
+    const unsubLight = useProjectStore.subscribe(
+      (state) => state.lightDirection,
+      (ld) => manager.setLightDirection(ld.x, ld.y, ld.z),
+      { equalityFn: shallow }
+    )
 
     return () => {
-      unsubscribe()
+      unsubEffect()
+      unsubAnim()
+      unsubLight()
       resizeObserver.disconnect()
       manager.dispose()
       sceneManagerRef.current = null
@@ -71,7 +86,9 @@ function PreviewCanvas() {
   }, [])
 
   const model = useProjectStore((state) => state.model)
+  const isLoading = useProjectStore((state) => state.status.loading) // Finding 9
 
+  // Findings 1+2: cancelled flag + sceneManagerRef guard to prevent stale updates
   useEffect(() => {
     const manager = sceneManagerRef.current
     if (!manager) return
@@ -81,11 +98,24 @@ function PreviewCanvas() {
       return
     }
 
+    let cancelled = false
     useProjectStore.getState().setStatus({ loading: true, error: '' })
     manager
       .loadModel(model.file)
-      .then(() => useProjectStore.getState().setStatus({ loading: false, message: 'Model loaded.' }))
-      .catch((error) => useProjectStore.getState().setStatus({ loading: false, error: error.message }))
+      .then(() => {
+        if (!cancelled && sceneManagerRef.current === manager) {
+          useProjectStore.getState().setStatus({ loading: false, message: 'Model loaded.' })
+        }
+      })
+      .catch((error) => {
+        if (!cancelled && sceneManagerRef.current === manager) {
+          useProjectStore.getState().setStatus({ loading: false, error: error.message })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
     // sceneManagerRef is a stable ref — excluded intentionally.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model])
@@ -93,7 +123,13 @@ function PreviewCanvas() {
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">
       <div ref={containerRef} className="h-full w-full" />
-      {!model && (
+      {/* Finding 9: loading spinner overlay */}
+      {isLoading && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-zinc-950/60">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-emerald-400" />
+        </div>
+      )}
+      {!model && !isLoading && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-600">
           <svg
             xmlns="http://www.w3.org/2000/svg"
