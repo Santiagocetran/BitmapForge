@@ -8,17 +8,17 @@ Guide for improving the codebase so contributors can work on isolated sections w
 
 The architecture already has a good foundation:
 
-- **`src/engine/`** has zero imports from `src/app/`  — it's framework-agnostic
+- **`src/engine/`** has zero imports from `src/app/` — it's framework-agnostic
 - **All UI components** communicate through a single Zustand store — no deep prop drilling
 - **Utilities** (`codeExport.js`, `projectFile.js`) are pure functions
 
 But there are three coupling points that make it harder for contributors:
 
-| Problem | Where | Impact |
-|---|---|---|
-| `sceneManagerRef` threading | Layout → PreviewCanvas, Layout → ExportPanel | Implicit communication channel; new contributors won't discover it easily |
-| Legacy dead code | `src/animations/`, `src/effects/` | Confusing — which files are the "real" engine? |
-| Implicit animation contracts | Store's `animationEffects` keys must match `AnimationEngine` | Adding a new animation requires changes in two disconnected files |
+| Problem                      | Where                                                        | Impact                                                                    |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `sceneManagerRef` threading  | Layout → PreviewCanvas, Layout → ExportPanel                 | Implicit communication channel; new contributors won't discover it easily |
+| Legacy dead code             | `src/animations/`, `src/effects/`                            | Confusing — which files are the "real" engine?                            |
+| Implicit animation contracts | Store's `animationEffects` keys must match `AnimationEngine` | Adding a new animation requires changes in two disconnected files         |
 
 ---
 
@@ -43,6 +43,7 @@ All of this code is preserved in git history and can be referenced when implemen
 ### Problem
 
 Currently, `Layout` creates a `useRef(null)` and threads it as a prop:
+
 - `Layout` → `PreviewCanvas` (which populates `ref.current` with the SceneManager instance)
 - `Layout` → `ExportPanel` (which reads `ref.current` via the `useExport` hook)
 
@@ -61,11 +62,7 @@ const SceneManagerContext = createContext(null)
 
 function SceneManagerProvider({ children }) {
   const sceneManagerRef = useRef(null)
-  return (
-    <SceneManagerContext.Provider value={sceneManagerRef}>
-      {children}
-    </SceneManagerContext.Provider>
-  )
+  return <SceneManagerContext.Provider value={sceneManagerRef}>{children}</SceneManagerContext.Provider>
 }
 
 function useSceneManager() {
@@ -220,9 +217,7 @@ Create a shared constants file that both the store and engine import:
 const ANIMATION_EFFECT_KEYS = ['spinX', 'spinY', 'spinZ', 'float']
 
 /** Default enabled/disabled state for each effect */
-const DEFAULT_ANIMATION_EFFECTS = Object.fromEntries(
-  ANIMATION_EFFECT_KEYS.map((key) => [key, key === 'spinY'])
-)
+const DEFAULT_ANIMATION_EFFECTS = Object.fromEntries(ANIMATION_EFFECT_KEYS.map((key) => [key, key === 'spinY']))
 
 export { ANIMATION_EFFECT_KEYS, DEFAULT_ANIMATION_EFFECTS }
 ```

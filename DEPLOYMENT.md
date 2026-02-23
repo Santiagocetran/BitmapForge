@@ -58,6 +58,7 @@ This works automatically once the repo is connected to Vercel:
 ### Preview deploy + CI pipeline together
 
 With the GitHub Actions CI from `CICD_AND_OPENSOURCE.md`, every PR now has:
+
 - CI checks: lint, format, tests, build (must all pass)
 - Live preview URL from Vercel (for visual/manual testing)
 
@@ -80,17 +81,18 @@ At your domain registrar (wherever you bought the domain), add these records:
 
 **For apex domain (`bitmapforge.com`):**
 
-| Type | Name | Value |
-|---|---|---|
-| A | @ | `76.76.21.21` |
+| Type | Name | Value         |
+| ---- | ---- | ------------- |
+| A    | @    | `76.76.21.21` |
 
 **For www subdomain (`www.bitmapforge.com`):**
 
-| Type | Name | Value |
-|---|---|---|
-| CNAME | www | `cname.vercel-dns.com` |
+| Type  | Name | Value                  |
+| ----- | ---- | ---------------------- |
+| CNAME | www  | `cname.vercel-dns.com` |
 
 Vercel automatically:
+
 - Provisions a free SSL certificate (HTTPS)
 - Redirects `www` to the apex domain (or vice versa, your choice)
 - Handles certificate renewal
@@ -147,6 +149,7 @@ No manual deployment steps. No SSH. No Docker. No server to maintain.
 ## Cost
 
 Vercel Hobby plan (free):
+
 - Unlimited personal projects
 - 100 GB bandwidth/month
 - Automatic HTTPS

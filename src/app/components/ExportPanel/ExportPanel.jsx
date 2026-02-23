@@ -5,17 +5,18 @@ import { useSceneManager } from '../../context/SceneManagerContext.jsx'
 import { loadProjectFile } from '../../utils/projectFile.js'
 
 const FORMAT_OPTIONS = [
-  { value: 'gif',         label: 'GIF' },
-  { value: 'webm',        label: 'WebM' },
-  { value: 'mp4',         label: 'MP4' },
+  { value: 'gif', label: 'GIF' },
+  { value: 'webm', label: 'WebM' },
+  { value: 'mp4', label: 'MP4' },
   { value: 'spritesheet', label: 'Sprite Sheet' },
-  { value: 'html',        label: 'HTML Snippet' },
-  { value: 'zip',         label: 'Code ZIP' },
+  { value: 'html', label: 'HTML Snippet' },
+  { value: 'zip', label: 'Code ZIP' }
 ]
 
 function ExportPanel() {
   const sceneManagerRef = useSceneManager()
-  const { exportSpriteSheet, exportGif, exportVideo, exportHtmlSnippet, exportCodeZip, saveProject } = useExport(sceneManagerRef)
+  const { exportSpriteSheet, exportGif, exportVideo, exportHtmlSnippet, exportCodeZip, saveProject } =
+    useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
@@ -24,12 +25,12 @@ function ExportPanel() {
 
   async function onExport() {
     const map = {
-      gif:         () => exportGif(),
-      webm:        () => exportVideo('webm'),
-      mp4:         () => exportVideo('mp4'),
+      gif: () => exportGif(),
+      webm: () => exportVideo('webm'),
+      mp4: () => exportVideo('mp4'),
       spritesheet: () => exportSpriteSheet(),
-      html:        () => exportHtmlSnippet(),
-      zip:         () => exportCodeZip(),
+      html: () => exportHtmlSnippet(),
+      zip: () => exportCodeZip()
     }
     await map[selectedFormat]?.()
   }
@@ -56,9 +57,7 @@ function ExportPanel() {
             type="button"
             onClick={() => setSelectedFormat(value)}
             className={`rounded px-2 py-1 text-xs ${
-              selectedFormat === value
-                ? 'bg-emerald-600 text-black'
-                : 'bg-zinc-700 text-zinc-200'
+              selectedFormat === value ? 'bg-emerald-600 text-black' : 'bg-zinc-700 text-zinc-200'
             }`}
           >
             {label}
@@ -72,7 +71,9 @@ function ExportPanel() {
         onClick={onExport}
         className="w-full rounded bg-emerald-500 px-2 py-1.5 text-xs font-semibold text-black disabled:opacity-50"
       >
-        {status.exporting ? status.message || 'Exporting…' : `Export ${FORMAT_OPTIONS.find((f) => f.value === selectedFormat)?.label}`}
+        {status.exporting
+          ? status.message || 'Exporting…'
+          : `Export ${FORMAT_OPTIONS.find((f) => f.value === selectedFormat)?.label}`}
       </button>
 
       <div className="grid grid-cols-2 gap-2">

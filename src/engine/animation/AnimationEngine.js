@@ -77,7 +77,7 @@ class AnimationEngine {
 
   getLoopDurationMs() {
     if (!this.useFadeInOut) {
-      return Math.round((2 * Math.PI / this.speed) * 1000)
+      return Math.round(((2 * Math.PI) / this.speed) * 1000)
     }
     return this.animationDuration * 2 + this.showPhaseDuration
   }
@@ -105,7 +105,7 @@ class AnimationEngine {
         const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
         // Analytical integral of the incremental float deltas applied each frame
         modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * ts))
-        modelGroup.rotation.z += (oz * 2 / 0.3) * (1 - Math.cos(0.3 * ts))
+        modelGroup.rotation.z += ((oz * 2) / 0.3) * (1 - Math.cos(0.3 * ts))
       }
     }
 

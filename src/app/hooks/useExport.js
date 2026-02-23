@@ -135,26 +135,26 @@ function useExport(sceneManagerRef) {
       const scale = Math.max(1, Math.ceil(minDim / Math.max(canvas.width, canvas.height)))
 
       // Pick codec — prefer explicit full-range VP9 so color metadata is embedded.
-      const candidates = format === 'mp4'
-        ? [
-            'video/mp4; codecs="avc1.64001F"',  // H.264 High 3.1 — forces BT.709
-            'video/mp4; codecs="avc1.42E01E"',
-            'video/mp4'
-          ]
-        : [
-            // vp09.profile.level.bitDepth.chromaSubsampling.colorPrimaries.transferChar.matrixCoeffs.blackLevel
-            // 00=BT.709 primaries, 01=BT.709 transfer, 01=BT.709 matrix, 01=full range
-            'video/webm; codecs="vp09.00.31.08.00.01.01.01.01.00"',
-            'video/webm; codecs=vp9',
-            'video/webm; codecs=vp8',
-            'video/webm'
-          ]
+      const candidates =
+        format === 'mp4'
+          ? [
+              'video/mp4; codecs="avc1.64001F"', // H.264 High 3.1 — forces BT.709
+              'video/mp4; codecs="avc1.42E01E"',
+              'video/mp4'
+            ]
+          : [
+              // vp09.profile.level.bitDepth.chromaSubsampling.colorPrimaries.transferChar.matrixCoeffs.blackLevel
+              // 00=BT.709 primaries, 01=BT.709 transfer, 01=BT.709 matrix, 01=full range
+              'video/webm; codecs="vp09.00.31.08.00.01.01.01.01.00"',
+              'video/webm; codecs=vp9',
+              'video/webm; codecs=vp8',
+              'video/webm'
+            ]
       const mimeType = candidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? 'video/webm'
       const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm'
 
-      const solidBg = (!state.backgroundColor || state.backgroundColor === 'transparent')
-        ? '#000000'
-        : state.backgroundColor
+      const solidBg =
+        !state.backgroundColor || state.backgroundColor === 'transparent' ? '#000000' : state.backgroundColor
 
       const compositeCanvas = document.createElement('canvas')
       compositeCanvas.width = canvas.width * scale
@@ -225,21 +225,24 @@ function useExport(sceneManagerRef) {
       const snippet = `<div id="bitmapforge-embed"></div>
 <script>
 window.BitmapForgeConfig = ${JSON.stringify({
-  modelName: model.name,
-  modelType: model.file.type || 'application/octet-stream',
-  modelData: modelBase64,
-  settings: {
-    colors: state.colors,
-    pixelSize: state.pixelSize,
-    ditherType: state.ditherType
-  }
-})}
+        modelName: model.name,
+        modelType: model.file.type || 'application/octet-stream',
+        modelData: modelBase64,
+        settings: {
+          colors: state.colors,
+          pixelSize: state.pixelSize,
+          ditherType: state.ditherType
+        }
+      })}
 </script>`
       try {
         await navigator.clipboard.writeText(snippet)
         setStatus({ message: 'HTML snippet copied to clipboard.' })
       } catch {
-        setStatus({ error: 'Could not copy to clipboard. Make sure the page is served over HTTPS and clipboard permission is granted.' })
+        setStatus({
+          error:
+            'Could not copy to clipboard. Make sure the page is served over HTTPS and clipboard permission is granted.'
+        })
       }
     } catch (error) {
       setStatus({ error: `HTML snippet export failed: ${error.message}` })

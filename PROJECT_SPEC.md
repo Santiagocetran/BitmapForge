@@ -101,6 +101,7 @@ During fadeIn/fadeOut phases, particles scatter/gather with easing animations
 ### Key Files in Detail
 
 #### `src/animations/modelAnimation.js`
+
 - Sets up Three.js scene with perspective camera (75° FOV)
 - WebGL renderer with alpha transparency
 - Three-point lighting: ambient (0.15), key directional (1.5), fill (0.4), rim (0.8)
@@ -111,6 +112,7 @@ During fadeIn/fadeOut phases, particles scatter/gather with easing animations
 - **What needs to change**: support multiple file formats, make animation configurable via presets, decouple from hardcoded rotation
 
 #### `src/effects/BitmapEffect.js`
+
 - Canvas-based post-processing effect (this is the core visual engine)
 - Creates a grid by dividing the canvas into `pixelSize` cells
 - Downsamples the WebGL render to grid resolution, reads pixel data
@@ -123,6 +125,7 @@ During fadeIn/fadeOut phases, particles scatter/gather with easing animations
 - **What needs to change**: extract shared logic with ColoredAsciiEffect into a base, make animation duration configurable, possibly add new animation types
 
 #### `src/effects/ColoredAsciiEffect.js`
+
 - Alternative renderer using ASCII characters instead of pixel blocks
 - Character set: ` .:-=+*#%@` mapped to brightness levels
 - Has its own particle system (similar to BitmapEffect but for characters)
@@ -130,12 +133,14 @@ During fadeIn/fadeOut phases, particles scatter/gather with easing animations
 - **Note**: shares ~60% of code with BitmapEffect (particle system, color interpolation, easing). Should be refactored into a shared base class.
 
 #### `src/react/AsciiAnimation.jsx`
+
 - React wrapper component using `useRef` + `useEffect`
 - `ResizeObserver` for responsive sizing
 - Props: `modelUrl`, `effectOptions`, `className`, `style`
 - **For the new app**: this won't be needed directly since the app itself will be React, but the pattern is useful reference
 
 ### Tech Stack (current)
+
 - **Rendering**: Three.js (WebGL) + Canvas 2D API
 - **Build**: Vite 7.2.4
 - **Language**: JavaScript (ES modules), JSX for React component
@@ -146,19 +151,19 @@ During fadeIn/fadeOut phases, particles scatter/gather with easing animations
 
 ## Decisions Made
 
-| Topic | Decision | Notes |
-|---|---|---|
-| **Repository** | New repo `BitmapForge`, not a GitHub fork | The npm package repo stays untouched |
-| **App type** | Client-side web app | No server/backend for v1 |
-| **UX complexity** | Dead simple + collapsible Advanced panel | Upload → configure → export flow |
-| **Color mapping approach** | Brightness-based (as currently implemented) | User reorders colors in a strip to control appearance |
-| **Color UX** | Draggable "Color Strip" (shadows → highlights) + light direction control | See detailed spec below |
-| **v1 Export formats** | GIF, MP4/WebM, PNG sprite sheet, embeddable snippet, full code zip | Code zip is like v0's export |
-| **Persistence (v1)** | localStorage auto-save + `.bitmapforge` project files | No backend needed |
-| **Auth/Backend** | Deferred to v2 | Supabase recommended when needed |
-| **3D formats (v1)** | STL (existing) + GLTF/GLB + OBJ | FBX deferred (heavier to support) |
-| **Animation types** | Looped only (like GIFs) for v1 | Spin Y/X/Z, slow float, fade in/out |
-| **Rendering modes** | Bitmap (primary), ASCII characters (secondary) | Both exist in codebase already |
+| Topic                      | Decision                                                                 | Notes                                                 |
+| -------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------- |
+| **Repository**             | New repo `BitmapForge`, not a GitHub fork                                | The npm package repo stays untouched                  |
+| **App type**               | Client-side web app                                                      | No server/backend for v1                              |
+| **UX complexity**          | Dead simple + collapsible Advanced panel                                 | Upload → configure → export flow                      |
+| **Color mapping approach** | Brightness-based (as currently implemented)                              | User reorders colors in a strip to control appearance |
+| **Color UX**               | Draggable "Color Strip" (shadows → highlights) + light direction control | See detailed spec below                               |
+| **v1 Export formats**      | GIF, MP4/WebM, PNG sprite sheet, embeddable snippet, full code zip       | Code zip is like v0's export                          |
+| **Persistence (v1)**       | localStorage auto-save + `.bitmapforge` project files                    | No backend needed                                     |
+| **Auth/Backend**           | Deferred to v2                                                           | Supabase recommended when needed                      |
+| **3D formats (v1)**        | STL (existing) + GLTF/GLB + OBJ                                          | FBX deferred (heavier to support)                     |
+| **Animation types**        | Looped only (like GIFs) for v1                                           | Spin Y/X/Z, slow float, fade in/out                   |
+| **Rendering modes**        | Bitmap (primary), ASCII characters (secondary)                           | Both exist in codebase already                        |
 
 ---
 
@@ -208,15 +213,17 @@ A horizontal bar labeled **"Shadows → Highlights"** divided into N color slots
 - **The key insight for the user**: "Colors on the left go to darker/shadowed parts of your model. Colors on the right go to brighter/highlighted parts. Drag to reorder and see the effect live."
 
 **Additional control -- Light Direction:**
-A simple control (draggable dot on a circle, or 4-8 direction buttons) that moves the key light source. This indirectly changes *which parts* of the model are "shadow" vs "highlight" without touching the palette. Combined with color reordering, this gives surprising creative range with a simple UI.
+A simple control (draggable dot on a circle, or 4-8 direction buttons) that moves the key light source. This indirectly changes _which parts_ of the model are "shadow" vs "highlight" without touching the palette. Combined with color reordering, this gives surprising creative range with a simple UI.
 
 ### 4. Quality / Rendering Settings
 
 **Simple mode (always visible):**
+
 - Pixel size slider (1-20, default 3) -- controls bitmap resolution/detail
 - Rendering mode toggle: Bitmap vs ASCII
 
 **Advanced panel (collapsible):**
+
 - Dither type: Bayer 4x4, Bayer 8x8, Variable Dot (dropdown)
 - Invert brightness: toggle
 - Min brightness threshold: slider (0.01 - 0.5)
@@ -227,6 +234,7 @@ A simple control (draggable dot on a circle, or 4-8 direction buttons) that move
 All animations loop seamlessly (like GIFs).
 
 **v1 presets:**
+
 - **Spin Y** (turntable) -- rotates around vertical axis. Speed control.
 - **Spin X** -- rotates around horizontal axis.
 - **Spin Z** -- rotates around depth axis.
@@ -234,6 +242,7 @@ All animations loop seamlessly (like GIFs).
 - **Fade In/Out** -- the existing particle scatter/gather animation. Configurable: with or without rotation during show phase.
 
 **Controls:**
+
 - Preset selector (visual cards or dropdown)
 - Speed slider
 - Animation duration (for fade in/out timing)
@@ -242,27 +251,32 @@ All animations loop seamlessly (like GIFs).
 ### 6. Export
 
 #### GIF Export
+
 - Use `gif.js` or `modern-gif` for client-side encoding
 - Capture frames from the bitmap canvas at configurable FPS
 - Duration = one full loop of the selected animation
 - Quality/size tradeoff slider
 
 #### MP4/WebM Video Export
+
 - Use browser `MediaRecorder` API
 - Record the bitmap canvas
 - Duration = one full animation loop (or user-specified)
 
 #### PNG Sprite Sheet
+
 - Capture N frames from one animation loop
 - Arrange in a grid (configurable columns)
 - Export as single PNG image
 
 #### Embeddable HTML Snippet
+
 - Generate a minimal `<script>` tag or `<iframe>` snippet
 - Self-contained: includes the rendering code inline or from a CDN
 - User copies and pastes into their website
 
 #### Full Code Export (ZIP)
+
 - Like v0's code export
 - Generated using **JSZip** (client-side)
 - Contents:
@@ -336,6 +350,7 @@ src/
 2. **Zustand for state**: lightweight, no boilerplate, works great for real-time parameter changes. The store holds: loaded model data, color palette, pixel size, dither type, animation preset, light direction, etc. Every UI control reads/writes from the store. The engine subscribes to store changes and re-configures live.
 
 3. **AnimationEngine replaces hardcoded animation**: currently `modelAnimation.js` has hardcoded rotation values. The new `AnimationEngine` takes a preset config object and applies it. Presets are plain objects:
+
    ```js
    { type: 'spinY', speed: 0.006 }
    { type: 'float', speedY: 0.006, oscillateX: 0.15, oscillateZ: 0.08 }
@@ -349,20 +364,20 @@ src/
 
 ## Recommended Tech Stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Framework | **React 19 + Vite** | Already familiar from the npm package, Vite already configured |
-| Styling | **Tailwind CSS 4** | Rapid UI development, utility-first, great for responsive layouts |
-| UI components | **Radix UI** (or shadcn/ui) | Accessible primitives (dialogs, sliders, dropdowns, drag handles) |
-| State | **Zustand** | Minimal boilerplate, perfect for real-time parameter stores |
-| 3D rendering | **Three.js** (already a dependency) | Existing engine is built on it |
-| Color picker | **react-colorful** | Tiny (~2KB), zero dependencies, accessible |
-| Drag & drop files | **react-dropzone** | Battle-tested, handles edge cases |
-| Drag reorder (color strip) | **@dnd-kit/core** | Modern, accessible, lightweight drag-and-drop |
-| GIF export | **gif.js** or **modern-gif** | Client-side GIF encoding from canvas frames |
-| Video export | **MediaRecorder API** | Native browser API, no library needed |
-| ZIP export | **JSZip** | Client-side zip generation |
-| Icons | **Lucide React** | Clean, consistent icon set |
+| Layer                      | Choice                              | Why                                                               |
+| -------------------------- | ----------------------------------- | ----------------------------------------------------------------- |
+| Framework                  | **React 19 + Vite**                 | Already familiar from the npm package, Vite already configured    |
+| Styling                    | **Tailwind CSS 4**                  | Rapid UI development, utility-first, great for responsive layouts |
+| UI components              | **Radix UI** (or shadcn/ui)         | Accessible primitives (dialogs, sliders, dropdowns, drag handles) |
+| State                      | **Zustand**                         | Minimal boilerplate, perfect for real-time parameter stores       |
+| 3D rendering               | **Three.js** (already a dependency) | Existing engine is built on it                                    |
+| Color picker               | **react-colorful**                  | Tiny (~2KB), zero dependencies, accessible                        |
+| Drag & drop files          | **react-dropzone**                  | Battle-tested, handles edge cases                                 |
+| Drag reorder (color strip) | **@dnd-kit/core**                   | Modern, accessible, lightweight drag-and-drop                     |
+| GIF export                 | **gif.js** or **modern-gif**        | Client-side GIF encoding from canvas frames                       |
+| Video export               | **MediaRecorder API**               | Native browser API, no library needed                             |
+| ZIP export                 | **JSZip**                           | Client-side zip generation                                        |
+| Icons                      | **Lucide React**                    | Clean, consistent icon set                                        |
 
 ---
 
