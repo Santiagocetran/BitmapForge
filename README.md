@@ -1,8 +1,8 @@
 # BitmapForge
 
-<img src="./BitmapForgeLogo.png" alt="BitmapForge Logo" width="256" />
+<img src="./docs/BitmapForgeLogo.png" alt="BitmapForge Logo" width="256" />
 
-![BitmapForge Demo](./demo.gif)
+![BitmapForge Demo](./docs/demo.gif)
 
 BitmapForge is a web application that turns 3D models into stylized bitmap animations.
 
@@ -60,7 +60,7 @@ npm run preview
 
 ## Documentation
 
-- Product and technical specification: `PROJECT_SPEC.md`
+- Product and technical specification: `docs/PROJECT_SPEC.md`
 
 ## License
 
