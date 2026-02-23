@@ -23,7 +23,18 @@ class BitmapEffect extends BaseEffect {
     super(renderer, {
       pixelSize: 3,
       ditherType: 'bayer4x4',
-      colors: ['#021a15', '#053a2a', '#074434', '#0a5845', '#1a7a5e', '#4d9977', '#ABC685', '#E8FF99', '#F7F9CE', '#FFF6E7'],
+      colors: [
+        '#021a15',
+        '#053a2a',
+        '#074434',
+        '#0a5845',
+        '#1a7a5e',
+        '#4d9977',
+        '#ABC685',
+        '#E8FF99',
+        '#F7F9CE',
+        '#FFF6E7'
+      ],
       backgroundColor: 'transparent',
       invert: false,
       minBrightness: 0.05,
@@ -157,13 +168,7 @@ class BitmapEffect extends BaseEffect {
           if (!this.shouldDraw(adjustedBrightness, x, y)) continue
 
           const color = this.getColorForBrightness(adjustedBrightness)
-          this.drawPixel(
-            x * this.options.pixelSize,
-            y * this.options.pixelSize,
-            adjustedBrightness,
-            color,
-            1
-          )
+          this.drawPixel(x * this.options.pixelSize, y * this.options.pixelSize, adjustedBrightness, color, 1)
         }
       }
     }

@@ -19,6 +19,7 @@ No test framework or linter is configured.
 ### Two-layer structure: `src/engine/` and `src/app/`
 
 **`src/engine/`** — Framework-agnostic rendering engine (vanilla JS, no React):
+
 - `SceneManager.js` — Orchestrates Three.js scene, camera, lights, renderer, and the BitmapEffect. Entry point for the engine. Manages model loading, animation loop, and settings updates.
 - `effects/BaseEffect.js` — Shared logic: particle system, easing, color interpolation, brightness calculation.
 - `effects/BitmapEffect.js` — Core visual engine. Reads WebGL pixels → calculates brightness per grid cell → applies dithering → maps brightness to colors → draws to visible canvas.
@@ -27,6 +28,7 @@ No test framework or linter is configured.
 - `animation/presets.js` — Animation preset definitions (spinY, spinX, spinZ, float, fadeInOut).
 
 **`src/app/`** — React application layer:
+
 - `store/useProjectStore.js` — Zustand store holding all project state (model, colors, pixel size, dither type, animation settings, light direction). Every UI control reads/writes from this store.
 - `hooks/useAutoSave.js` — localStorage persistence on every state change.
 - `hooks/useExport.js` — Export logic (GIF via gif.js, video via MediaRecorder, sprite sheet, code ZIP via JSZip).

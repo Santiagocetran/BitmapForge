@@ -58,8 +58,7 @@ class BaseEffect {
   }
 
   isAnimationComplete() {
-    return (this.animationPhase === 'fadeIn' || this.animationPhase === 'fadeOut') &&
-      this.animationProgress >= 1
+    return (this.animationPhase === 'fadeIn' || this.animationPhase === 'fadeOut') && this.animationProgress >= 1
   }
 
   getAnimationPhase() {

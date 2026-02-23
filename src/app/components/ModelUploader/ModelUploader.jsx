@@ -46,9 +46,7 @@ function ModelUploader({ compact = false }) {
           <span className="truncate text-xs text-zinc-300" title={model.name}>
             {model.name}
           </span>
-          <span className="shrink-0 text-xs text-zinc-500">
-            {(model.size / 1024).toFixed(1)} KB
-          </span>
+          <span className="shrink-0 text-xs text-zinc-500">{(model.size / 1024).toFixed(1)} KB</span>
         </div>
         <div className="flex gap-2">
           <button
@@ -69,9 +67,7 @@ function ModelUploader({ compact = false }) {
             Remove
           </button>
         </div>
-        {isDragActive && (
-          <p className="text-center text-xs text-emerald-400">Drop to replace model</p>
-        )}
+        {isDragActive && <p className="text-center text-xs text-emerald-400">Drop to replace model</p>}
       </div>
     )
   }

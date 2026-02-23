@@ -137,9 +137,7 @@ import { PRESETS } from './presets.js'
 
 describe('animation presets', () => {
   it('includes all expected preset keys', () => {
-    expect(Object.keys(PRESETS)).toEqual(
-      expect.arrayContaining(['spinY', 'spinX', 'spinZ', 'float'])
-    )
+    expect(Object.keys(PRESETS)).toEqual(expect.arrayContaining(['spinY', 'spinX', 'spinZ', 'float']))
   })
 
   it('each preset has a type and default speed', () => {
@@ -243,6 +241,7 @@ labels: bug
 **What did you expect?**
 
 **Steps to reproduce:**
+
 1.
 2.
 3.

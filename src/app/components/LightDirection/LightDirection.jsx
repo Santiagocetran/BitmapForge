@@ -21,9 +21,7 @@ function LightDirection() {
       <div className="grid grid-cols-3 gap-1">
         {DIRECTIONS.map((direction) => {
           const active =
-            direction.x === lightDirection.x &&
-            direction.y === lightDirection.y &&
-            direction.z === lightDirection.z
+            direction.x === lightDirection.x && direction.y === lightDirection.y && direction.z === lightDirection.z
           return (
             <button
               key={direction.label}

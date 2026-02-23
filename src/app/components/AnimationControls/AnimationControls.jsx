@@ -5,7 +5,7 @@ const EFFECT_LABELS = {
   spinX: 'Spin X',
   spinY: 'Spin Y',
   spinZ: 'Spin Z',
-  float: 'Float',
+  float: 'Float'
 }
 
 function AnimationControls() {
@@ -23,11 +23,7 @@ function AnimationControls() {
   return (
     <section className="space-y-3">
       <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={useFadeInOut}
-          onChange={(e) => setUseFadeInOut(e.target.checked)}
-        />
+        <input type="checkbox" checked={useFadeInOut} onChange={(e) => setUseFadeInOut(e.target.checked)} />
         Fade in / out
       </label>
 

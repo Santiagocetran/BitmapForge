@@ -10,11 +10,7 @@ const SceneManagerContext = createContext(null)
  */
 function SceneManagerProvider({ children }) {
   const sceneManagerRef = useRef(null)
-  return (
-    <SceneManagerContext.Provider value={sceneManagerRef}>
-      {children}
-    </SceneManagerContext.Provider>
-  )
+  return <SceneManagerContext.Provider value={sceneManagerRef}>{children}</SceneManagerContext.Provider>
 }
 
 /**

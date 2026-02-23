@@ -76,11 +76,9 @@ async function loadProjectFile(file) {
   let modelFile = null
   if (project.model?.data) {
     const buffer = base64ToArrayBuffer(project.model.data)
-    modelFile = new File(
-      [buffer],
-      project.model.name || `model.${project.model.format ?? 'stl'}`,
-      { type: project.model.type || 'application/octet-stream' }
-    )
+    modelFile = new File([buffer], project.model.name || `model.${project.model.format ?? 'stl'}`, {
+      type: project.model.type || 'application/octet-stream'
+    })
   }
 
   return { settings: project.settings, modelFile }

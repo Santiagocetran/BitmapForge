@@ -86,4 +86,4 @@ async function loadModel(file) {
   }
 }
 
-export { loadModel }
+export { loadModel, getExtension }

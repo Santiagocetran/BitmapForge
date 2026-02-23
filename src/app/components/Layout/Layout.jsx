@@ -49,12 +49,8 @@ function Layout() {
       </aside>
 
       <section className="order-1 flex min-h-[360px] flex-col gap-2 lg:order-2 lg:min-h-0">
-        {status.message && (
-          <div className="rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">{status.message}</div>
-        )}
-        {hasError && (
-          <div className="rounded bg-red-950 px-3 py-2 text-xs text-red-200">{status.error}</div>
-        )}
+        {status.message && <div className="rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">{status.message}</div>}
+        {hasError && <div className="rounded bg-red-950 px-3 py-2 text-xs text-red-200">{status.error}</div>}
         {status.loading && (
           <div className="rounded bg-emerald-900/40 px-3 py-2 text-xs text-emerald-200">Loading model...</div>
         )}

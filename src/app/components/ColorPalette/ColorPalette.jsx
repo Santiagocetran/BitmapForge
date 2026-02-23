@@ -46,10 +46,7 @@ function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
         onDoubleClick={() => (isOpen ? onClose() : onOpen())}
       />
       {isOpen && (
-        <div
-          ref={popupRef}
-          className="absolute left-0 z-20 mt-2 rounded border border-zinc-600 bg-zinc-900 p-2"
-        >
+        <div ref={popupRef} className="absolute left-0 z-20 mt-2 rounded border border-zinc-600 bg-zinc-900 p-2">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs text-zinc-400">Edit color</span>
             <button
