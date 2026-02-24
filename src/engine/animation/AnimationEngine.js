@@ -92,6 +92,7 @@ class AnimationEngine {
   // Safe to call with a paused renderer loop.
   seekTo(absoluteTimeMs, modelGroup, effect) {
     const ts = absoluteTimeMs / 1000
+    this.time = ts
 
     if (modelGroup) {
       modelGroup.rotation.set(0, 0, 0)

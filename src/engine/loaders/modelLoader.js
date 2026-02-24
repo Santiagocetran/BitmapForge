@@ -3,6 +3,8 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 
+// Template material cloned per mesh — each mesh needs its own instance because
+// Three.js materials are stateful and disposed independently with their mesh.
 const WHITE_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0xffffff,
   roughness: 0.5,
@@ -60,11 +62,16 @@ async function loadModel(file) {
     if (extension === 'stl') {
       const stlLoader = new STLLoader()
       const geometry = await loadWithCallback(stlLoader, objectUrl)
-      geometry.computeVertexNormals()
-      const mesh = new THREE.Mesh(geometry, WHITE_MATERIAL.clone())
-      mesh.rotation.x = -Math.PI / 2
-      group = new THREE.Group()
-      group.add(mesh)
+      try {
+        geometry.computeVertexNormals()
+        const mesh = new THREE.Mesh(geometry, WHITE_MATERIAL.clone())
+        mesh.rotation.x = -Math.PI / 2
+        group = new THREE.Group()
+        group.add(mesh)
+      } catch (e) {
+        geometry.dispose()
+        throw e
+      }
     } else if (extension === 'obj') {
       const objLoader = new OBJLoader()
       group = await loadWithCallback(objLoader, objectUrl)

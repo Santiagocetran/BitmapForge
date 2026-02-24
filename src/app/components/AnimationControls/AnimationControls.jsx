@@ -46,45 +46,49 @@ function AnimationControls() {
         </div>
       </div>
 
-      <label className="block text-sm">
+      {/* Finding 13: explicit id/htmlFor for range inputs */}
+      <label htmlFor="anim-speed" className="block text-sm">
         Speed: {animationSpeed.toFixed(2)} rad/s
-        <input
-          type="range"
-          min="0.05"
-          max="2"
-          step="0.01"
-          value={animationSpeed}
-          onChange={(e) => setAnimationSpeed(Number(e.target.value))}
-          className="w-full"
-        />
       </label>
+      <input
+        id="anim-speed"
+        type="range"
+        min="0.05"
+        max="2"
+        step="0.01"
+        value={animationSpeed}
+        onChange={(e) => setAnimationSpeed(Number(e.target.value))}
+        className="w-full"
+      />
 
       {useFadeInOut && (
         <div className="space-y-2 border-t border-zinc-700 pt-2">
-          <label className="block text-sm">
+          <label htmlFor="anim-fade-duration" className="block text-sm">
             Fade duration: {animationDuration}ms
-            <input
-              type="range"
-              min="300"
-              max="8000"
-              step="100"
-              value={animationDuration}
-              onChange={(e) => setAnimationDuration(Number(e.target.value))}
-              className="w-full"
-            />
           </label>
-          <label className="block text-sm">
+          <input
+            id="anim-fade-duration"
+            type="range"
+            min="300"
+            max="8000"
+            step="100"
+            value={animationDuration}
+            onChange={(e) => setAnimationDuration(Number(e.target.value))}
+            className="w-full"
+          />
+          <label htmlFor="anim-show-duration" className="block text-sm">
             Show duration: {showPhaseDuration}ms
-            <input
-              type="range"
-              min="1000"
-              max="40000"
-              step="500"
-              value={showPhaseDuration}
-              onChange={(e) => setShowPhaseDuration(Number(e.target.value))}
-              className="w-full"
-            />
           </label>
+          <input
+            id="anim-show-duration"
+            type="range"
+            min="1000"
+            max="40000"
+            step="500"
+            value={showPhaseDuration}
+            onChange={(e) => setShowPhaseDuration(Number(e.target.value))}
+            className="w-full"
+          />
         </div>
       )}
     </section>

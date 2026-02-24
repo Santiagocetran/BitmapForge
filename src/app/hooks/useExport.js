@@ -1,8 +1,12 @@
 import GIF from 'gif.js'
 import gifWorkerUrl from 'gif.js/dist/gif.worker.js?url'
+import { useRef } from 'react'
 import { useProjectStore } from '../store/useProjectStore.js'
 import { buildCodeZip } from '../utils/codeExport.js'
 import { saveProjectFile } from '../utils/projectFile.js'
+
+// Finding 21: hoisted to module level
+const getState = useProjectStore.getState
 
 function downloadBlob(blob, fileName) {
   const url = URL.createObjectURL(blob)
@@ -11,6 +15,11 @@ function downloadBlob(blob, fileName) {
   anchor.download = fileName
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+// Finding 3: yield to the event loop between frames to avoid blocking the main thread
+function yieldToMain() {
+  return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 // Pause the live preview loop, run fn(), then always resume.
@@ -23,15 +32,38 @@ async function withPausedScene(manager, fn) {
   }
 }
 
+// Finding 7: friendly error message helper
+function friendlyExportError(error) {
+  if (error.name === 'AbortError') return 'Export was cancelled.'
+  if (error.message?.includes('out of memory') || error.message?.includes('allocation'))
+    return 'Export failed: not enough memory. Try reducing frame count or canvas size.'
+  if (error.message?.includes('NotSupportedError') || error.message?.includes('isTypeSupported'))
+    return 'Export failed: this format is not supported by your browser.'
+  if (error.message?.includes('clipboard'))
+    return 'Could not copy to clipboard. Ensure the page is served over HTTPS and clipboard permission is granted.'
+  return `Export failed: ${error.message}`
+}
+
 function useExport(sceneManagerRef) {
   const setStatus = useProjectStore((state) => state.setStatus)
-  const getState = useProjectStore.getState
+  const abortRef = useRef(null) // Finding 5: AbortController ref
+
+  // Finding 5: cancel export function
+  function cancelExport() {
+    abortRef.current?.abort()
+    setStatus({ exporting: false, message: 'Export cancelled.' })
+  }
 
   async function exportSpriteSheet(frameCount = 24, columns = 6) {
     const manager = sceneManagerRef.current
     if (!manager) return
     const sourceCanvas = manager.getCanvas()
     if (!sourceCanvas) throw new Error('No preview canvas available')
+
+    // Finding 5: create AbortController
+    const controller = new AbortController()
+    abortRef.current = controller
+    const { signal } = controller
 
     setStatus({ exporting: true, message: 'Generating sprite sheet...' })
     try {
@@ -47,8 +79,15 @@ function useExport(sceneManagerRef) {
 
       await withPausedScene(manager, async () => {
         for (let i = 0; i < frameCount; i++) {
+          if (signal.aborted) throw new DOMException('Export cancelled', 'AbortError') // Finding 5
           manager.renderAtTime((i / frameCount) * loopMs)
           outCtx.drawImage(sourceCanvas, (i % columns) * width, Math.floor(i / columns) * height)
+          // Finding 6: progress updates
+          setStatus({
+            exporting: true,
+            message: `Generating sprite sheet... ${Math.round(((i + 1) / frameCount) * 100)}%`
+          })
+          if (i % 4 === 3) await yieldToMain() // Finding 3: yield every 4 frames
         }
       })
 
@@ -61,7 +100,7 @@ function useExport(sceneManagerRef) {
 
       setStatus({ exporting: false, message: 'Sprite sheet exported.' })
     } catch (error) {
-      setStatus({ exporting: false, error: `Sprite sheet export failed: ${error.message}` })
+      setStatus({ exporting: false, error: friendlyExportError(error) }) // Finding 7
     }
   }
 
@@ -70,6 +109,12 @@ function useExport(sceneManagerRef) {
     if (!manager) return
     const canvas = manager.getCanvas()
     if (!canvas) throw new Error('No preview canvas available')
+
+    // Finding 5: create AbortController
+    const controller = new AbortController()
+    abortRef.current = controller
+    const { signal } = controller
+
     setStatus({ exporting: true, message: 'Encoding GIF...' })
 
     try {
@@ -87,8 +132,12 @@ function useExport(sceneManagerRef) {
 
       await withPausedScene(manager, async () => {
         for (let i = 0; i < frameCount; i++) {
+          if (signal.aborted) throw new DOMException('Export cancelled', 'AbortError') // Finding 5
           manager.renderAtTime((i / frameCount) * loopMs)
           gif.addFrame(canvas, { copy: true, delay: frameDelay })
+          // Finding 6: progress updates
+          setStatus({ exporting: true, message: `Encoding GIF... ${Math.round(((i + 1) / frameCount) * 100)}%` })
+          if (i % 4 === 3) await yieldToMain() // Finding 3: yield every 4 frames
         }
       })
 
@@ -104,7 +153,7 @@ function useExport(sceneManagerRef) {
 
       setStatus({ exporting: false, message: 'GIF exported.' })
     } catch (error) {
-      setStatus({ exporting: false, error: `GIF export failed: ${error.message}` })
+      setStatus({ exporting: false, error: friendlyExportError(error) }) // Finding 7
     }
   }
 
@@ -202,7 +251,7 @@ function useExport(sceneManagerRef) {
       setStatus({ exporting: false, message: 'Video exported.' })
     } catch (error) {
       manager.clearOnFrameRendered()
-      setStatus({ exporting: false, error: `Video export failed: ${error.message}` })
+      setStatus({ exporting: false, error: friendlyExportError(error) }) // Finding 7
     }
   }
 
@@ -210,8 +259,12 @@ function useExport(sceneManagerRef) {
     const state = getState()
     const model = state.model
     if (!model?.file) throw new Error('Upload a model before exporting HTML snippet.')
+    // Finding 11: block >2MB instead of warning
     if (model.size > 2_000_000) {
-      setStatus({ message: 'Warning: HTML snippet may be large for this model size.' })
+      setStatus({
+        error: 'Model is too large for HTML snippet export (>2 MB). Use GIF, video, or code ZIP instead.'
+      })
+      return
     }
     try {
       const modelData = await model.file.arrayBuffer()
@@ -245,7 +298,7 @@ window.BitmapForgeConfig = ${JSON.stringify({
         })
       }
     } catch (error) {
-      setStatus({ error: `HTML snippet export failed: ${error.message}` })
+      setStatus({ error: friendlyExportError(error) }) // Finding 7
     }
   }
 
@@ -257,7 +310,7 @@ window.BitmapForgeConfig = ${JSON.stringify({
       downloadBlob(blob, `bitmapforge-export-${Date.now()}.zip`)
       setStatus({ exporting: false, message: 'Code ZIP exported.' })
     } catch (error) {
-      setStatus({ exporting: false, error: `ZIP export failed: ${error.message}` })
+      setStatus({ exporting: false, error: friendlyExportError(error) }) // Finding 7
     }
   }
 
@@ -266,7 +319,7 @@ window.BitmapForgeConfig = ${JSON.stringify({
       await saveProjectFile(getState())
       setStatus({ message: 'Project saved as .bitmapforge file.' })
     } catch (error) {
-      setStatus({ error: `Save failed: ${error.message}` })
+      setStatus({ error: friendlyExportError(error) }) // Finding 7
     }
   }
 
@@ -276,7 +329,8 @@ window.BitmapForgeConfig = ${JSON.stringify({
     exportVideo,
     exportHtmlSnippet,
     exportCodeZip,
-    saveProject
+    saveProject,
+    cancelExport // Finding 5
   }
 }
 

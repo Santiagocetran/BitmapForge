@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useProjectStore } from '../store/useProjectStore.js'
 
 const STORAGE_KEY = 'bitmapforge:project-settings:v1'
@@ -22,37 +22,36 @@ function serializeState(state) {
 }
 
 function useAutoSave() {
-  const setStatus = useProjectStore((state) => state.setStatus)
+  const timerRef = useRef(null) // Finding 18: useRef instead of module-level _timer
 
+  // Finding 17: use getState() directly — no setStatus in dep array
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return
       const settings = JSON.parse(raw)
       useProjectStore.setState((state) => ({ ...state, ...settings }))
-      setStatus({
+      useProjectStore.getState().setStatus({
         message: 'Settings restored from previous session. Re-upload your model to continue.'
       })
     } catch {
       // ignore malformed saved data
     }
-  }, [setStatus])
+  }, [])
 
   useEffect(() => {
     const unsubscribe = useProjectStore.subscribe((state) => {
       const data = serializeState(state)
-      window.clearTimeout(useAutoSave._timer)
-      useAutoSave._timer = window.setTimeout(() => {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = window.setTimeout(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
       }, 500)
     })
     return () => {
       unsubscribe()
-      window.clearTimeout(useAutoSave._timer)
+      window.clearTimeout(timerRef.current)
     }
   }, [])
 }
-
-useAutoSave._timer = null
 
 export { useAutoSave, STORAGE_KEY }

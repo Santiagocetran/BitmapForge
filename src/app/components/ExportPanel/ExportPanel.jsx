@@ -3,6 +3,7 @@ import { useExport } from '../../hooks/useExport.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { useSceneManager } from '../../context/SceneManagerContext.jsx'
 import { loadProjectFile } from '../../utils/projectFile.js'
+import { BTN } from '../../styles/buttonStyles.js'
 
 const FORMAT_OPTIONS = [
   { value: 'gif', label: 'GIF' },
@@ -35,9 +36,15 @@ function ExportPanel() {
     await map[selectedFormat]?.()
   }
 
+  // Finding 8: confirm before destructive project load
   async function onLoadProject(event) {
     const file = event.target.files?.[0]
     if (!file) return
+    const currentModel = useProjectStore.getState().model
+    if (currentModel && !window.confirm('Loading a project will replace your current settings and model. Continue?')) {
+      event.target.value = ''
+      return
+    }
     try {
       const { settings, modelFile } = await loadProjectFile(file)
       useProjectStore.setState((state) => ({ ...state, ...settings }))
@@ -56,8 +63,8 @@ function ExportPanel() {
             key={value}
             type="button"
             onClick={() => setSelectedFormat(value)}
-            className={`rounded px-2 py-1 text-xs ${
-              selectedFormat === value ? 'bg-emerald-600 text-black' : 'bg-zinc-700 text-zinc-200'
+            className={`${BTN.base} px-2 py-1 ${
+              selectedFormat === value ? 'bg-emerald-600 text-black' : 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600'
             }`}
           >
             {label}
@@ -69,7 +76,7 @@ function ExportPanel() {
         type="button"
         disabled={status.exporting}
         onClick={onExport}
-        className="w-full rounded bg-emerald-500 px-2 py-1.5 text-xs font-semibold text-black disabled:opacity-50"
+        className={`w-full ${BTN.base} ${BTN.primary} disabled:opacity-50`}
       >
         {status.exporting
           ? status.message || 'Exporting…'
@@ -77,12 +84,21 @@ function ExportPanel() {
       </button>
 
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" className="rounded bg-zinc-600 px-2 py-1 text-xs" onClick={() => saveProject()}>
+        <button type="button" className={`${BTN.base} ${BTN.secondary}`} onClick={() => saveProject()}>
           Save .bitmapforge
         </button>
-        <label className="rounded bg-zinc-700 px-2 py-1 text-center text-xs cursor-pointer">
+        <label
+          className={`${BTN.base} bg-zinc-800 px-2 py-1 text-center text-zinc-200 cursor-pointer hover:bg-zinc-700`}
+        >
           Load .bitmapforge
-          <input type="file" accept=".bitmapforge" className="hidden" onChange={onLoadProject} />
+          {/* Finding 16: aria-label for hidden file input */}
+          <input
+            type="file"
+            accept=".bitmapforge"
+            className="hidden"
+            onChange={onLoadProject}
+            aria-label="Load BitmapForge project file"
+          />
         </label>
       </div>
 

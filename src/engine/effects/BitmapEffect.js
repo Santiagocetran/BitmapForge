@@ -64,6 +64,8 @@ class BitmapEffect extends BaseEffect {
   }
 
   onStructuralOptionChange() {
+    // Recalculate grid dimensions and resize canvases. This calls super.setSize()
+    // which resets particles — any in-flight fade animation will restart.
     this.setSize(this.width, this.height)
   }
 
@@ -85,7 +87,11 @@ class BitmapEffect extends BaseEffect {
   }
 
   drawPixel(x, y, adjustedBrightness, color, alpha = 1) {
-    this.bitmapCtx.fillStyle = this.applyAlpha(color, alpha)
+    const style = alpha < 1 ? this.applyAlpha(color, alpha) : color
+    if (style !== this._lastFillStyle) {
+      this.bitmapCtx.fillStyle = style
+      this._lastFillStyle = style
+    }
     if (this.options.ditherType === 'variableDot') {
       const baseRadius = this.options.pixelSize * 0.5
       const radius = Math.max(this.options.pixelSize * 0.12, baseRadius * (1 - adjustedBrightness))
@@ -107,12 +113,13 @@ class BitmapEffect extends BaseEffect {
     this.bitmapCtx = null
     this.sampleCanvas = null
     this.sampleCtx = null
-    this.particles = []
+    super.dispose()
   }
 
   renderBitmap() {
     if (!this.sampleCtx || !this.bitmapCtx) return
 
+    this._lastFillStyle = null
     this.sampleCtx.clearRect(0, 0, this.gridWidth, this.gridHeight)
     this.sampleCtx.drawImage(this.renderer.domElement, 0, 0, this.gridWidth, this.gridHeight)
     const imageData = this.sampleCtx.getImageData(0, 0, this.gridWidth, this.gridHeight).data
@@ -153,7 +160,7 @@ class BitmapEffect extends BaseEffect {
       }
     }
 
-    if (!this.isAnimating || !this.particlesInitialized || this.particles.length === 0) {
+    if (!this.isAnimating || this.particles.length === 0) {
       for (let y = 0; y < this.gridHeight; y++) {
         for (let x = 0; x < this.gridWidth; x++) {
           const iOffset = (y * this.gridWidth + x) * 4
