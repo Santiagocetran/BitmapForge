@@ -1,4 +1,5 @@
 import { ANIMATION_EFFECT_KEYS } from '../../../engine/animation/effectTypes.js'
+import { FADE_VARIANT_KEYS, FADE_VARIANT_LABELS } from '../../../engine/effects/fadeVariants/index.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 
 const EFFECT_LABELS = {
@@ -10,11 +11,13 @@ const EFFECT_LABELS = {
 
 function AnimationControls() {
   const useFadeInOut = useProjectStore((state) => state.useFadeInOut)
+  const fadeVariant = useProjectStore((state) => state.fadeVariant)
   const animationEffects = useProjectStore((state) => state.animationEffects)
   const animationSpeed = useProjectStore((state) => state.animationSpeed)
   const showPhaseDuration = useProjectStore((state) => state.showPhaseDuration)
   const animationDuration = useProjectStore((state) => state.animationDuration)
   const setUseFadeInOut = useProjectStore((state) => state.setUseFadeInOut)
+  const setFadeVariant = useProjectStore((state) => state.setFadeVariant)
   const setAnimationEffect = useProjectStore((state) => state.setAnimationEffect)
   const setAnimationSpeed = useProjectStore((state) => state.setAnimationSpeed)
   const setShowPhaseDuration = useProjectStore((state) => state.setShowPhaseDuration)
@@ -22,13 +25,35 @@ function AnimationControls() {
 
   return (
     <section className="space-y-3">
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={useFadeInOut} onChange={(e) => setUseFadeInOut(e.target.checked)} />
-        Fade in / out
-      </label>
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={useFadeInOut} onChange={(e) => setUseFadeInOut(e.target.checked)} />
+          Fade in / out
+        </label>
+
+        {useFadeInOut && (
+          <div className="space-y-1.5 pl-1">
+            <span className="text-xs font-medium text-zinc-400">Style</span>
+            <div className="flex flex-wrap gap-2">
+              {FADE_VARIANT_KEYS.map((key) => (
+                <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
+                  <input
+                    type="radio"
+                    name="fade-variant"
+                    value={key}
+                    checked={fadeVariant === key}
+                    onChange={() => setFadeVariant(key)}
+                  />
+                  {FADE_VARIANT_LABELS[key]}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-1.5">
-        <span className="text-xs font-medium text-zinc-400">Effects (combine any)</span>
+        <span className="text-xs font-medium text-zinc-400">Motion (combine any)</span>
         <div className="flex flex-wrap gap-2">
           {ANIMATION_EFFECT_KEYS.map((key) => {
             const label = EFFECT_LABELS[key] ?? key
@@ -46,7 +71,6 @@ function AnimationControls() {
         </div>
       </div>
 
-      {/* Finding 13: explicit id/htmlFor for range inputs */}
       <label htmlFor="anim-speed" className="block text-sm">
         Speed: {animationSpeed.toFixed(2)} rad/s
       </label>

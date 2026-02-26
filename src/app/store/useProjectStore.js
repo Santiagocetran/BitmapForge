@@ -11,6 +11,7 @@ const DEFAULT_STATE = {
   minBrightness: 0.05,
   backgroundColor: '#0a0a0a',
   useFadeInOut: true,
+  fadeVariant: 'dissolve',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 0.36,
   showPhaseDuration: 20000,
@@ -75,6 +76,7 @@ const useProjectStore = create(
     setMinBrightness: (minBrightness) => set({ minBrightness: clamp(minBrightness, 0.01, 0.5) }),
     setBackgroundColor: (backgroundColor) => set({ backgroundColor }),
     setUseFadeInOut: (useFadeInOut) => set({ useFadeInOut }),
+    setFadeVariant: (fadeVariant) => set({ fadeVariant }),
     setAnimationEffect: (key, value) =>
       set((state) => ({
         animationEffects: { ...state.animationEffects, [key]: Boolean(value) }

@@ -45,7 +45,8 @@ function PreviewCanvas() {
         invert: state.invert,
         minBrightness: state.minBrightness,
         backgroundColor: state.backgroundColor,
-        animationDuration: state.animationDuration
+        animationDuration: state.animationDuration,
+        fadeVariant: state.fadeVariant
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
