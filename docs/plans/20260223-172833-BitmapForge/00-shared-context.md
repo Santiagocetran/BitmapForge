@@ -40,6 +40,7 @@ index f8c541b..5361b6a 100644
 --- a/src/app/components/AnimationControls/AnimationControls.jsx
 +++ b/src/app/components/AnimationControls/AnimationControls.jsx
 @@ -46,45 +46,49 @@ function AnimationControls() {
+
 </div>
 </div>
 
@@ -210,6 +211,7 @@ function ColorPalette() {
 @@ -98,9 +121,15 @@ function ColorPalette() {
 
 return (
+
 <section className="space-y-2">
 
 -      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-400">
@@ -320,7 +322,7 @@ await map[selectedFormat]?.()
              ? status.message || 'Exporting…'
   @@ -77,12 +84,19 @@ function ExportPanel() {
   </button>
-         <div className="grid grid-cols-2 gap-2">
+  <div className="grid grid-cols-2 gap-2">
 
 *        <button type="button" className="rounded bg-zinc-600 px-2 py-1 text-xs" onClick={() => saveProject()}>
 

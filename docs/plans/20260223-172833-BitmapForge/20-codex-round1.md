@@ -193,6 +193,7 @@
 *          <input
 *            id={showDurationId}
              type="range"
+
   ```
 
   ```
