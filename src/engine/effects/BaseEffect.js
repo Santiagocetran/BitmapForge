@@ -206,11 +206,13 @@ class BaseEffect {
         const delay = (distFromCenter / maxDist) * 0.4
 
         this.particles.push({
+          idx,
           startX,
           startY,
           finalX,
           finalY,
           delay,
+          distFromCenter,
           brightness: adjustedBrightness,
           color: this.getColorForBrightness(adjustedBrightness)
         })

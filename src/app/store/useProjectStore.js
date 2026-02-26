@@ -11,11 +11,15 @@ const DEFAULT_STATE = {
   minBrightness: 0.05,
   backgroundColor: '#0a0a0a',
   useFadeInOut: true,
+  fadeVariant: 'bloom',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 0.36,
   showPhaseDuration: 20000,
   animationDuration: 2500,
   lightDirection: { x: 3, y: 4, z: 5 },
+  // Base rotation offset (Euler angles in radians, XYZ order). Applied as a static
+  // pose layer — animation plays on top via a separate animGroup child.
+  baseRotation: { x: 0, y: 0, z: 0 },
   // legacy (kept for migration; prefer animationEffects)
   animationPreset: 'spinY',
   rotateOnShow: false,
@@ -75,6 +79,7 @@ const useProjectStore = create(
     setMinBrightness: (minBrightness) => set({ minBrightness: clamp(minBrightness, 0.01, 0.5) }),
     setBackgroundColor: (backgroundColor) => set({ backgroundColor }),
     setUseFadeInOut: (useFadeInOut) => set({ useFadeInOut }),
+    setFadeVariant: (fadeVariant) => set({ fadeVariant }),
     setAnimationEffect: (key, value) =>
       set((state) => ({
         animationEffects: { ...state.animationEffects, [key]: Boolean(value) }
@@ -86,6 +91,8 @@ const useProjectStore = create(
     setRotateOnShow: (rotateOnShow) => set({ rotateOnShow }),
     setShowPreset: (showPreset) => set({ showPreset }),
     setLightDirection: (lightDirection) => set({ lightDirection }),
+    setBaseRotation: (x, y, z) => set({ baseRotation: { x, y, z } }),
+    resetBaseRotation: () => set({ baseRotation: { x: 0, y: 0, z: 0 } }),
     setStatus: (partialStatus) => {
       set({ status: { ...get().status, ...partialStatus } })
     },

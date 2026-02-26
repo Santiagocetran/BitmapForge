@@ -1,4 +1,5 @@
 import { BaseEffect } from './BaseEffect.js'
+import { createFadeVariant } from './fadeVariants/index.js'
 
 const BAYER_4X4 = [
   [0, 8, 2, 10],
@@ -51,6 +52,11 @@ class BitmapEffect extends BaseEffect {
     this.sampleCtx = this.sampleCanvas.getContext('2d', { willReadFrequently: true })
     this.gridWidth = 1
     this.gridHeight = 1
+
+    // Active fade variant — recreated whenever options.fadeVariant changes.
+    const initialVariant = this.options.fadeVariant ?? 'dissolve'
+    this.fadeVariant = createFadeVariant(initialVariant)
+    this._currentFadeVariantKey = initialVariant
   }
 
   setSize(width, height) {
@@ -119,6 +125,15 @@ class BitmapEffect extends BaseEffect {
   renderBitmap() {
     if (!this.sampleCtx || !this.bitmapCtx) return
 
+    // Swap variant instance when the store option changes and restart the fade
+    // so the new style plays immediately from the beginning.
+    const wantedVariant = this.options.fadeVariant ?? 'dissolve'
+    if (wantedVariant !== this._currentFadeVariantKey) {
+      this._currentFadeVariantKey = wantedVariant
+      this.fadeVariant = createFadeVariant(wantedVariant)
+      this.startAnimation('fadeIn')
+    }
+
     this._lastFillStyle = null
     this.sampleCtx.clearRect(0, 0, this.gridWidth, this.gridHeight)
     this.sampleCtx.drawImage(this.renderer.domElement, 0, 0, this.gridWidth, this.gridHeight)
@@ -140,23 +155,26 @@ class BitmapEffect extends BaseEffect {
           imageData,
           (brightness, x, y) => this.shouldDraw(brightness, x, y)
         )
+        // Let the variant attach any per-particle metadata it needs.
+        this.fadeVariant.initVariantMetadata(
+          this.particles,
+          this.width,
+          this.height,
+          this.options.pixelSize,
+          this.gridWidth,
+          this.gridHeight
+        )
       }
 
-      for (const particle of this.particles) {
-        const progress = Math.max(0, Math.min(1, (this.animationProgress - particle.delay) / (1 - particle.delay)))
-        const eased = this.easeInOutCubic(progress)
-
-        if (this.animationPhase === 'fadeIn') {
-          const x = particle.startX + (particle.finalX - particle.startX) * eased
-          const y = particle.startY + (particle.finalY - particle.startY) * eased
-          const alpha = Math.min(1, progress * 2)
-          this.drawPixel(x, y, particle.brightness, particle.color, alpha)
-        } else if (this.animationPhase === 'fadeOut') {
-          const x = particle.finalX + (particle.startX - particle.finalX) * eased
-          const y = particle.finalY + (particle.startY - particle.finalY) * eased
-          const alpha = Math.max(0, 1 - progress * 2)
-          this.drawPixel(x, y, particle.brightness, particle.color, alpha)
-        }
+      // Variant returns draw descriptors; BitmapEffect owns the canvas and draws them.
+      const visiblePixels = this.fadeVariant.getVisiblePixels(
+        this.particles,
+        this.animationProgress,
+        this.animationPhase,
+        (t) => this.easeInOutCubic(t)
+      )
+      for (const px of visiblePixels) {
+        this.drawPixel(px.x, px.y, px.brightness, px.color, px.alpha)
       }
     }
 

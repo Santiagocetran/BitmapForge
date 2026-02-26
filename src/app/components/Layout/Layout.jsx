@@ -4,6 +4,7 @@ import { ColorPalette } from '../ColorPalette/ColorPalette.jsx'
 import { QualitySettings } from '../QualitySettings/QualitySettings.jsx'
 import { AnimationControls } from '../AnimationControls/AnimationControls.jsx'
 import { LightDirection } from '../LightDirection/LightDirection.jsx'
+import { RotationGizmoPanel } from '../RotationGizmo/RotationGizmoPanel.jsx'
 import { ExportPanel } from '../ExportPanel/ExportPanel.jsx'
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
@@ -39,6 +40,9 @@ function Layout() {
         </Section>
         <Section title="Animation">
           <AnimationControls />
+        </Section>
+        <Section title="Rotation Offset">
+          <RotationGizmoPanel />
         </Section>
         <Section title="Light Direction">
           <LightDirection />

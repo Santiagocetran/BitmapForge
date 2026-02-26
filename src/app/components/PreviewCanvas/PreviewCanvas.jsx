@@ -45,7 +45,8 @@ function PreviewCanvas() {
         invert: state.invert,
         minBrightness: state.minBrightness,
         backgroundColor: state.backgroundColor,
-        animationDuration: state.animationDuration
+        animationDuration: state.animationDuration,
+        fadeVariant: state.fadeVariant
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
@@ -72,10 +73,17 @@ function PreviewCanvas() {
       { equalityFn: shallow }
     )
 
+    const unsubRotation = useProjectStore.subscribe(
+      (state) => state.baseRotation,
+      (br) => manager.setBaseRotation(br.x, br.y, br.z),
+      { equalityFn: shallow }
+    )
+
     return () => {
       unsubEffect()
       unsubAnim()
       unsubLight()
+      unsubRotation()
       resizeObserver.disconnect()
       manager.dispose()
       sceneManagerRef.current = null
