@@ -48,6 +48,16 @@ class SceneManager {
     this.rimLight.position.set(0, 2, -5)
     this.scene.add(this.ambientLight, this.keyLight, this.fillLight, this.rimLight)
 
+    // Two-group rotation hierarchy:
+    //   baseGroup — static pose (set from Zustand baseRotation)
+    //   animGroup — animation-driven rotation (incremental += per frame)
+    // This separates the user's manual offset from the animation loop so neither
+    // fights the other and seekTo/export remain deterministic.
+    this.baseGroup = new THREE.Group()
+    this.animGroup = new THREE.Group()
+    this.baseGroup.add(this.animGroup)
+    this.scene.add(this.baseGroup)
+
     this.animationEngine = new AnimationEngine()
     this.modelGroup = null
     this.currentObjectUrl = null
@@ -59,7 +69,7 @@ class SceneManager {
       const deltaSeconds = Math.max(0, Math.min((now - this.lastFrameTime) / 1000, 0.25))
       this.lastFrameTime = now
       if (this.modelGroup) {
-        this.animationEngine.update(this.modelGroup, this.effect, deltaSeconds)
+        this.animationEngine.update(this.animGroup, this.effect, deltaSeconds)
       }
       this.effect.render(this.scene, this.camera)
       this._onFrameRendered?.()
@@ -107,7 +117,9 @@ class SceneManager {
       this.disposeModel()
       this.modelGroup = group
       this.currentObjectUrl = objectUrl
-      this.scene.add(this.modelGroup)
+      this.animGroup.add(this.modelGroup)
+      // Reset animation rotation so each new model starts from the base pose.
+      this.animGroup.rotation.set(0, 0, 0)
       this.effect.startAnimation('fadeIn')
     } finally {
       this._loading = false
@@ -120,7 +132,7 @@ class SceneManager {
    */
   disposeModel() {
     if (!this.modelGroup) return
-    this.scene.remove(this.modelGroup)
+    this.animGroup.remove(this.modelGroup)
     this.modelGroup.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose?.()
       if (obj.material) {
@@ -179,6 +191,16 @@ class SceneManager {
   }
 
   /**
+   * Apply a base rotation offset to the model pose. Animation plays on top of this.
+   * @param {number} x - Euler X in radians
+   * @param {number} y - Euler Y in radians
+   * @param {number} z - Euler Z in radians
+   */
+  setBaseRotation(x, y, z) {
+    this.baseGroup.rotation.set(x, y, z)
+  }
+
+  /**
    * Get the bitmap output canvas element (the visible canvas with the dithered effect).
    * Used by export functions to capture frames.
    * @returns {HTMLCanvasElement | null}
@@ -229,7 +251,7 @@ class SceneManager {
    * @param {number} absoluteTimeMs - Time in milliseconds within the loop (0 to getLoopDurationMs())
    */
   renderAtTime(absoluteTimeMs) {
-    this.animationEngine.seekTo(absoluteTimeMs, this.modelGroup, this.effect)
+    this.animationEngine.seekTo(absoluteTimeMs, this.animGroup, this.effect)
     this.renderOnce()
   }
 
@@ -256,8 +278,8 @@ class SceneManager {
   resetToLoopStart() {
     this.animationEngine.resetToStart()
     if (this.modelGroup) {
-      const br = this.animationEngine.baseRotation
-      this.modelGroup.rotation.set(br.x, br.y, br.z)
+      // Reset the animation layer only — baseGroup keeps the user's pose offset.
+      this.animGroup.rotation.set(0, 0, 0)
     }
     if (this.animationEngine.useFadeInOut) {
       this.effect.startAnimation('fadeIn')

@@ -136,11 +136,11 @@ class AnimationEngine {
       r.elapsed += deltaMs
       const raw = Math.min(r.elapsed / RESET_DURATION_MS, 1)
       const t = easeOutCubic(raw)
-      const target = this.baseRotation[axis]
-      modelGroup.rotation[axis] = r.startRotation + (target - r.startRotation) * t
+      // Target is always 0 — baseGroup handles the user's offset layer separately.
+      modelGroup.rotation[axis] = r.startRotation * (1 - t)
 
       if (r.elapsed >= RESET_DURATION_MS) {
-        modelGroup.rotation[axis] = target
+        modelGroup.rotation[axis] = 0
         this._resetTransitions[axis] = null
       }
     }
@@ -211,8 +211,8 @@ class AnimationEngine {
     this.time = ts
 
     if (modelGroup) {
-      const br = this.baseRotation
-      modelGroup.rotation.set(br.x, br.y, br.z)
+      // Start animGroup at zero — baseGroup holds the user's pose offset independently.
+      modelGroup.rotation.set(0, 0, 0)
       const e = this.animationEffects
       const speed = this.speed
       if (e.spinX) modelGroup.rotation.x += speed * ts

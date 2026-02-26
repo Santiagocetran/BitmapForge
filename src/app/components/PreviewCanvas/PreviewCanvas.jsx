@@ -73,10 +73,17 @@ function PreviewCanvas() {
       { equalityFn: shallow }
     )
 
+    const unsubRotation = useProjectStore.subscribe(
+      (state) => state.baseRotation,
+      (br) => manager.setBaseRotation(br.x, br.y, br.z),
+      { equalityFn: shallow }
+    )
+
     return () => {
       unsubEffect()
       unsubAnim()
       unsubLight()
+      unsubRotation()
       resizeObserver.disconnect()
       manager.dispose()
       sceneManagerRef.current = null
