@@ -255,7 +255,10 @@ class SceneManager {
    */
   resetToLoopStart() {
     this.animationEngine.resetToStart()
-    if (this.modelGroup) this.modelGroup.rotation.set(0, 0, 0)
+    if (this.modelGroup) {
+      const br = this.animationEngine.baseRotation
+      this.modelGroup.rotation.set(br.x, br.y, br.z)
+    }
     if (this.animationEngine.useFadeInOut) {
       this.effect.startAnimation('fadeIn')
     } else {
