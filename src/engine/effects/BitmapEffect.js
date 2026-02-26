@@ -125,12 +125,13 @@ class BitmapEffect extends BaseEffect {
   renderBitmap() {
     if (!this.sampleCtx || !this.bitmapCtx) return
 
-    // Swap variant instance when the store option changes.
+    // Swap variant instance when the store option changes and restart the fade
+    // so the new style plays immediately from the beginning.
     const wantedVariant = this.options.fadeVariant ?? 'dissolve'
     if (wantedVariant !== this._currentFadeVariantKey) {
       this._currentFadeVariantKey = wantedVariant
       this.fadeVariant = createFadeVariant(wantedVariant)
-      this.resetParticles()
+      this.startAnimation('fadeIn')
     }
 
     this._lastFillStyle = null

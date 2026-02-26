@@ -1,0 +1,591 @@
+[TASK]
+Critique Codex's proposal against your own proposal for the same task.
+
+[PROCESS RULES]
+- Do not run tools or commands.
+- Use only the provided context and proposals.
+- Call out unsupported claims explicitly.
+
+[SHARED CONTEXT]
+# IA Bridge Shared Context
+
+- Timestamp: 2026-02-23T17:03:51-03:00
+- Working root: /home/santi/sideprojects/BitmapForge
+- Mode (auto): code
+- Branch: main
+- Commit: 08f773238cdc
+- Worktree: dirty
+- Task: Review the implementation plan at docs/plans/app-fixes-plan.md for the BitmapForge React app layer (src/app/). Read the plan file and all source files it references. For each of the 28 findings: (1) validate before/after code snippets against actual source, (2) confirm or challenge priority and effort estimates, (3) flag regressions or missed edge cases, (4) identify gaps. Produce a verdict per finding (APPROVED / NEEDS REVISION / DISPUTED), a prioritized top-10 fix list, and a final overall recommendation for the implementation order.
+- Constraints: none
+- Claude model: opus
+- Codex model: gpt-5
+- Timeout per round (s): 240
+
+## Fairness Rules
+
+1. Both agents receive the exact same task, constraints, and working context.
+2. Both agents use the same evidence packet.
+3. Both agents are asked for the same output shape.
+4. Cross-critiques are symmetric (each critiques the other's proposal).
+5. Final synthesis cites agreement, disagreements, and residual risks.
+
+## Recent Commits
+
+08f7732 Merge pull request #5 from Santiagocetran/chore/repo-organization
+8f07443 chore: reorganize repo structure
+0e381a7 Merge pull request #4 from Santiagocetran/ci/tooling-and-tests
+a22c1b7 chore: add Vitest, CI workflow, husky, and contributor docs
+cc99fea chore: format baseline — ESLint + Prettier on entire codebase
+d5aad93 Merge pull request #3 from Santiagocetran/refactor/modularity-and-docs
+865d30c Close modularity gap: import ANIMATION_EFFECT_KEYS from effectTypes.js
+618fb43 Modularity refactor: SceneManager context, shared effect types, cleanup
+2a3957b Merge pull request #2 from Santiagocetran/logo-and-video
+90b3aeb logo size reduced
+
+## Diff Preview
+
+(No working-tree diff against HEAD.)
+
+[YOUR PROPOSAL - CLAUDE]
+Now I have all the source files. Let me compile my comprehensive review.
+
+---
+
+# Plan Review: BitmapForge App Layer Fixes (28 Findings)
+
+## Per-Finding Verdicts
+
+### Phase 1: Bugs + Critical UX (P1)
+
+**Finding 1 — Async model load after unmount**
+- Before snippet: **Matches** `PreviewCanvas.jsx:75-91` exactly
+- Fix is correct — standard mounted-guard pattern
+- Priority P1 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 2 — Race condition: stale manager**
+- Same code block as #1, `sceneManagerRef.current === manager` guard is solid
+- Subsumes Finding 1 — implement #2 and you get #1 for free
+- Priority P1 / Effort S: **Accurate**
+- **APPROVED** — combine with #1 as a single commit
+
+**Finding 5 — No cancel/abort for exports**
+- Source confirmed: no abort mechanism in `useExport.js`
+- Risk note is honest: `gif.render()` is fire-and-forget. For video, `recorder.stop()` works. For sprite sheet, the abort in the loop is clean.
+- Priority P1 / Effort M: **Accurate**
+- **APPROVED** — but add: video export also needs `clearOnFrameRendered()` on abort (currently only in catch/success)
+
+**Finding 6 — No progress indication**
+- Source confirmed: only static strings "Encoding GIF..." / "Generating sprite sheet..."
+- **NEEDS REVISION** — Plan proposes adding a `progress: 0` field to `DEFAULT_STATE.status` but the actual code snippet uses `message` string interpolation (`Encoding GIF... 72%`). These are contradictory. Pick one: either a dedicated `progress` number (cleaner for a progress bar UI) or message-embedded percentage (simpler). Recommend message-embedded for now, drop the `progress` field addition.
+- Priority P1 / Effort S: Effort is **XS** if just using message strings
+
+**Finding 7 — Vague error messages**
+- All 5 cited catch blocks verified in source
+- `friendlyExportError` helper is clean and the fallback preserves raw message
+- Priority P1 / Effort S: **Accurate**
+- **APPROVED**
+
+**Finding 8 — No confirmation before destructive project load**
+- `ExportPanel.jsx:38-49` matches exactly
+- **NEEDS REVISION** — The guard checks `currentModel` only. If user has no model but changed colors/settings/pixel size, those are also lost on load. Should check for any deviation from defaults, e.g.: `const isDirty = currentModel || JSON.stringify(serializeState(state)) !== JSON.stringify(serializeState(DEFAULT_STATE))`. Alternatively, always confirm if the file input is used — simpler and safer.
+- Priority P1 / Effort XS: Stays XS either way
+- **NEEDS REVISION**
+
+**Finding 9 — No loading spinner**
+- Source confirmed: no overlay in PreviewCanvas, only text bar in Layout
+- CSS-only spinner approach is correct and lightweight
+- One issue: the plan shows `{!model && !isLoading && (` for the placeholder, but current source at line 96 is `{!model && (`. This means the placeholder would show during loading of the first model. The plan's fix is correct.
+- Priority P1 / Effort S: **Accurate**
+- **APPROVED**
+
+**Finding 10 — No error boundary**
+- No ErrorBoundary exists anywhere in the app. Correct finding.
+- Standard React class component pattern. Lucide React (in tech stack) has icons — could use `AlertTriangle` instead of inline SVG in the boundary, but this is minor.
+- Priority P1 / Effort S: **Accurate**
+- **APPROVED**
+
+**Finding 11 — No upfront model size validation for HTML export**
+- `useExport.js:213-215` — confirmed: warning only, export proceeds
+- Blocking is the right MVP call. The 2MB threshold is already established.
+- Priority P1 / Effort XS: **Accurate**
+- **APPROVED**
+
+### Phase 2: Performance + Accessibility (P2)
+
+**Finding 3 — Main thread blocking during frame rendering**
+- Confirmed: `exportSpriteSheet` (lines 48-53) and `exportGif` (lines 88-93) are synchronous loops
+- `yieldToMain` every 4 frames is a reasonable compromise
+- **Note:** The `exportGif` loop already uses `withPausedScene` with async wrapper — the yielding integrates cleanly
+- Priority P2 / Effort M: **Accurate**
+- **APPROVED**
+
+**Finding 4 — Overly broad store subscription**
+- `PreviewCanvas.jsx:38-60` matches exactly — single subscription fires on every state change
+- **NEEDS REVISION** — The plan proposes `subscribeWithSelector` middleware. In Zustand v5 (current), the selector-based `.subscribe(selector, listener, options)` is supported natively without middleware. Check your Zustand version in `package.json`. If v5+, skip the middleware addition entirely. If v4, the middleware is needed.
+- Also: `shallow` import path is `zustand/shallow` in v4 but `zustand/react/shallow` exposes `useShallow` for hooks. For `.subscribe()`, use `import { shallow } from 'zustand/shallow'`.
+- Priority P2 / Effort M: Effort is correct either way
+- **NEEDS REVISION** (verify Zustand version first)
+
+**Finding 12 — Color buttons missing aria-label**
+- `ColorPalette.jsx:40-47` matches exactly
+- `id` is available as prop — the template string is correct
+- Priority P2 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 13 — Range inputs not labelled via htmlFor**
+- AnimationControls: 3 ranges (speed, fade duration, show duration) — confirmed
+- QualitySettings: the plan text says "3 range inputs" but only lists 2 IDs (`quality-pixel-size`, `quality-min-brightness`). Actual file has 2 ranges. **Minor text error** in plan but the actual IDs are correct.
+- Priority P2 / Effort S: **Accurate**
+- **APPROVED** (fix the "3" → "2" in plan text)
+
+**Finding 14 — Status messages lack ARIA roles**
+- `Layout.jsx:52-56` matches exactly
+- `role="status"` and `role="alert"` are correct choices
+- Priority P2 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 15 — details/summary missing aria-expanded**
+- `QualitySettings.jsx:29-30` matches
+- Plan correctly notes `useState` needs to be imported (currently not imported in this file)
+- Priority P2 / Effort S: **Accurate**
+- **APPROVED**
+
+**Finding 16 — Hidden file input lacks description**
+- `ModelUploader.jsx:44,82` and `ExportPanel.jsx:85` all confirmed as bare inputs
+- Priority P2 / Effort XS: **Accurate**
+- **APPROVED**
+
+### Phase 3: State Improvements + Design Consistency (P3)
+
+**Finding 17 — setStatus dep array in useAutoSave**
+- `useAutoSave.js:25,39` matches exactly
+- Using `useProjectStore.getState().setStatus()` inside the effect is correct
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 18 — Module-level _timer antipattern**
+- `useAutoSave.js:44-56` matches exactly, including `useAutoSave._timer = null` at line 56
+- `useRef` replacement is idiomatic and functionally identical
+- Priority P3 / Effort S: **Accurate**
+- **APPROVED**
+
+**Finding 19 — Fragmented Zustand selectors in ColorPalette**
+- `ColorPalette.jsx:74-78` matches exactly — 5 separate selectors
+- `useShallow` is the correct Zustand v5 pattern (v4 uses `shallow` from `zustand/shallow`)
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 20 — Unnecessary useMemo for trivial boolean**
+- `Layout.jsx:24` matches exactly
+- Correct — `Boolean()` is trivially cheap
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 21 — getState captured inside hook**
+- `useExport.js:28` matches exactly
+- Module-level hoist or inline — either is fine
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 22 — Button styling inconsistency**
+- All cited line numbers verified against actual source. The inconsistency is real (mix of `bg-zinc-600`, `bg-zinc-700`, different hover states).
+- Shared `BTN` constants is a reasonable approach. Consider Tailwind `@apply` in a utility layer as an alternative.
+- Priority P3 / Effort S: **Accurate**
+- **APPROVED**
+
+**Finding 23 — Form input background inconsistency**
+- `ExportPanel.jsx:83` uses `bg-zinc-700` while others use `bg-zinc-800` — confirmed
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 24 — Fixed h-[70vh] breaks on mobile**
+- `Layout.jsx:57` matches: `h-[70vh] lg:flex-1 lg:min-h-0`
+- **Note:** The parent `<section>` at line 51 already has `min-h-[360px]`. Changing the child to `min-h-[360px] flex-1` is fine but slightly redundant with parent. The key fix is removing `h-[70vh]` — the parent's flex layout + child `flex-1` will handle sizing correctly.
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+**Finding 25 — Color picker popup overflow**
+- `ColorPalette.jsx:49` matches exactly
+- The flip approach is MVP-appropriate. A more robust solution would use Floating UI, but that's a new dependency.
+- Priority P3 / Effort M: **Accurate**
+- **APPROVED**
+
+**Finding 26 — "Shadows → Highlights" label unclear**
+- `ColorPalette.jsx:101-103` matches
+- **NEEDS REVISION** — The info icon `ⓘ` is a Unicode character that renders inconsistently across platforms. Use a Lucide `Info` icon (already in tech stack) instead.
+- Priority P3 / Effort XS: **Accurate**
+- **NEEDS REVISION** (minor)
+
+**Finding 27 — Error messages lack visual weight**
+- `Layout.jsx:53` matches
+- **NEEDS REVISION** — Inline SVG when Lucide React (`lucide-react`) is already a project dependency. Use `<AlertCircle />` from Lucide instead.
+- Priority P3 / Effort S: **Accurate**
+- **NEEDS REVISION**
+
+**Finding 28 — No proactive large model warning**
+- `ModelUploader.jsx:17-26` matches exactly
+- Warning is non-blocking, threshold is reasonable
+- Priority P3 / Effort XS: **Accurate**
+- **APPROVED**
+
+---
+
+## Gaps Identified (Not in the Plan)
+
+### Gap A — Unhandled throws before try/catch in useExport
+`useExport.js` lines 34, 72, 115: `throw new Error('No preview canvas available')` executes **before** the `try` block. In `ExportPanel.jsx:35`, `await map[selectedFormat]?.()` has no try/catch wrapper. These throws will bubble up as unhandled promise rejections and crash the UI. **Severity: P1.**
+
+### Gap B — `exportHtmlSnippet` never sets `exporting: true`
+Every other export function sets `setStatus({ exporting: true, ... })` at the start, but `exportHtmlSnippet` (line 209) doesn't. The export button won't be disabled during HTML snippet generation, allowing double-clicks. **Severity: P2.**
+
+### Gap C — Duplicate status display
+`ExportPanel.jsx:89-92` renders `status.error` and `status.message` independently from `Layout.jsx:52-53`. Errors and messages show in two locations simultaneously. **Severity: P3.**
+
+### Gap D — `status.message` and `status.error` can coexist
+`setStatus` merges partially (`{ ...get().status, ...partialStatus }`). If you set `{ error: 'fail' }` and then `{ message: 'ok' }` without clearing error, both show. The plan touches this area (Findings 14, 27) but never addresses the semantic overlap. **Severity: P3.**
+
+---
+
+## Verdict Summary
+
+| # | Finding | Verdict |
+|---|---------|---------|
+| 1 | Async unmount guard | APPROVED |
+| 2 | Stale manager race | APPROVED |
+| 3 | Main thread blocking | APPROVED |
+| 4 | Broad store subscription | NEEDS REVISION (check Zustand version) |
+| 5 | No export cancel | APPROVED |
+| 6 | No export progress | NEEDS REVISION (contradictory approach) |
+| 7 | Vague error messages | APPROVED |
+| 8 | No load confirmation | NEEDS REVISION (guard too narrow) |
+| 9 | No loading spinner | APPROVED |
+| 10 | No error boundary | APPROVED |
+| 11 | HTML export size guard | APPROVED |
+| 12 | Color button aria-label | APPROVED |
+| 13 | Range input labels | APPROVED |
+| 14 | Status ARIA roles | APPROVED |
+| 15 | details/summary aria | APPROVED |
+| 16 | Hidden input description | APPROVED |
+| 17 | setStatus dep array | APPROVED |
+| 18 | Module-level _timer | APPROVED |
+| 19 | Fragmented selectors | APPROVED |
+| 20 | Unnecessary useMemo | APPROVED |
+| 21 | getState alias | APPROVED |
+| 22 | Button styling | APPROVED |
+| 23 | Form input bg | APPROVED |
+| 24 | h-[70vh] on mobile | APPROVED |
+| 25 | Popup overflow | APPROVED |
+| 26 | Shadows/Highlights label | NEEDS REVISION (use Lucide icon) |
+| 27 | Error visual weight | NEEDS REVISION (use Lucide icon) |
+| 28 | Large model warning | APPROVED |
+
+**Score: 23 APPROVED, 5 NEEDS REVISION, 0 DISPUTED**
+
+---
+
+## Prioritized Top-10 Fix List
+
+| Rank | Finding(s) | Why | Files |
+|------|-----------|-----|-------|
+| 1 | **Gap A** (new) | Unhandled throws = UI crashes on missing canvas | `useExport.js`, `ExportPanel.jsx` |
+| 2 | **#1 + #2** | Async bugs that cause React state-update-on-unmount warnings | `PreviewCanvas.jsx` |
+| 3 | **#9** | Loading spinner — most visible UX gap | `PreviewCanvas.jsx` |
+| 4 | **#5 + #6** | Export cancel + progress — long exports block the user | `useExport.js` |
+| 5 | **#7** | Friendly error messages — low effort, high user impact | `useExport.js` |
+| 6 | **#10** | Error boundary — prevents full-app crash | New `ErrorBoundary.jsx`, `Layout.jsx` |
+| 7 | **#8** | Load confirmation — prevents data loss | `ExportPanel.jsx` |
+| 8 | **#11 + Gap B** | HTML export guards — size block + missing exporting flag | `useExport.js` |
+| 9 | **#4** | Store subscription split — perf win for real-time preview | `PreviewCanvas.jsx`, `useProjectStore.js` |
+| 10 | **#14 + #27** | ARIA roles + error styling — a11y foundation | `Layout.jsx` |
+
+---
+
+## Recommended Implementation Order
+
+1. **Batch 1 — Critical bugs** (1 PR): Findings #1+#2, Gap A, Gap B
+2. **Batch 2 — Export UX** (1 PR): Findings #5+#6+#7+#11
+3. **Batch 3 — UI polish** (1 PR): Findings #8+#9+#10
+4. **Batch 4 — Performance** (1 PR): Findings #3+#4 (verify Zustand version first)
+5. **Batch 5 — Accessibility** (1 PR): Findings #12+#13+#14+#15+#16+#27
+6. **Batch 6 — Cleanup** (1 PR): Findings #17-#28 remaining
+
+This order ensures: bugs before UX, UX before perf, perf before cosmetics. Each batch is independently shippable and testable.
+
+---
+
+## Overall Recommendation
+
+**The plan is solid and well-researched.** 23 of 28 findings are fully validated against source with accurate line numbers, correct before/after snippets, and realistic effort estimates. The 5 revisions are minor. The 4 gaps I identified (especially Gap A — unhandled throws) should be folded into Phase 1 before implementation begins. The dependency/ordering notes at the bottom of the plan are correct and should be followed. Ship it in 6 batches as outlined above.
+
+[OTHER PROPOSAL - CODEX]
+**Findings**
+
+Note: I could not open docs/plans/app-fixes-plan.md or referenced files per “Do not run tools.” Verdicts below reflect validation risk; where I cannot check a before/after snippet against the repo, I mark NEEDS REVISION and provide a concrete review checklist and proposed scope. Ordering is by likely user impact and blast radius.
+
+- 1) Crash containment (global ErrorBoundary around editor/canvas)
+  - Verdict: NEEDS REVISION (no source validation)
+  - Priority: High | Effort: S
+  - Regressions: swallowing actionable errors; SSR mismatch if boundary renders differently
+  - Gaps: add error-reporting hook and tests
+
+- 2) SSR/CSR hydration mismatches (direct `window/document` in render)
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: layout shift, double effects
+  - Gaps: lint rule or codemod to gate env access
+
+- 3) Context value churn (SceneManager/context values recreated each render)
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: app-wide re-render storms
+  - Gaps: selector pattern for context consumers
+
+- 4) Expensive derived state computed on render
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S–M
+  - Regressions: memoization hiding legit updates
+  - Gaps: profile to pick true hotspots
+
+- 5) Unbounded event listeners (resize, pointer, keydown) lacking cleanup
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: lost behaviors on detach/reattach
+  - Gaps: shared `useEventListener` hook
+
+- 6) Canvas/WebGL context lifecycle misuse (recreate on prop change)
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: M
+  - Regressions: stale refs after resize
+  - Gaps: ref-centered init + guarded effects
+
+- 7) Async race conditions (effect loading/cancelation missing)
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: setState on unmounted
+  - Gaps: `AbortController` and test
+
+- 8) Missing Suspense fallbacks for async assets/effects
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: flash of unstyled/blank UI
+  - Gaps: route- or feature-level fallback
+
+- 9) Hot-path re-renders from inline callbacks/objects in JSX
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: stale closures if incorrectly memoized
+  - Gaps: lint rule + perf test
+
+- 10) Keyboard shortcut scope leaks (global handlers stealing focus)
+  - Verdict: NEEDS REVISION
+  - Priority: High | Effort: S
+  - Regressions: broken input fields/IME
+  - Gaps: scoped keymap + `stopPropagation`
+
+- 11) Large bundle imports (whole-library imports vs subpath)
+  - Verdict: NEEDS REVISION
+  - Priority: Medium-High | Effort: S
+  - Regressions: polyfill differences at subpath
+  - Gaps: bundle analyzer baseline
+
+- 12) No throttling/debouncing for high-frequency events (drag/zoom)
+  - Verdict: NEEDS REVISION
+  - Priority: Medium-High | Effort: S
+  - Regressions: sluggishness if debounce too high
+  - Gaps: pluggable strategy by interaction
+
+- 13) List keys unstable or missing
+  - Verdict: NEEDS REVISION
+  - Priority: Medium-High | Effort: S
+  - Regressions: item state jumps on reorder
+  - Gaps: stable IDs, `useId` for SSR
+
+- 14) Effect dependency arrays wrong (stale/missing deps)
+  - Verdict: NEEDS REVISION
+  - Priority: Medium-High | Effort: S
+  - Regressions: infinite loops or missed updates
+  - Gaps: exhaustive-deps exceptions documented
+
+- 15) Focus management and ARIA gaps in editor controls
+  - Verdict: NEEDS REVISION
+  - Priority: Medium-High | Effort: S–M
+  - Regressions: focus traps if miswired
+  - Gaps: keyboard E2E tests
+
+- 16) Route/component code-splitting not leveraged
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: waterfall if split points poor
+  - Gaps: prefetch hints
+
+- 17) CSS-induced layout thrash (measuring + writing same frame)
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: scroll jank
+  - Gaps: `will-change`, transform-based moves
+
+- 18) Imperative timers/intervals not cleared
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: ghost updates after unmount
+  - Gaps: `useInterval` util
+
+- 19) Global state mutations (non-immutable updates in reducers)
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: subtle stale renders
+  - Gaps: tests around reducers
+
+- 20) Image/video preloading strategy missing
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: memory pressure on low-end
+  - Gaps: `loading="lazy"` policies
+
+- 21) Error logging spills to production console
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: leaking PII in logs
+  - Gaps: env-gated logger
+
+- 22) Circular deps between app modules
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S–M
+  - Regressions: module init order bugs
+  - Gaps: boundary rules in lint
+
+- 23) Provider tree depth causing unnecessary updates
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: M
+  - Regressions: prop drilling revival
+  - Gaps: split providers + selectors
+
+- 24) Drag-and-drop accessibility (mouse-only affordances)
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: M
+  - Regressions: keyboard users blocked
+  - Gaps: roving tabindex patterns
+
+- 25) Worker usage lacks fallback/error path
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: S
+  - Regressions: Safari/Firefox quirks
+  - Gaps: capability check + retry
+
+- 26) Testing gaps for hooks and reducers
+  - Verdict: NEEDS REVISION
+  - Priority: Medium | Effort: M
+  - Regressions: undetected perf regressions
+  - Gaps: perf smoke tests in Vitest
+
+- 27) i18n/readiness (hardcoded text, no RTL)
+  - Verdict: NEEDS REVISION
+  - Priority: Low | Effort: M
+  - Regressions: layout flips under RTL
+  - Gaps: string extraction
+
+- 28) Dev-only flags compiled into prod
+  - Verdict: NEEDS REVISION
+  - Priority: Low | Effort: S
+  - Regressions: feature toggles leaking
+  - Gaps: dead-code elimination checks
+
+
+**Plan**
+
+- Validate each plan snippet against repo and note diffs.
+- Prioritize high-impact, low-effort fixes behind a feature flag.
+- Implement guard rails: ErrorBoundary, Suspense, listener/util hooks.
+- Stabilize renders: memoized context values, callbacks, selectors.
+- Address SSR/CSR and async races; add abort/test coverage.
+- Profile, split, and measure: bundle analysis + hot-path profiling.
+
+
+**Patch-Ready Edits**
+
+Note: Paths reflect additions under `src/app/`. Adjust import paths to local structure when applying.
+
+- `src/app/providers/ErrorBoundary.tsx` (new)
+  - Minimal error boundary that renders a fallback and exposes `onReset` prop.
+- `src/app/hooks/useEventListener.ts` (new)
+  - Stable, passive-by-default listener with cleanup; supports AbortSignal.
+- `src/app/hooks/useInterval.ts` (new)
+  - Declarative interval with auto-clear on unmount/dep change.
+- `src/app/hooks/useStableCallback.ts` (new)
+  - Returns a referentially-stable callback capturing latest state.
+- `src/app/state/createSelectorContext.tsx` (new)
+  - Context helper that memoizes value and exposes `useSelector` to avoid full-tree updates.
+- Refactors (search-and-apply patterns across `src/app/**`):
+  - Gate browser APIs: replace direct `window/document` in render with guards in `useEffect` or `useLayoutEffect`.
+  - Memoize context values: wrap provider values in `useMemo({…}, [deps])`.
+  - Stabilize props: replace inline lambdas/objects in hot paths with `useCallback`/`useMemo`.
+  - Add Suspense: wrap async-loading components with `<Suspense fallback={<Spinner/>}>`.
+  - Ensure stable keys: prefer persistent IDs; use `useId` for SSR-safe control IDs.
+  - Convert high-frequency handlers (`pointermove`, `wheel`) to throttled versions and mark listeners `{ passive: true }` when safe.
+  - Add `AbortController` to async effects; cancel on cleanup.
+  - Replace whole-library imports with subpath imports where supported (e.g., `lodash-es/pick`).
+  - Guard WebGL/canvas init with `useRef` and a single-init effect; separate “configure vs render” phases.
+  - Add env-gated logger and strip dev-only logs in prod builds.
+
+Code snippets (minimal examples):
+
+- ErrorBoundary
+  - `export class ErrorBoundary extends React.Component<{fallback: React.ReactNode,onReset?:()=>void},{error?:Error}>{ /* component with componentDidCatch + reset */ }`
+- useEventListener
+  - `useEffect(()=>{ target.addEventListener(type, handler, opts); return ()=>target.removeEventListener(type, handler, opts); },[target,type,handler])`
+- Selector context (pattern)
+  - `const C=React.createContext<State>(init); export const useSelector=sel=>sel(useContext(C));`
+
+
+**Verification Commands**
+
+- Lint/typecheck/build
+  - `npm run lint && npm run typecheck && npm run build` (or `pnpm`/`yarn` equivalents)
+- Tests (with coverage and watch off for CI parity)
+  - `npm run test -- --coverage --run`
+- Bundle analysis
+  - `npm run build:analyze` (add script with `@next/bundle-analyzer` or `rollup-plugin-visualizer` as applicable)
+- Runtime smoke (local)
+  - `npm run dev` → open editor flows; verify no hydration warnings, stable FPS on drag/zoom
+- Profiling (React Profiler)
+  - Capture interaction traces for: open project → zoom/pan → apply effect
+
+
+**Top-10 Fixes (Prioritized)**
+
+1) Add ErrorBoundary around editor and critical routes.  
+2) Eliminate SSR/CSR hydration mismatches; guard browser APIs.  
+3) Memoize provider/context values; introduce selector-based consumption.  
+4) Throttle/debounce high-frequency input; passive listeners.  
+5) Fix effect dependency arrays; add stale-closure-safe callbacks.  
+6) Harden async with `AbortController`; prevent setState-after-unmount.  
+7) Stabilize hot-path props (useCallback/useMemo); remove inline objects.  
+8) Canvas/WebGL single-init via refs; split init/configure/render.  
+9) Add Suspense fallbacks for async assets/effects.  
+10) Replace whole-library imports with subpaths; analyze bundle.
+
+
+**One High-Upside Alternative**
+
+- Adopt a dedicated state store with selector-based subscriptions (e.g., Zustand or Jotai) for editor state instead of React context.
+  - Upside: fine-grained subscriptions reduce re-renders dramatically; simpler mental model for hot paths.
+  - Tradeoff: adds dependency and migration cost; requires new testing and patterns adoption.
+
+
+**Confidence + Unknowns**
+
+- Confidence: Low–Medium (no access to the actual plan file or source to validate 28 specific findings or code snippets).
+- Unknowns: exact file layout under `src/app/`, presence of SSR/Next.js, actual SceneManager API, testing scripts and bundler.
+
+
+**Short Rationale**
+
+Given no file access, I focused on the highest-probability, highest-impact React app-layer risks for a graphics/editor app (per commit hints: SceneManager, effect types). The plan emphasizes crash containment, render stability, async safety, and input performance, with small, composable utilities and minimal invasive changes. When you can share the plan file and referenced sources, I’ll replace NEEDS REVISION with APPROVED/DISPUTED verdicts per finding, adjust priorities/effort with evidence, and generate concrete per-file patches.
+
+[OUTPUT FORMAT]
+- Strong agreements
+- Critical disagreements
+- Missing tests/risks in Codex proposal
+- What you would adopt from Codex
+- Revised recommendation

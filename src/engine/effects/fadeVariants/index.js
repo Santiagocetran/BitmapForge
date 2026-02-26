@@ -1,12 +1,12 @@
 import { DissolveVariant } from './DissolveVariant.js'
 import { ScanlineVariant } from './ScanlineVariant.js'
-import { RadialVariant } from './RadialVariant.js'
+import { ShutterVariant } from './ShutterVariant.js'
 import { GlitchVariant } from './GlitchVariant.js'
 
 const FADE_VARIANT_LABELS = {
   dissolve: 'Dissolve',
   scanline: 'Scanline',
-  radial: 'Radial',
+  shutter: 'Shutter',
   glitch: 'Glitch'
 }
 
@@ -16,8 +16,8 @@ function createFadeVariant(name, options = {}) {
   switch (name) {
     case 'scanline':
       return new ScanlineVariant(options)
-    case 'radial':
-      return new RadialVariant(options)
+    case 'shutter':
+      return new ShutterVariant(options)
     case 'glitch':
       return new GlitchVariant(options)
     case 'dissolve':
