@@ -1,12 +1,12 @@
-import { DissolveVariant } from './DissolveVariant.js'
-import { ScanlineVariant } from './ScanlineVariant.js'
-import { ShutterVariant } from './ShutterVariant.js'
+import { BloomVariant } from './BloomVariant.js'
+import { CascadeVariant } from './CascadeVariant.js'
+import { StaticVariant } from './StaticVariant.js'
 import { GlitchVariant } from './GlitchVariant.js'
 
 const FADE_VARIANT_LABELS = {
-  dissolve: 'Dissolve',
-  scanline: 'Scanline',
-  shutter: 'Shutter',
+  bloom: 'Bloom',
+  cascade: 'Cascade',
+  static: 'Static',
   glitch: 'Glitch'
 }
 
@@ -14,15 +14,15 @@ const FADE_VARIANT_KEYS = Object.keys(FADE_VARIANT_LABELS)
 
 function createFadeVariant(name, options = {}) {
   switch (name) {
-    case 'scanline':
-      return new ScanlineVariant(options)
-    case 'shutter':
-      return new ShutterVariant(options)
+    case 'cascade':
+      return new CascadeVariant(options)
+    case 'static':
+      return new StaticVariant(options)
     case 'glitch':
       return new GlitchVariant(options)
-    case 'dissolve':
+    case 'bloom':
     default:
-      return new DissolveVariant(options)
+      return new BloomVariant(options)
   }
 }
 

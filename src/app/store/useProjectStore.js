@@ -11,7 +11,7 @@ const DEFAULT_STATE = {
   minBrightness: 0.05,
   backgroundColor: '#0a0a0a',
   useFadeInOut: true,
-  fadeVariant: 'dissolve',
+  fadeVariant: 'bloom',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 0.36,
   showPhaseDuration: 20000,
