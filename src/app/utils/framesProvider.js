@@ -5,18 +5,19 @@ function yieldToMain() {
 
 /**
  * Compute how many frames to capture for a given fps.
- * Uses the export loop duration (no fades, capped at 3s).
+ * Uses the full loop duration so frame count is consistent with the delay calculation.
  * @param {object} manager - SceneManager instance
  * @param {number} fps
  * @returns {number}
  */
 function getFrameCount(manager, fps) {
-  return Math.max(12, Math.round((manager.getExportLoopDurationMs() / 1000) * fps))
+  return Math.max(12, Math.round((manager.getLoopDurationMs() / 1000) * fps))
 }
 
 /**
- * Capture all animation frames from the SceneManager.
- * Always renders in "show" phase — no fade-in/out — using the export loop duration.
+ * Capture all animation frames from the SceneManager by stepping through the loop
+ * deterministically using renderAtTime(). The exported animation matches the live
+ * preview exactly — fade-in/out, rotation, and all effect settings are included.
  * @param {object} manager - SceneManager instance
  * @param {number} frameCount - total frames to capture
  * @param {{ signal?: AbortSignal, onProgress?: (current: number, total: number) => void }} options
@@ -26,7 +27,8 @@ async function captureFrames(manager, frameCount, { signal, onProgress } = {}) {
   const sourceCanvas = manager.getCanvas()
   if (!sourceCanvas) throw new Error('No preview canvas available')
 
-  const loopMs = manager.getExportLoopDurationMs()
+  // Use the same duration as getFrameCount so frameDelay = loopMs/frameCount = 1000/fps
+  const loopMs = manager.getLoopDurationMs()
   const frames = []
 
   manager.pauseLoop()
@@ -34,7 +36,9 @@ async function captureFrames(manager, frameCount, { signal, onProgress } = {}) {
     for (let i = 0; i < frameCount; i++) {
       if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError')
 
-      manager.renderAtTimeForExport((i / frameCount) * loopMs)
+      // renderAtTime uses seekTo() which maps absolute time to the correct
+      // animation phase (fadeIn/show/fadeOut) and rotation — matching the live preview
+      manager.renderAtTime((i / frameCount) * loopMs)
 
       const ctx = sourceCanvas.getContext('2d')
       const imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)

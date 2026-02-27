@@ -97,7 +97,7 @@ function useExport(sceneManagerRef) {
       const sourceCanvas = manager.getCanvas()
       if (!sourceCanvas) throw new Error('No preview canvas available')
 
-      const loopMs = manager.getExportLoopDurationMs()
+      const loopMs = manager.getLoopDurationMs()
       const frameCount = getFrameCount(manager, fps)
       const frameDelay = Math.round(loopMs / frameCount)
 
@@ -148,7 +148,7 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Encoding APNG...' })
     try {
-      const loopMs = manager.getExportLoopDurationMs()
+      const loopMs = manager.getLoopDurationMs()
       const frameCount = getFrameCount(manager, fps)
       const frameDelay = Math.round(loopMs / frameCount)
 
@@ -174,8 +174,7 @@ function useExport(sceneManagerRef) {
     setStatus({ exporting: true, message: 'Recording video...' })
 
     try {
-      // Use export loop duration: no fade-in/out phases, capped at 3 seconds
-      const loopMs = manager.getExportLoopDurationMs()
+      const loopMs = manager.getLoopDurationMs()
       const state = getState()
 
       // Scale so the shorter side reaches at least 720px for color accuracy
@@ -208,8 +207,7 @@ function useExport(sceneManagerRef) {
 
       drawFrame()
       manager.setOnFrameRendered(drawFrame)
-      // Strip fade-in/out for export — start in "show" phase at rotation t=0
-      manager.prepareForVideoExport()
+      manager.resetToLoopStart()
 
       const stream = compositeCanvas.captureStream(30)
       const recorder = new MediaRecorder(stream, {
@@ -233,12 +231,10 @@ function useExport(sceneManagerRef) {
 
       const blob = await result
       manager.clearOnFrameRendered()
-      manager.restoreAfterVideoExport()
       downloadBlob(blob, `bitmapforge-${Date.now()}.webm`)
       setStatus({ exporting: false, message: 'Video exported.' })
     } catch (error) {
       manager.clearOnFrameRendered?.()
-      manager.restoreAfterVideoExport?.()
       setStatus({ exporting: false, error: friendlyExportError(error) })
     }
   }

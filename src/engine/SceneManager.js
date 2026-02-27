@@ -222,49 +222,6 @@ class SceneManager {
   }
 
   /**
-   * Get the export loop duration: pure rotation cycle with no fade phases, capped at 3 seconds.
-   * All exporters should use this instead of getLoopDurationMs() to produce short, clean loops.
-   * @returns {number}
-   */
-  getExportLoopDurationMs() {
-    return this.animationEngine.getExportLoopDurationMs()
-  }
-
-  /**
-   * Seek to an absolute time and render one frame in "show" mode (no fade-in/out).
-   * Used by frame-based exporters (APNG, GIF, sprite sheet, single HTML).
-   * @param {number} absoluteTimeMs
-   */
-  renderAtTimeForExport(absoluteTimeMs) {
-    this.animationEngine.seekToExport(absoluteTimeMs, this.animGroup, this.effect)
-    this.renderOnce()
-  }
-
-  /**
-   * Prepare the live animation loop for video export: disables fade-in/out,
-   * resets rotation to t=0, and starts in "show" phase.
-   * Call restoreAfterVideoExport() when recording is done.
-   */
-  prepareForVideoExport() {
-    this._savedFadeInOut = this.animationEngine.useFadeInOut
-    this.animationEngine.useFadeInOut = false
-    this.animGroup.rotation.set(0, 0, 0)
-    this.animationEngine.resetToStart()
-    this.effect.startAnimation('show')
-    this.renderOnce()
-  }
-
-  /**
-   * Restore fade-in/out setting after video export.
-   */
-  restoreAfterVideoExport() {
-    if (this._savedFadeInOut !== undefined) {
-      this.animationEngine.useFadeInOut = this._savedFadeInOut
-      delete this._savedFadeInOut
-    }
-  }
-
-  /**
    * Pause the live animation loop. Use before frame-stepping during export.
    * Always call resumeLoop() when done.
    */
