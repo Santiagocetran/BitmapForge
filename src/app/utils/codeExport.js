@@ -1,5 +1,20 @@
 import JSZip from 'jszip'
 
+// Import engine source files as raw strings (Vite ?raw suffix)
+import SceneManagerSrc from '../../engine/SceneManager.js?raw'
+import BaseEffectSrc from '../../engine/effects/BaseEffect.js?raw'
+import BitmapEffectSrc from '../../engine/effects/BitmapEffect.js?raw'
+import BaseFadeVariantSrc from '../../engine/effects/fadeVariants/BaseFadeVariant.js?raw'
+import BloomVariantSrc from '../../engine/effects/fadeVariants/BloomVariant.js?raw'
+import CascadeVariantSrc from '../../engine/effects/fadeVariants/CascadeVariant.js?raw'
+import StaticVariantSrc from '../../engine/effects/fadeVariants/StaticVariant.js?raw'
+import GlitchVariantSrc from '../../engine/effects/fadeVariants/GlitchVariant.js?raw'
+import fadeVariantsIndexSrc from '../../engine/effects/fadeVariants/index.js?raw'
+import modelLoaderSrc from '../../engine/loaders/modelLoader.js?raw'
+import AnimationEngineSrc from '../../engine/animation/AnimationEngine.js?raw'
+import presetsSrc from '../../engine/animation/presets.js?raw'
+import effectTypesSrc from '../../engine/animation/effectTypes.js?raw'
+
 function createAnimationConfig(state) {
   return `export const config = ${JSON.stringify(
     {
@@ -24,7 +39,7 @@ function createAnimationConfig(state) {
   )}\n`
 }
 
-async function buildCodeZip(state, engineFiles = {}) {
+async function buildCodeZip(state) {
   const zip = new JSZip()
   const root = zip.folder('BitmapForge-export')
 
@@ -44,30 +59,46 @@ async function buildCodeZip(state, engineFiles = {}) {
 </html>`
   )
 
+  const modelName = state.model?.name ?? 'model'
   root.file(
     'animation.js',
     `import { SceneManager } from './engine/SceneManager.js'
 import { config } from './config.js'
+
 const container = document.getElementById('app')
 const manager = new SceneManager(container, config.effectOptions)
-console.log('BitmapForge export config', config, manager)
+
+manager.loadModel('./models/${modelName}').then(() => {
+  manager.start()
+})
 `
   )
 
   root.file('config.js', createAnimationConfig(state))
 
+  // Add real engine source files at their correct paths
   const engineFolder = root.folder('engine')
-  const safeEngineFiles = {
-    'SceneManager.js': `export class SceneManager { constructor(container){ this.container=container } }`,
-    'BitmapEffect.js': `export class BitmapEffect {}`,
-    'modelLoader.js': `export async function loadModel(){ return null }`,
-    'AnimationEngine.js': `export class AnimationEngine {}`,
-    ...engineFiles
-  }
+  engineFolder.file('SceneManager.js', SceneManagerSrc)
 
-  Object.entries(safeEngineFiles).forEach(([fileName, source]) => {
-    engineFolder.file(fileName, source)
-  })
+  const effectsFolder = engineFolder.folder('effects')
+  effectsFolder.file('BaseEffect.js', BaseEffectSrc)
+  effectsFolder.file('BitmapEffect.js', BitmapEffectSrc)
+
+  const fadeVariantsFolder = effectsFolder.folder('fadeVariants')
+  fadeVariantsFolder.file('BaseFadeVariant.js', BaseFadeVariantSrc)
+  fadeVariantsFolder.file('BloomVariant.js', BloomVariantSrc)
+  fadeVariantsFolder.file('CascadeVariant.js', CascadeVariantSrc)
+  fadeVariantsFolder.file('StaticVariant.js', StaticVariantSrc)
+  fadeVariantsFolder.file('GlitchVariant.js', GlitchVariantSrc)
+  fadeVariantsFolder.file('index.js', fadeVariantsIndexSrc)
+
+  const loadersFolder = engineFolder.folder('loaders')
+  loadersFolder.file('modelLoader.js', modelLoaderSrc)
+
+  const animationFolder = engineFolder.folder('animation')
+  animationFolder.file('AnimationEngine.js', AnimationEngineSrc)
+  animationFolder.file('presets.js', presetsSrc)
+  animationFolder.file('effectTypes.js', effectTypesSrc)
 
   if (state.model?.file) {
     const modelsFolder = root.folder('models')

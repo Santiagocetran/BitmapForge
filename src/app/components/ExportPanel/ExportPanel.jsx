@@ -6,37 +6,37 @@ import { loadProjectFile } from '../../utils/projectFile.js'
 import { BTN } from '../../styles/buttonStyles.js'
 
 const FORMAT_OPTIONS = [
-  { value: 'gif', label: 'GIF' },
-  { value: 'webm', label: 'WebM' },
-  { value: 'mp4', label: 'MP4' },
-  { value: 'spritesheet', label: 'Sprite Sheet' },
-  { value: 'html', label: 'HTML Snippet' },
-  { value: 'zip', label: 'Code ZIP' }
+  { value: 'apng', label: 'APNG', description: 'Best for web — full color, transparency' },
+  { value: 'gif', label: 'GIF', description: 'Max compatibility' },
+  { value: 'webm', label: 'Video', description: 'WebM — best quality' },
+  { value: 'spritesheet', label: 'Sprite Sheet', description: 'PNG grid for CSS/JS' },
+  { value: 'html', label: 'Single HTML', description: 'Self-contained embed file' },
+  { value: 'zip', label: 'Code ZIP', description: 'Vite project with full engine' }
 ]
 
 function ExportPanel() {
   const sceneManagerRef = useSceneManager()
-  const { exportSpriteSheet, exportGif, exportVideo, exportHtmlSnippet, exportCodeZip, saveProject } =
+  const { exportSpriteSheet, exportGif, exportApng, exportVideo, exportSingleHtml, exportCodeZip, saveProject } =
     useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
 
-  const [selectedFormat, setSelectedFormat] = useState('gif')
+  const [selectedFormat, setSelectedFormat] = useState('apng')
 
   async function onExport() {
+    setStatus({ error: '', message: '' })
     const map = {
+      apng: () => exportApng(),
       gif: () => exportGif(),
-      webm: () => exportVideo('webm'),
-      mp4: () => exportVideo('mp4'),
+      webm: () => exportVideo(),
       spritesheet: () => exportSpriteSheet(),
-      html: () => exportHtmlSnippet(),
+      html: () => exportSingleHtml(),
       zip: () => exportCodeZip()
     }
     await map[selectedFormat]?.()
   }
 
-  // Finding 8: confirm before destructive project load
   async function onLoadProject(event) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -55,6 +55,8 @@ function ExportPanel() {
     }
   }
 
+  const selectedOption = FORMAT_OPTIONS.find((f) => f.value === selectedFormat)
+
   return (
     <section className="space-y-2">
       <div className="grid grid-cols-3 gap-1">
@@ -72,15 +74,15 @@ function ExportPanel() {
         ))}
       </div>
 
+      {selectedOption?.description && <p className="text-xs text-zinc-400">{selectedOption.description}</p>}
+
       <button
         type="button"
         disabled={status.exporting}
         onClick={onExport}
         className={`w-full ${BTN.base} ${BTN.primary} disabled:opacity-50`}
       >
-        {status.exporting
-          ? status.message || 'Exporting…'
-          : `Export ${FORMAT_OPTIONS.find((f) => f.value === selectedFormat)?.label}`}
+        {status.exporting ? status.message || 'Exporting…' : `Export ${selectedOption?.label}`}
       </button>
 
       <div className="grid grid-cols-2 gap-2">
@@ -91,7 +93,6 @@ function ExportPanel() {
           className={`${BTN.base} bg-zinc-800 px-2 py-1 text-center text-zinc-200 cursor-pointer hover:bg-zinc-700`}
         >
           Load .bitmapforge
-          {/* Finding 16: aria-label for hidden file input */}
           <input
             type="file"
             accept=".bitmapforge"

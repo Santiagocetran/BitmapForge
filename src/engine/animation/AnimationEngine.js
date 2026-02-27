@@ -215,15 +215,32 @@ class AnimationEngine {
       modelGroup.rotation.set(0, 0, 0)
       const e = this.animationEffects
       const speed = this.speed
-      if (e.spinX) modelGroup.rotation.x += speed * ts
-      if (e.spinY) modelGroup.rotation.y += speed * ts
-      if (e.spinZ) modelGroup.rotation.z += speed * ts
+
+      // Mirror update(): rotation only accumulates during the 'show' phase.
+      // During fadeIn and fadeOut the model is stationary — this keeps particle
+      // landing positions consistent with the rotation shown in the show phase.
+      let showTs = ts // seconds elapsed within the show phase
+      if (this.useFadeInOut) {
+        const fadeDurS = this.animationDuration / 1000
+        const showDurS = this.showPhaseDuration / 1000
+        if (ts < fadeDurS) {
+          showTs = 0 // fade-in: model stationary at rotation 0
+        } else if (ts < fadeDurS + showDurS) {
+          showTs = ts - fadeDurS // show: accumulate from show start
+        } else {
+          showTs = showDurS // fade-out: frozen at end-of-show rotation
+        }
+      }
+
+      if (e.spinX) modelGroup.rotation.x += speed * showTs
+      if (e.spinY) modelGroup.rotation.y += speed * showTs
+      if (e.spinZ) modelGroup.rotation.z += speed * showTs
       if (e.float) {
         const ox = FLOAT_PRESET?.oscillateX ?? 0.15
         const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
-        // Analytical integral of the incremental float deltas applied each frame
-        modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * ts))
-        modelGroup.rotation.z += ((oz * 2) / 0.3) * (1 - Math.cos(0.3 * ts))
+        // Analytical integral of the incremental float deltas applied per frame
+        modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * showTs))
+        modelGroup.rotation.z += ((oz * 2) / 0.3) * (1 - Math.cos(0.3 * showTs))
       }
     }
 
