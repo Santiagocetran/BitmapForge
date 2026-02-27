@@ -97,7 +97,7 @@ function useExport(sceneManagerRef) {
       const sourceCanvas = manager.getCanvas()
       if (!sourceCanvas) throw new Error('No preview canvas available')
 
-      const loopMs = manager.getLoopDurationMs()
+      const loopMs = manager.getExportLoopDurationMs()
       const frameCount = getFrameCount(manager, fps)
       const frameDelay = Math.round(loopMs / frameCount)
 
@@ -148,7 +148,7 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Encoding APNG...' })
     try {
-      const loopMs = manager.getLoopDurationMs()
+      const loopMs = manager.getExportLoopDurationMs()
       const frameCount = getFrameCount(manager, fps)
       const frameDelay = Math.round(loopMs / frameCount)
 

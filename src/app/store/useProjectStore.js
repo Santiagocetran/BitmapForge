@@ -13,7 +13,7 @@ const DEFAULT_STATE = {
   useFadeInOut: true,
   fadeVariant: 'bloom',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
-  animationSpeed: 0.36,
+  animationSpeed: 1.0,
   showPhaseDuration: 3000,
   animationDuration: 2500,
   lightDirection: { x: 3, y: 4, z: 5 },
