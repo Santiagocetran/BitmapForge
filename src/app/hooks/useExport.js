@@ -174,7 +174,8 @@ function useExport(sceneManagerRef) {
     setStatus({ exporting: true, message: 'Recording video...' })
 
     try {
-      const loopMs = manager.getLoopDurationMs()
+      // Use export loop duration: no fade-in/out phases, capped at 3 seconds
+      const loopMs = manager.getExportLoopDurationMs()
       const state = getState()
 
       // Scale so the shorter side reaches at least 720px for color accuracy
@@ -207,7 +208,8 @@ function useExport(sceneManagerRef) {
 
       drawFrame()
       manager.setOnFrameRendered(drawFrame)
-      manager.resetToLoopStart()
+      // Strip fade-in/out for export — start in "show" phase at rotation t=0
+      manager.prepareForVideoExport()
 
       const stream = compositeCanvas.captureStream(30)
       const recorder = new MediaRecorder(stream, {
@@ -231,10 +233,12 @@ function useExport(sceneManagerRef) {
 
       const blob = await result
       manager.clearOnFrameRendered()
+      manager.restoreAfterVideoExport()
       downloadBlob(blob, `bitmapforge-${Date.now()}.webm`)
       setStatus({ exporting: false, message: 'Video exported.' })
     } catch (error) {
       manager.clearOnFrameRendered?.()
+      manager.restoreAfterVideoExport?.()
       setStatus({ exporting: false, error: friendlyExportError(error) })
     }
   }

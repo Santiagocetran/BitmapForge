@@ -14,7 +14,7 @@ const DEFAULT_STATE = {
   fadeVariant: 'bloom',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 0.36,
-  showPhaseDuration: 20000,
+  showPhaseDuration: 3000,
   animationDuration: 2500,
   lightDirection: { x: 3, y: 4, z: 5 },
   // Base rotation offset (Euler angles in radians, XYZ order). Applied as a static

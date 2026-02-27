@@ -194,6 +194,36 @@ class AnimationEngine {
     return this.animationDuration * 2 + this.showPhaseDuration
   }
 
+  // Returns the export loop duration: pure rotation cycle, capped at 3 seconds.
+  // Fade-in/out is a live-preview feature and is always stripped from exports.
+  getExportLoopDurationMs() {
+    const oneRotation = Math.round(((2 * Math.PI) / this.speed) * 1000)
+    return Math.min(oneRotation, 3000)
+  }
+
+  // Like seekTo but always renders in full "show" phase — no fade-in/out.
+  // Used by frame-based exporters so they capture clean rotation frames.
+  seekToExport(absoluteTimeMs, modelGroup, effect) {
+    this._clearResetTransitions()
+    const ts = absoluteTimeMs / 1000
+    this.time = ts
+    if (modelGroup) {
+      modelGroup.rotation.set(0, 0, 0)
+      const e = this.animationEffects
+      const speed = this.speed
+      if (e.spinX) modelGroup.rotation.x += speed * ts
+      if (e.spinY) modelGroup.rotation.y += speed * ts
+      if (e.spinZ) modelGroup.rotation.z += speed * ts
+      if (e.float) {
+        const ox = FLOAT_PRESET?.oscillateX ?? 0.15
+        const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
+        modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * ts))
+        modelGroup.rotation.z += ((oz * 2) / 0.3) * (1 - Math.cos(0.3 * ts))
+      }
+    }
+    if (effect) effect.setPhaseProgress('show', 1)
+  }
+
   resetToStart() {
     this.time = 0
     this.phaseStartTime = 0
