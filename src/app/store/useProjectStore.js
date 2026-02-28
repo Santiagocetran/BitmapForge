@@ -24,7 +24,9 @@ const DEFAULT_STATE = {
   animationPreset: 'spinY',
   rotateOnShow: false,
   showPreset: 'spinY',
-  status: { loading: false, error: '', exporting: false, message: '', progress: 0 }
+  status: { loading: false, error: '', exporting: false, message: '', progress: 0 },
+  npmPackageName: 'bitmapforge-animation',
+  npmPackageVersion: '1.0.0'
 }
 
 function clamp(value, min, max) {
@@ -93,6 +95,8 @@ const useProjectStore = create(
     setLightDirection: (lightDirection) => set({ lightDirection }),
     setBaseRotation: (x, y, z) => set({ baseRotation: { x, y, z } }),
     resetBaseRotation: () => set({ baseRotation: { x: 0, y: 0, z: 0 } }),
+    setNpmPackageName: (name) => set({ npmPackageName: name }),
+    setNpmPackageVersion: (version) => set({ npmPackageVersion: version }),
     setStatus: (partialStatus) => {
       set({ status: { ...get().status, ...partialStatus } })
     },

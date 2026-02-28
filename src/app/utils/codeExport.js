@@ -68,9 +68,10 @@ import { config } from './config.js'
 const container = document.getElementById('app')
 const manager = new SceneManager(container, config.effectOptions)
 
-manager.loadModel('./models/${modelName}').then(() => {
-  manager.start()
-})
+fetch('./models/${modelName}')
+  .then(res => { if (!res.ok) throw new Error('Failed to load model'); return res.blob() })
+  .then(blob => new File([blob], '${modelName}'))
+  .then(file => manager.loadModel(file))
 `
   )
 

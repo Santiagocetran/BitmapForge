@@ -11,16 +11,29 @@ const FORMAT_OPTIONS = [
   { value: 'webm', label: 'Video', description: 'WebM — best quality' },
   { value: 'spritesheet', label: 'Sprite Sheet', description: 'PNG grid for CSS/JS' },
   { value: 'html', label: 'Single HTML', description: 'Self-contained embed file' },
-  { value: 'zip', label: 'Code ZIP', description: 'Vite project with full engine' }
+  { value: 'zip', label: 'Code ZIP', description: 'Vite project with full engine' },
+  { value: 'npm', label: 'NPM Pkg', description: 'npm-publishable package for any app or website' }
 ]
 
 function ExportPanel() {
   const sceneManagerRef = useSceneManager()
-  const { exportSpriteSheet, exportGif, exportApng, exportVideo, exportSingleHtml, exportCodeZip, saveProject } =
-    useExport(sceneManagerRef)
+  const {
+    exportSpriteSheet,
+    exportGif,
+    exportApng,
+    exportVideo,
+    exportSingleHtml,
+    exportCodeZip,
+    exportNpmPackage,
+    saveProject
+  } = useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
+  const npmPackageName = useProjectStore((s) => s.npmPackageName)
+  const npmPackageVersion = useProjectStore((s) => s.npmPackageVersion)
+  const setNpmPackageName = useProjectStore((s) => s.setNpmPackageName)
+  const setNpmPackageVersion = useProjectStore((s) => s.setNpmPackageVersion)
 
   const [selectedFormat, setSelectedFormat] = useState('apng')
 
@@ -32,7 +45,8 @@ function ExportPanel() {
       webm: () => exportVideo(),
       spritesheet: () => exportSpriteSheet(),
       html: () => exportSingleHtml(),
-      zip: () => exportCodeZip()
+      zip: () => exportCodeZip(),
+      npm: () => exportNpmPackage()
     }
     await map[selectedFormat]?.()
   }
@@ -75,6 +89,31 @@ function ExportPanel() {
       </div>
 
       {selectedOption?.description && <p className="text-xs text-zinc-400">{selectedOption.description}</p>}
+
+      {selectedFormat === 'npm' && (
+        <div className="space-y-1">
+          <div>
+            <label className="text-xs text-zinc-400">Package name</label>
+            <input
+              type="text"
+              value={npmPackageName}
+              onChange={(e) => setNpmPackageName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+              className="w-full bg-zinc-800 text-zinc-100 text-xs px-2 py-1 rounded border border-zinc-600 mt-0.5"
+              placeholder="my-animation-package"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400">Version</label>
+            <input
+              type="text"
+              value={npmPackageVersion}
+              onChange={(e) => setNpmPackageVersion(e.target.value)}
+              className="w-full bg-zinc-800 text-zinc-100 text-xs px-2 py-1 rounded border border-zinc-600 mt-0.5"
+              placeholder="1.0.0"
+            />
+          </div>
+        </div>
+      )}
 
       <button
         type="button"

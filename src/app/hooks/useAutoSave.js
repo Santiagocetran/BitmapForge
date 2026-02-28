@@ -17,7 +17,9 @@ function serializeState(state) {
     animationDuration: state.animationDuration,
     rotateOnShow: state.rotateOnShow,
     showPreset: state.showPreset,
-    lightDirection: state.lightDirection
+    lightDirection: state.lightDirection,
+    npmPackageName: state.npmPackageName,
+    npmPackageVersion: state.npmPackageVersion
   }
 }
 

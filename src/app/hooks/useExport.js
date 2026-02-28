@@ -3,6 +3,7 @@ import gifWorkerUrl from 'gif.js/dist/gif.worker.js?url'
 import { useRef } from 'react'
 import { useProjectStore } from '../store/useProjectStore.js'
 import { buildCodeZip } from '../utils/codeExport.js'
+import { buildNpmPackage } from '../utils/npmExport.js'
 import { buildSingleHtml } from '../utils/singleHtmlExport.js'
 import { buildApng } from '../utils/apngExport.js'
 import { captureFrames, getFrameCount } from '../utils/framesProvider.js'
@@ -278,6 +279,19 @@ function useExport(sceneManagerRef) {
     }
   }
 
+  async function exportNpmPackage() {
+    const state = getState()
+    const { npmPackageName, npmPackageVersion } = state
+    setStatus({ exporting: true, message: 'Building npm package…' })
+    try {
+      const blob = await buildNpmPackage(state, npmPackageName, npmPackageVersion)
+      downloadBlob(blob, `${npmPackageName}-${npmPackageVersion}.zip`)
+      setStatus({ exporting: false, message: 'npm package exported. Unzip and run: npm publish' })
+    } catch (error) {
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
   async function saveProject() {
     try {
       await saveProjectFile(getState())
@@ -294,6 +308,7 @@ function useExport(sceneManagerRef) {
     exportVideo,
     exportSingleHtml,
     exportCodeZip,
+    exportNpmPackage,
     saveProject,
     cancelExport
   }
