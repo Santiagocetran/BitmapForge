@@ -98,6 +98,12 @@ vi.mock('three/addons/loaders/STLLoader.js', () => ({
   STLLoader: vi.fn(() => ({ load: vi.fn() }))
 }))
 
+// Stub canvas toDataURL (returns a minimal valid data URI)
+HTMLCanvasElement.prototype.toDataURL = vi.fn(
+  () =>
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+)
+
 // Stub canvas contexts
 const mockContext2d = {
   fillRect: vi.fn(),

@@ -1,0 +1,20 @@
+{
+  "colors": ["#021a15", "#074434", "#ABC685", "#E8FF99"],
+  "pixelSize": 3,
+  "ditherType": "bayer4x4",
+  "invert": false,
+  "minBrightness": 0.05,
+  "backgroundColor": "#0a0a0a",
+  "useFadeInOut": true,
+  "fadeVariant": "bloom",
+  "animationEffects": { "spinX": false, "spinY": true, "spinZ": false, "float": false },
+  "animationSpeed": 1.0,
+  "showPhaseDuration": 3000,
+  "animationDuration": 2500,
+  "lightDirection": { "x": 3, "y": 4, "z": 5 },
+  "baseRotation": { "x": 0, "y": 0, "z": 0 },
+  "animationPreset": "spinY",
+  "rotateOnShow": false,
+  "showPreset": "spinY",
+  "model": null
+}

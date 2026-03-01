@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.{js,jsx}'],
+    include: ['src/**/*.test.{js,jsx}', 'test/integration/**/*.test.{js,jsx}'],
     setupFiles: './test/setup.js',
     coverage: { provider: 'v8' }
   }
