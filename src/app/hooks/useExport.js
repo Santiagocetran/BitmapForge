@@ -7,6 +7,10 @@ import { buildSingleHtml } from '../utils/singleHtmlExport.js'
 import { buildApng } from '../utils/apngExport.js'
 import { captureFrames, getFrameCount } from '../utils/framesProvider.js'
 import { saveProjectFile } from '../utils/projectFile.js'
+import { buildReactComponent } from '../utils/reactComponentExport.js'
+import { buildWebComponent } from '../utils/webComponentExport.js'
+import { buildCssAnimation } from '../utils/cssExport.js'
+import { buildLottieJson, estimateLottieSizeMb, LOTTIE_MAX_PX } from '../utils/lottieExport.js'
 
 const getState = useProjectStore.getState
 
@@ -278,6 +282,86 @@ function useExport(sceneManagerRef) {
     }
   }
 
+  async function exportReactComponent() {
+    const state = getState()
+    setStatus({ exporting: true, message: 'Building React component…' })
+    try {
+      const blob = await buildReactComponent(state)
+      downloadBlob(blob, `MyAnimation.zip`)
+      setStatus({
+        exporting: false,
+        message: 'React component exported. Drop the MyAnimation/ folder into your project.'
+      })
+    } catch (error) {
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
+  async function exportWebComponent() {
+    const state = getState()
+    setStatus({ exporting: true, message: 'Building Web Component…' })
+    try {
+      const blob = await buildWebComponent(state)
+      downloadBlob(blob, `bitmap-animation.zip`)
+      setStatus({ exporting: false, message: 'Web Component exported. See README.md inside the ZIP for usage.' })
+    } catch (error) {
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
+  async function exportCssAnimation(fps = 16) {
+    const manager = sceneManagerRef.current
+    if (!manager) return
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setStatus({ exporting: true, message: 'Capturing frames…' })
+    try {
+      const state = getState()
+      const blob = await buildCssAnimation(manager, state, 'bitmapforge-animation', fps, {
+        signal: controller.signal,
+        onProgress: (i, total) =>
+          setStatus({ exporting: true, message: `Building CSS animation… ${Math.round((i / total) * 100)}%` })
+      })
+      downloadBlob(blob, `bitmapforge-animation-css.zip`)
+      setStatus({ exporting: false, message: 'CSS animation exported.' })
+    } catch (error) {
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
+  async function exportLottie(fps = 16) {
+    const manager = sceneManagerRef.current
+    if (!manager) return
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    const sourceCanvas = manager.getCanvas()
+    const frameCount = getFrameCount(manager, fps)
+    const estimatedMb = estimateLottieSizeMb(frameCount, sourceCanvas.width, sourceCanvas.height)
+    const capNote =
+      Math.max(sourceCanvas.width, sourceCanvas.height) > LOTTIE_MAX_PX ? ` (frames scaled to ${LOTTIE_MAX_PX}px)` : ''
+
+    setStatus({ exporting: true, message: `Encoding Lottie (raster)${capNote} — est. ~${estimatedMb} MB…` })
+    try {
+      const state = getState()
+      const blob = await buildLottieJson(manager, state, 'bitmapforge-animation', fps, {
+        signal: controller.signal,
+        onProgress: (i, total) =>
+          setStatus({ exporting: true, message: `Encoding Lottie… ${Math.round((i / total) * 100)}%` })
+      })
+      downloadBlob(blob, `bitmapforge-animation.json`)
+      setStatus({
+        exporting: false,
+        message: `Lottie JSON exported (~${estimatedMb} MB). Works with lottie-web, lottie-react, Framer.`
+      })
+    } catch (error) {
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
   async function saveProject() {
     try {
       await saveProjectFile(getState())
@@ -294,6 +378,10 @@ function useExport(sceneManagerRef) {
     exportVideo,
     exportSingleHtml,
     exportCodeZip,
+    exportReactComponent,
+    exportWebComponent,
+    exportCssAnimation,
+    exportLottie,
     saveProject,
     cancelExport
   }

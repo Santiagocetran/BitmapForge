@@ -11,13 +11,28 @@ const FORMAT_OPTIONS = [
   { value: 'webm', label: 'Video', description: 'WebM — best quality' },
   { value: 'spritesheet', label: 'Sprite Sheet', description: 'PNG grid for CSS/JS' },
   { value: 'html', label: 'Single HTML', description: 'Self-contained embed file' },
-  { value: 'zip', label: 'Code ZIP', description: 'Vite project with full engine' }
+  { value: 'zip', label: 'Code ZIP', description: 'Vite project with full engine' },
+  { value: 'react', label: 'React', description: 'Drop-in component — works with Vite & webpack 5' },
+  { value: 'webcomponent', label: 'Web Comp', description: 'Custom element — works in any framework or plain HTML' },
+  { value: 'css', label: 'CSS Anim', description: 'Pure CSS keyframe animation + sprite sheet — no JS required' },
+  { value: 'lottie', label: 'Lottie', description: 'Lottie (raster) — works with lottie-web, lottie-react, Framer' }
 ]
 
 function ExportPanel() {
   const sceneManagerRef = useSceneManager()
-  const { exportSpriteSheet, exportGif, exportApng, exportVideo, exportSingleHtml, exportCodeZip, saveProject } =
-    useExport(sceneManagerRef)
+  const {
+    exportSpriteSheet,
+    exportGif,
+    exportApng,
+    exportVideo,
+    exportSingleHtml,
+    exportCodeZip,
+    exportReactComponent,
+    exportWebComponent,
+    exportCssAnimation,
+    exportLottie,
+    saveProject
+  } = useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
@@ -32,7 +47,11 @@ function ExportPanel() {
       webm: () => exportVideo(),
       spritesheet: () => exportSpriteSheet(),
       html: () => exportSingleHtml(),
-      zip: () => exportCodeZip()
+      zip: () => exportCodeZip(),
+      react: () => exportReactComponent(),
+      webcomponent: () => exportWebComponent(),
+      css: () => exportCssAnimation(),
+      lottie: () => exportLottie()
     }
     await map[selectedFormat]?.()
   }

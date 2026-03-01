@@ -289,6 +289,11 @@ class SceneManager {
     this.renderOnce()
   }
 
+  /** Alias for dispose(). Provided for npm package consumers. */
+  destroy() {
+    this.dispose()
+  }
+
   /**
    * Fully dispose the SceneManager: stops the animation loop, disposes the model,
    * effect, and WebGL renderer, and removes the canvas from the DOM.
