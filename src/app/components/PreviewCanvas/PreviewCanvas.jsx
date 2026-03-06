@@ -81,11 +81,17 @@ function PreviewCanvas() {
       { equalityFn: shallow }
     )
 
+    const unsubRenderMode = useProjectStore.subscribe(
+      (state) => state.renderMode,
+      (mode) => manager.setRenderMode(mode)
+    )
+
     return () => {
       unsubEffect()
       unsubAnim()
       unsubLight()
       unsubRotation()
+      unsubRenderMode()
       resizeObserver.disconnect()
       manager.dispose()
       sceneManagerRef.current = null
@@ -96,10 +102,20 @@ function PreviewCanvas() {
   }, [])
 
   const model = useProjectStore((state) => state.model)
-  const isLoading = useProjectStore((state) => state.status.loading) // Finding 9
+  const inputType = useProjectStore((state) => state.inputType)
+  const shapeType = useProjectStore((state) => state.shapeType)
+  const shapeParams = useProjectStore((state) => state.shapeParams)
+  const textContent = useProjectStore((state) => state.textContent)
+  const fontSize = useProjectStore((state) => state.fontSize)
+  const extrudeDepth = useProjectStore((state) => state.extrudeDepth)
+  const bevelEnabled = useProjectStore((state) => state.bevelEnabled)
+  const fontFamily = useProjectStore((state) => state.fontFamily)
+  const imageSource = useProjectStore((state) => state.imageSource)
+  const isLoading = useProjectStore((state) => state.status.loading)
 
-  // Findings 1+2: cancelled flag + sceneManagerRef guard to prevent stale updates
+  // Load 3D model files (existing behaviour)
   useEffect(() => {
+    if (inputType !== 'model') return
     const manager = sceneManagerRef.current
     if (!manager) return
 
@@ -126,9 +142,76 @@ function PreviewCanvas() {
     return () => {
       cancelled = true
     }
-    // sceneManagerRef is a stable ref — excluded intentionally.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model])
+  }, [model, inputType])
+
+  // Load shape primitives
+  useEffect(() => {
+    if (inputType !== 'shape') return
+    const manager = sceneManagerRef.current
+    if (!manager) return
+    manager.loadShape(shapeType, shapeParams)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputType, shapeType, shapeParams])
+
+  // Load 3D extruded text
+  useEffect(() => {
+    if (inputType !== 'text') return
+    const manager = sceneManagerRef.current
+    if (!manager) return
+
+    let cancelled = false
+    useProjectStore.getState().setStatus({ loading: true, error: '' })
+    manager
+      .loadText(textContent, { fontFamily, fontSize, extrudeDepth, bevelEnabled })
+      .then(() => {
+        if (!cancelled && sceneManagerRef.current === manager) {
+          useProjectStore.getState().setStatus({ loading: false, message: '' })
+        }
+      })
+      .catch((error) => {
+        if (!cancelled && sceneManagerRef.current === manager) {
+          useProjectStore.getState().setStatus({ loading: false, error: error.message })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputType, textContent, fontFamily, fontSize, extrudeDepth, bevelEnabled])
+
+  // Load image/SVG as textured plane
+  useEffect(() => {
+    if (inputType !== 'image') return
+    const manager = sceneManagerRef.current
+    if (!manager) return
+
+    if (!imageSource) {
+      manager.disposeModel()
+      return
+    }
+
+    let cancelled = false
+    useProjectStore.getState().setStatus({ loading: true, error: '' })
+    manager
+      .loadImage(imageSource)
+      .then(() => {
+        if (!cancelled && sceneManagerRef.current === manager) {
+          useProjectStore.getState().setStatus({ loading: false, message: 'Image loaded.' })
+        }
+      })
+      .catch((error) => {
+        if (!cancelled && sceneManagerRef.current === manager) {
+          useProjectStore.getState().setStatus({ loading: false, error: error.message })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputType, imageSource])
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">
