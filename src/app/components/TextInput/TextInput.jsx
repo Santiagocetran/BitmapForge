@@ -34,11 +34,20 @@ function TextInput() {
           value={fontFamily}
           onChange={(e) => setFontFamily(e.target.value)}
         >
-          {Object.entries(FONT_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
+          <optgroup label="Sans-Serif">
+            <option value="helvetiker">Helvetiker</option>
+            <option value="helvetikerBold">Helvetiker Bold</option>
+            <option value="droidSans">Droid Sans</option>
+            <option value="droidSansBold">Droid Sans Bold</option>
+            <option value="droidMono">Droid Mono</option>
+          </optgroup>
+          <optgroup label="Serif">
+            <option value="optimer">Optimer</option>
+            <option value="optimerBold">Optimer Bold</option>
+            <option value="gentilis">Gentilis</option>
+            <option value="gentilisBold">Gentilis Bold</option>
+            <option value="droidSerif">Droid Serif</option>
+          </optgroup>
         </select>
       </div>
 

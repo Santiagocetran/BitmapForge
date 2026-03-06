@@ -38,7 +38,7 @@ const DEFAULT_STATE = {
   shapeParams: {}, // merged with shapeGenerator defaults at load time
   // 3D text settings
   textContent: 'BitmapForge',
-  fontSize: 1,
+  fontSize: 0.8,
   extrudeDepth: 0.3,
   bevelEnabled: true,
   fontFamily: 'helvetiker',

@@ -2,6 +2,15 @@ import * as THREE from 'three'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import helvetikerData from 'three/examples/fonts/helvetiker_regular.typeface.json'
+import helvetikerBoldData from 'three/examples/fonts/helvetiker_bold.typeface.json'
+import optimerData from 'three/examples/fonts/optimer_regular.typeface.json'
+import optimerBoldData from 'three/examples/fonts/optimer_bold.typeface.json'
+import gentilisData from 'three/examples/fonts/gentilis_regular.typeface.json'
+import gentilisBoldData from 'three/examples/fonts/gentilis_bold.typeface.json'
+import droidSansData from 'three/examples/fonts/droid/droid_sans_regular.typeface.json'
+import droidSansBoldData from 'three/examples/fonts/droid/droid_sans_bold.typeface.json'
+import droidSerifData from 'three/examples/fonts/droid/droid_serif_regular.typeface.json'
+import droidMonoData from 'three/examples/fonts/droid/droid_sans_mono_regular.typeface.json'
 
 const fontLoader = new FontLoader()
 
@@ -9,11 +18,29 @@ const fontLoader = new FontLoader()
 const fontCache = new Map()
 
 const BUILT_IN_FONTS = {
-  helvetiker: helvetikerData
+  helvetiker: helvetikerData,
+  helvetikerBold: helvetikerBoldData,
+  optimer: optimerData,
+  optimerBold: optimerBoldData,
+  gentilis: gentilisData,
+  gentilisBold: gentilisBoldData,
+  droidSans: droidSansData,
+  droidSansBold: droidSansBoldData,
+  droidSerif: droidSerifData,
+  droidMono: droidMonoData
 }
 
 const FONT_LABELS = {
-  helvetiker: 'Helvetiker'
+  helvetiker: 'Helvetiker',
+  helvetikerBold: 'Helvetiker Bold',
+  optimer: 'Optimer',
+  optimerBold: 'Optimer Bold',
+  gentilis: 'Gentilis',
+  gentilisBold: 'Gentilis Bold',
+  droidSans: 'Droid Sans',
+  droidSansBold: 'Droid Sans Bold',
+  droidSerif: 'Droid Serif',
+  droidMono: 'Droid Mono'
 }
 
 /**
