@@ -222,7 +222,7 @@ function PreviewCanvas() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-emerald-400" />
         </div>
       )}
-      {!model && !isLoading && (
+      {inputType === 'model' && !model && !isLoading && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-600">
           <svg
             xmlns="http://www.w3.org/2000/svg"
