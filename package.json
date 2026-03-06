@@ -53,6 +53,7 @@
     "react-dropzone": "^14.3.8",
     "three": "^0.182.0",
     "upng-js": "^2.1.0",
+    "zundo": "^2.3.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

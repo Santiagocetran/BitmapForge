@@ -1,3 +1,5 @@
+import { createRNG } from '../utils/seededRandom.js'
+
 class BaseEffect {
   constructor(renderer, options = {}) {
     this.renderer = renderer
@@ -7,6 +9,7 @@ class BaseEffect {
       invert: false,
       minBrightness: 0.05,
       animationDuration: 2500,
+      seed: null,
       ...options
     }
 
@@ -24,6 +27,11 @@ class BaseEffect {
 
     this._colorLUT = null
     this._buildColorLUT()
+    this._rng = this._createRNG()
+  }
+
+  _createRNG() {
+    return this.options.seed != null ? createRNG(this.options.seed) : null
   }
 
   setSize(width, height) {
@@ -35,9 +43,14 @@ class BaseEffect {
 
   updateOptions(nextOptions = {}) {
     const prevPixelSize = this.options.pixelSize
+    const prevSeed = this.options.seed
     this.options = { ...this.options, ...nextOptions }
     if (nextOptions.pixelSize && prevPixelSize !== nextOptions.pixelSize) {
       this.onStructuralOptionChange()
+    } else if ('seed' in nextOptions && nextOptions.seed !== prevSeed) {
+      // Seed changed — recreate RNG and clear particles so next fade uses new pattern
+      this._rng = this._createRNG()
+      this.resetParticles()
     } else {
       this.onOptionChange()
     }
@@ -103,6 +116,8 @@ class BaseEffect {
   resetParticles() {
     this.particles = []
     this.particlesInitialized = false
+    // Reset RNG to start of seed sequence so every fade produces the same pattern
+    this._rng = this._createRNG()
   }
 
   getBrightness(r, g, b) {
@@ -193,11 +208,18 @@ class BaseEffect {
 
         const finalX = x * pixelSize
         const finalY = y * pixelSize
-        const seed = idx * 0.1
-        const angle = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453
-        const normalized = angle - Math.floor(angle)
-        const theta = normalized * Math.PI * 2
-        const distance = 300 + normalized * 500
+        let theta, distance
+        if (this._rng) {
+          theta = this._rng() * Math.PI * 2
+          distance = 300 + this._rng() * 500
+        } else {
+          // Legacy deterministic hash (seed === null — preserves pre-seed behavior)
+          const hashSeed = idx * 0.1
+          const angle = Math.sin(hashSeed * 12.9898 + hashSeed * 78.233) * 43758.5453
+          const normalized = angle - Math.floor(angle)
+          theta = normalized * Math.PI * 2
+          distance = 300 + normalized * 500
+        }
         const startX = this.width / 2 + Math.cos(theta) * distance
         const startY = this.height / 2 + Math.sin(theta) * distance
         const dx = finalX - this.width / 2

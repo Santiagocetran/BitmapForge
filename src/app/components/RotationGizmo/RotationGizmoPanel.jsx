@@ -1,5 +1,6 @@
 import { GizmoCanvas } from './GizmoCanvas.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 const RAD_TO_DEG = 180 / Math.PI
 const DEG_TO_RAD = Math.PI / 180
@@ -52,14 +53,17 @@ function RotationGizmoPanel() {
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={resetBaseRotation}
-        disabled={isZero}
-        className="w-full rounded bg-zinc-700 px-2 py-1.5 text-xs hover:bg-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Reset Rotation
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={resetBaseRotation}
+          disabled={isZero}
+          className="flex-1 rounded bg-zinc-700 px-2 py-1.5 text-xs hover:bg-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Reset Rotation (R)
+        </button>
+        <InfoTooltip content="Static rotation offset applied before animation. Press R to reset to 0°." />
+      </div>
     </section>
   )
 }

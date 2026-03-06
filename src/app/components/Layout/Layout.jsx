@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { useStore } from 'zustand'
+import { Undo2, Redo2, ChevronDown } from 'lucide-react'
 import { ModelUploader } from '../ModelUploader/ModelUploader.jsx'
 import { PreviewCanvas } from '../PreviewCanvas/PreviewCanvas.jsx'
 import { ColorPalette } from '../ColorPalette/ColorPalette.jsx'
@@ -7,14 +10,59 @@ import { LightDirection } from '../LightDirection/LightDirection.jsx'
 import { RotationGizmoPanel } from '../RotationGizmo/RotationGizmoPanel.jsx'
 import { ExportPanel } from '../ExportPanel/ExportPanel.jsx'
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary.jsx'
+import { PresetGallery } from '../PresetGallery/PresetGallery.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
 
-function Section({ title, children }) {
+function Section({ title, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen)
+
   return (
-    <section className="rounded-lg border border-zinc-700 bg-zinc-900 p-3">
-      <h3 className="mb-2 text-sm font-semibold text-zinc-100">{title}</h3>
-      {children}
+    <section className="rounded-lg border border-zinc-700 bg-zinc-900">
+      <div className="flex items-center justify-between p-3">
+        <h3 className="text-sm font-semibold text-zinc-100">{title}</h3>
+        {/* Chevron only visible below lg — desktop sections are always open */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="rounded p-0.5 text-zinc-400 hover:text-zinc-200 lg:hidden"
+          aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          aria-expanded={open}
+        >
+          <ChevronDown size={16} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+      {/* hidden on mobile when closed; lg:block always shows on desktop */}
+      <div className={`px-3 pb-3 ${open ? 'block' : 'hidden lg:block'}`}>{children}</div>
     </section>
+  )
+}
+
+function UndoRedoBar() {
+  const { undo, redo, pastStates, futureStates } = useStore(useProjectStore.temporal)
+  return (
+    <div className="flex items-center gap-1 px-1">
+      <button
+        type="button"
+        onClick={undo}
+        disabled={pastStates.length === 0}
+        title="Undo (Ctrl+Z)"
+        className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <Undo2 size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={redo}
+        disabled={futureStates.length === 0}
+        title="Redo (Ctrl+Shift+Z)"
+        className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <Redo2 size={14} />
+      </button>
+      <span className="ml-auto text-xs text-zinc-600">
+        {pastStates.length > 0 ? `${pastStates.length} step${pastStates.length > 1 ? 's' : ''}` : ''}
+      </span>
+    </div>
   )
 }
 
@@ -25,12 +73,16 @@ function Layout() {
   const hasError = Boolean(status.error) // Finding 20: remove useMemo
 
   return (
-    <main className="grid min-h-screen grid-cols-1 gap-4 p-4 lg:h-screen lg:overflow-hidden lg:grid-cols-[340px_minmax(0,1fr)]">
+    <main className="grid min-h-screen grid-cols-1 gap-3 p-2 lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="order-2 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto lg:order-1 lg:max-h-full">
+        <UndoRedoBar />
         <Section title={model ? 'Replace Model' : 'Upload Model'}>
-          <div className="flex min-h-[260px] w-full flex-col items-center justify-center">
+          <div className="flex min-h-[180px] w-full flex-col items-center justify-center lg:min-h-[260px]">
             <ModelUploader compact={Boolean(model)} />
           </div>
+        </Section>
+        <Section title="Presets">
+          <PresetGallery />
         </Section>
         <Section title="Color Strip">
           <ColorPalette />
@@ -41,10 +93,10 @@ function Layout() {
         <Section title="Animation">
           <AnimationControls />
         </Section>
-        <Section title="Rotation Offset">
+        <Section title="Rotation Offset" defaultOpen={false}>
           <RotationGizmoPanel />
         </Section>
-        <Section title="Light Direction">
+        <Section title="Light Direction" defaultOpen={false}>
           <LightDirection />
         </Section>
         {/* Finding 10: wrap ExportPanel in ErrorBoundary */}
@@ -55,7 +107,7 @@ function Layout() {
         </Section>
       </aside>
 
-      <section className="order-1 flex min-h-[360px] flex-col gap-2 lg:order-2 lg:min-h-0">
+      <section className="order-1 flex min-h-[300px] flex-col gap-2 sm:min-h-[360px] lg:order-2 lg:min-h-0">
         {/* Finding 14: ARIA roles on status messages */}
         {status.message && (
           <div role="status" className="rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">

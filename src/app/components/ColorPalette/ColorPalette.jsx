@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useShallow } from 'zustand/shallow'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
+import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
@@ -126,9 +127,7 @@ function ColorPalette() {
         <span>Dark (shadows)</span>
         <span className="flex items-center gap-1">
           Bright (highlights)
-          <span title="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder.">
-            ⓘ
-          </span>
+          <InfoTooltip content="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder. Double-click a swatch to edit its color." />
         </span>
       </div>
 

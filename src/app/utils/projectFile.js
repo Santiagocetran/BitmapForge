@@ -1,4 +1,6 @@
-const PROJECT_VERSION = 1
+import { DEFAULT_ANIMATION_EFFECTS } from '../../engine/animation/effectTypes.js'
+
+const PROJECT_VERSION = 2
 
 function arrayBufferToBase64(buffer) {
   let binary = ''
@@ -31,13 +33,18 @@ async function buildProjectPayload(state) {
       invert: state.invert,
       minBrightness: state.minBrightness,
       backgroundColor: state.backgroundColor,
+      useFadeInOut: state.useFadeInOut,
+      fadeVariant: state.fadeVariant,
+      animationEffects: state.animationEffects,
       animationPreset: state.animationPreset,
       animationSpeed: state.animationSpeed,
       showPhaseDuration: state.showPhaseDuration,
       animationDuration: state.animationDuration,
       rotateOnShow: state.rotateOnShow,
       showPreset: state.showPreset,
-      lightDirection: state.lightDirection
+      lightDirection: state.lightDirection,
+      baseRotation: state.baseRotation,
+      seed: state.seed
     },
     model: null
   }
@@ -66,11 +73,30 @@ async function saveProjectFile(state) {
   URL.revokeObjectURL(url)
 }
 
+function migrateV1toV2(project) {
+  return {
+    ...project,
+    version: 2,
+    settings: {
+      ...project.settings,
+      useFadeInOut: project.settings.useFadeInOut ?? true,
+      fadeVariant: project.settings.fadeVariant ?? 'bloom',
+      animationEffects: project.settings.animationEffects ?? { ...DEFAULT_ANIMATION_EFFECTS },
+      baseRotation: project.settings.baseRotation ?? { x: 0, y: 0, z: 0 },
+      seed: null // preserve old deterministic-hash behavior
+    }
+  }
+}
+
 async function loadProjectFile(file) {
   const raw = await file.text()
-  const project = JSON.parse(raw)
+  let project = JSON.parse(raw)
   if (!project.settings) {
     throw new Error('Invalid .bitmapforge file: missing settings')
+  }
+
+  if (!project.version || project.version < 2) {
+    project = migrateV1toV2(project)
   }
 
   let modelFile = null

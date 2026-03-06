@@ -1,23 +1,6 @@
 import { BaseEffect } from './BaseEffect.js'
 import { createFadeVariant } from './fadeVariants/index.js'
-
-const BAYER_4X4 = [
-  [0, 8, 2, 10],
-  [12, 4, 14, 6],
-  [3, 11, 1, 9],
-  [15, 7, 13, 5]
-].map((row) => row.map((v) => v / 16))
-
-const BAYER_8X8 = [
-  [0, 32, 8, 40, 2, 34, 10, 42],
-  [48, 16, 56, 24, 50, 18, 58, 26],
-  [12, 44, 4, 36, 14, 46, 6, 38],
-  [60, 28, 52, 20, 62, 30, 54, 22],
-  [3, 35, 11, 43, 1, 33, 9, 41],
-  [51, 19, 59, 27, 49, 17, 57, 25],
-  [15, 47, 7, 39, 13, 45, 5, 37],
-  [63, 31, 55, 23, 61, 29, 53, 21]
-].map((row) => row.map((v) => v / 64))
+import { DITHER_STRATEGIES } from './ditherStrategies.js'
 
 class BitmapEffect extends BaseEffect {
   constructor(renderer, options = {}) {
@@ -82,13 +65,16 @@ class BitmapEffect extends BaseEffect {
   }
 
   getThreshold(x, y) {
-    if (this.options.ditherType === 'bayer8x8') return BAYER_8X8[y % 8][x % 8]
-    if (this.options.ditherType === 'bayer4x4') return BAYER_4X4[y % 4][x % 4]
+    const strategy = DITHER_STRATEGIES[this.options.ditherType]
+    if (strategy?.type === 'threshold') return strategy.getThreshold(x, y)
     return 0.5
   }
 
   shouldDraw(adjustedBrightness, x, y) {
-    if (this.options.ditherType === 'variableDot') return adjustedBrightness > this.options.minBrightness
+    const strategy = DITHER_STRATEGIES[this.options.ditherType]
+    if (!strategy || strategy.type === 'variableDot') return adjustedBrightness > this.options.minBrightness
+    // Error-diffusion is grid-wide; use simple threshold here (only called during particle init)
+    if (strategy.type === 'errorDiffusion') return adjustedBrightness > 0.5
     return adjustedBrightness > this.getThreshold(x, y)
   }
 
@@ -179,22 +165,67 @@ class BitmapEffect extends BaseEffect {
     }
 
     if (!this.isAnimating || this.particles.length === 0) {
-      for (let y = 0; y < this.gridHeight; y++) {
-        for (let x = 0; x < this.gridWidth; x++) {
-          const iOffset = (y * this.gridWidth + x) * 4
-          const r = imageData[iOffset]
-          const g = imageData[iOffset + 1]
-          const b = imageData[iOffset + 2]
-          const a = imageData[iOffset + 3]
-          const brightness = this.getBrightness(r, g, b)
+      const strategy = DITHER_STRATEGIES[this.options.ditherType] ?? DITHER_STRATEGIES.bayer4x4
+      if (strategy.type === 'errorDiffusion') {
+        this._renderErrorDiffusion(imageData, strategy)
+      } else {
+        this._renderThreshold(imageData)
+      }
+    }
+  }
 
-          if (a === 0 || brightness < this.options.minBrightness) continue
-          const adjustedBrightness = this.options.invert ? 1 - brightness : brightness
-          if (!this.shouldDraw(adjustedBrightness, x, y)) continue
+  _renderThreshold(imageData) {
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        const iOffset = (y * this.gridWidth + x) * 4
+        const r = imageData[iOffset]
+        const g = imageData[iOffset + 1]
+        const b = imageData[iOffset + 2]
+        const a = imageData[iOffset + 3]
+        const brightness = this.getBrightness(r, g, b)
 
-          const color = this.getColorForBrightness(adjustedBrightness)
-          this.drawPixel(x * this.options.pixelSize, y * this.options.pixelSize, adjustedBrightness, color, 1)
-        }
+        if (a === 0 || brightness < this.options.minBrightness) continue
+        const adjustedBrightness = this.options.invert ? 1 - brightness : brightness
+        if (!this.shouldDraw(adjustedBrightness, x, y)) continue
+
+        const color = this.getColorForBrightness(adjustedBrightness)
+        this.drawPixel(x * this.options.pixelSize, y * this.options.pixelSize, adjustedBrightness, color, 1)
+      }
+    }
+  }
+
+  _renderErrorDiffusion(imageData, strategy) {
+    const size = this.gridWidth * this.gridHeight
+    const brightnessGrid = new Float32Array(size)
+    const alphaGrid = new Uint8Array(size)
+
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        const iOffset = (y * this.gridWidth + x) * 4
+        const r = imageData[iOffset]
+        const g = imageData[iOffset + 1]
+        const b = imageData[iOffset + 2]
+        const a = imageData[iOffset + 3]
+        if (a === 0) continue
+        const brightness = this.getBrightness(r, g, b)
+        if (brightness < this.options.minBrightness) continue
+        const adjusted = this.options.invert ? 1 - brightness : brightness
+        const idx = y * this.gridWidth + x
+        brightnessGrid[idx] = adjusted
+        alphaGrid[idx] = 1
+      }
+    }
+
+    const drawMask = strategy.processGrid(brightnessGrid, this.gridWidth, this.gridHeight)
+
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        const idx = y * this.gridWidth + x
+        // Never draw transparent pixels even if diffused error pushed them above threshold
+        if (!drawMask[idx] || !alphaGrid[idx]) continue
+        const adjusted = brightnessGrid[idx]
+        const color = this.getColorForBrightness(adjusted)
+        this.drawPixel(x * this.options.pixelSize, y * this.options.pixelSize, adjusted, color, 1)
       }
     }
   }

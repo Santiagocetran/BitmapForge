@@ -1,4 +1,5 @@
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 const DIRECTIONS = [
   { label: 'NW', x: -3, y: 4, z: 5 },
@@ -18,6 +19,10 @@ function LightDirection() {
 
   return (
     <section className="space-y-2">
+      <p className="flex items-center text-xs text-zinc-400">
+        Position of the directional light
+        <InfoTooltip content="Sets where light comes from. Affects shading and which surfaces appear bright or dark in the bitmap effect." />
+      </p>
       <div className="grid grid-cols-3 gap-1">
         {DIRECTIONS.map((direction) => {
           const active =
