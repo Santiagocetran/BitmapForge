@@ -1,6 +1,7 @@
 import { ANIMATION_EFFECT_KEYS } from '../../../engine/animation/effectTypes.js'
 import { FADE_VARIANT_KEYS, FADE_VARIANT_LABELS } from '../../../engine/effects/fadeVariants/index.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 const EFFECT_LABELS = {
   spinX: 'Spin X',
@@ -29,6 +30,7 @@ function AnimationControls() {
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={useFadeInOut} onChange={(e) => setUseFadeInOut(e.target.checked)} />
           Fade in / out
+          <InfoTooltip content="Animate pixels scattering apart (fade out) and assembling together (fade in) at the start and end of each loop." />
         </label>
 
         {useFadeInOut && (
@@ -53,7 +55,10 @@ function AnimationControls() {
       </div>
 
       <div className="space-y-1.5">
-        <span className="text-xs font-medium text-zinc-400">Motion (combine any)</span>
+        <span className="flex items-center text-xs font-medium text-zinc-400">
+          Motion (combine any)
+          <InfoTooltip content="Continuous motion applied during the animation loop. Multiple effects can be active at once." />
+        </span>
         <div className="flex flex-wrap gap-2">
           {ANIMATION_EFFECT_KEYS.map((key) => {
             const label = EFFECT_LABELS[key] ?? key
@@ -71,8 +76,9 @@ function AnimationControls() {
         </div>
       </div>
 
-      <label htmlFor="anim-speed" className="block text-sm">
+      <label htmlFor="anim-speed" className="flex items-center text-sm">
         Speed: {animationSpeed.toFixed(2)} rad/s
+        <InfoTooltip content="Rotation and float speed in radians per second. Affects all motion effects." />
       </label>
       <input
         id="anim-speed"

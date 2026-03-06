@@ -19,7 +19,8 @@ function PreviewCanvas() {
       backgroundColor: useProjectStore.getState().backgroundColor,
       invert: useProjectStore.getState().invert,
       minBrightness: useProjectStore.getState().minBrightness,
-      animationDuration: useProjectStore.getState().animationDuration
+      animationDuration: useProjectStore.getState().animationDuration,
+      seed: useProjectStore.getState().seed
     })
     sceneManagerRef.current = manager
 
@@ -46,7 +47,8 @@ function PreviewCanvas() {
         minBrightness: state.minBrightness,
         backgroundColor: state.backgroundColor,
         animationDuration: state.animationDuration,
-        fadeVariant: state.fadeVariant
+        fadeVariant: state.fadeVariant,
+        seed: state.seed
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
