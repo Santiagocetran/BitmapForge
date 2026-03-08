@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 import { InfoTooltip } from '../ui/InfoTooltip.jsx'
+import { RENDERER_LABELS } from '../../../engine/renderers/index.js'
 
 function QualitySettings() {
   const pixelSize = useProjectStore((state) => state.pixelSize)
   const ditherType = useProjectStore((state) => state.ditherType)
   const invert = useProjectStore((state) => state.invert)
   const minBrightness = useProjectStore((state) => state.minBrightness)
+  const renderMode = useProjectStore((state) => state.renderMode)
+  const setRenderMode = useProjectStore((state) => state.setRenderMode)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -23,6 +26,24 @@ function QualitySettings() {
 
   return (
     <section className="space-y-3">
+      <label className="block text-sm">
+        <span className="flex items-center">
+          Render Mode
+          <InfoTooltip content="Bitmap: dithered pixel grid with configurable algorithms. Pixel Art: clean squares, nearest-palette-color, no dithering." />
+        </span>
+        <select
+          className="mt-1 w-full rounded bg-zinc-800 p-1"
+          value={renderMode}
+          onChange={(e) => setRenderMode(e.target.value)}
+        >
+          {Object.entries(RENDERER_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label htmlFor="quality-pixel-size" className="flex items-center text-sm">
         Pixel Size: {pixelSize}
         <InfoTooltip content="Grid resolution. Smaller = more detail, larger = blockier/more pixelated." />

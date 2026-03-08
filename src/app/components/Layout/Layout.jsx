@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from 'zustand'
 import { Undo2, Redo2, ChevronDown } from 'lucide-react'
-import { ModelUploader } from '../ModelUploader/ModelUploader.jsx'
+import { InputSource } from '../InputSource/InputSource.jsx'
 import { PreviewCanvas } from '../PreviewCanvas/PreviewCanvas.jsx'
 import { ColorPalette } from '../ColorPalette/ColorPalette.jsx'
 import { QualitySettings } from '../QualitySettings/QualitySettings.jsx'
@@ -67,7 +67,6 @@ function UndoRedoBar() {
 }
 
 function Layout() {
-  const model = useProjectStore((state) => state.model)
   const status = useProjectStore((state) => state.status)
 
   const hasError = Boolean(status.error) // Finding 20: remove useMemo
@@ -76,10 +75,8 @@ function Layout() {
     <main className="grid min-h-screen grid-cols-1 gap-3 p-2 lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="order-2 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto lg:order-1 lg:max-h-full">
         <UndoRedoBar />
-        <Section title={model ? 'Replace Model' : 'Upload Model'}>
-          <div className="flex min-h-[180px] w-full flex-col items-center justify-center lg:min-h-[260px]">
-            <ModelUploader compact={Boolean(model)} />
-          </div>
+        <Section title="Input">
+          <InputSource />
         </Section>
         <Section title="Presets">
           <PresetGallery />

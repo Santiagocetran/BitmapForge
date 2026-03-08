@@ -29,6 +29,21 @@ const DEFAULT_STATE = {
   // null = use legacy deterministic hash for particle scatter (backward compatible)
   // number = seeded PRNG — enables reproducible, user-controllable scatter patterns
   seed: null,
+  // Rendering mode ('bitmap' | 'pixelArt') — controls active renderer in BitmapEffect
+  renderMode: 'bitmap',
+  // Input source type — which tab is active in the input panel
+  inputType: 'model', // 'model' | 'shape' | 'text' | 'image'
+  // Shape primitive settings
+  shapeType: 'cube',
+  shapeParams: {}, // merged with shapeGenerator defaults at load time
+  // 3D text settings
+  textContent: 'BitmapForge',
+  fontSize: 0.8,
+  extrudeDepth: 0.3,
+  bevelEnabled: true,
+  fontFamily: 'helvetiker',
+  // Image input — File object excluded from undo history (binary data)
+  imageSource: null,
   status: { loading: false, error: '', exporting: false, message: '', progress: 0 }
 }
 
@@ -101,16 +116,28 @@ const useProjectStore = create(
       resetBaseRotation: () => set({ baseRotation: { x: 0, y: 0, z: 0 } }),
       setSeed: (seed) => set({ seed }),
       randomizeSeed: () => set({ seed: randomSeed() }),
+      setRenderMode: (renderMode) => set({ renderMode }),
+      setInputType: (inputType) => set({ inputType }),
+      setShapeType: (shapeType) => set({ shapeType, shapeParams: {} }),
+      setShapeParam: (key, value) => set((state) => ({ shapeParams: { ...state.shapeParams, [key]: value } })),
+      setTextContent: (textContent) => set({ textContent }),
+      setFontSize: (fontSize) => set({ fontSize: Math.max(0.1, fontSize) }),
+      setExtrudeDepth: (extrudeDepth) => set({ extrudeDepth: Math.max(0.05, extrudeDepth) }),
+      setBevelEnabled: (bevelEnabled) => set({ bevelEnabled }),
+      setFontFamily: (fontFamily) => set({ fontFamily }),
+      setImageSource: (imageSource) => set({ imageSource }),
       setStatus: (partialStatus) => {
         set({ status: { ...get().status, ...partialStatus } })
       },
       resetToDefaults: () => set({ ...DEFAULT_STATE, animationEffects: { ...DEFAULT_ANIMATION_EFFECTS } })
     })),
     {
-      // Only track meaningful visual state — exclude status, model (binary data), and all action functions
+      // Only track meaningful visual state — exclude status, binary file objects, and all action functions
       partialize: (state) =>
         Object.fromEntries(
-          Object.entries(state).filter(([k, v]) => k !== 'status' && k !== 'model' && typeof v !== 'function')
+          Object.entries(state).filter(
+            ([k, v]) => k !== 'status' && k !== 'model' && k !== 'imageSource' && typeof v !== 'function'
+          )
         ),
       limit: 50
     }

@@ -2,6 +2,10 @@ import * as THREE from 'three'
 import { BitmapEffect } from './effects/BitmapEffect.js'
 import { loadModel } from './loaders/modelLoader.js'
 import { AnimationEngine } from './animation/AnimationEngine.js'
+import { createRenderer } from './renderers/index.js'
+import { createShape } from './loaders/shapeGenerator.js'
+import { createTextGroup } from './loaders/textGenerator.js'
+import { createImagePlane } from './loaders/imageLoader.js'
 
 /**
  * Facade for the rendering engine. Manages the Three.js scene, camera, lights,
@@ -287,6 +291,73 @@ class SceneManager {
       this.effect.startAnimation('show')
     }
     this.renderOnce()
+  }
+
+  /**
+   * Swap the rendering mode. Delegates to BitmapEffect.setRenderer().
+   * If a fade is in progress, the swap is deferred until the fade completes.
+   * @param {string} mode - render mode key ('bitmap' | 'pixelArt')
+   */
+  setRenderMode(mode) {
+    const newRenderer = createRenderer(mode, this.effect.options)
+    this.effect.setRenderer(newRenderer)
+  }
+
+  /**
+   * Load a built-in shape primitive into the scene. Disposes any previous model.
+   * @param {string} type - shape type key (see shapeGenerator.getShapeTypes())
+   * @param {object} [params] - shape-specific parameters
+   */
+  loadShape(type, params = {}) {
+    this.disposeModel()
+    const group = createShape(type, params)
+    this.modelGroup = group
+    this.animGroup.add(this.modelGroup)
+    this.animGroup.rotation.set(0, 0, 0)
+    this.effect.startAnimation('fadeIn')
+  }
+
+  /**
+   * Load 3D extruded text into the scene. Disposes any previous model.
+   * @param {string} text
+   * @param {{ fontFamily?: string, fontSize?: number, extrudeDepth?: number, bevelEnabled?: boolean }} [options]
+   * @returns {Promise<void>}
+   */
+  async loadText(text, options = {}) {
+    if (this._loading) return
+    this._loading = true
+    try {
+      this.disposeModel()
+      const group = await createTextGroup(text, options)
+      this.modelGroup = group
+      this.animGroup.add(this.modelGroup)
+      this.animGroup.rotation.set(0, 0, 0)
+      this.effect.startAnimation('fadeIn')
+    } finally {
+      this._loading = false
+    }
+  }
+
+  /**
+   * Load an image or SVG file as a 3D textured plane into the scene.
+   * Disposes any previous model.
+   * @param {File} file
+   * @returns {Promise<void>}
+   */
+  async loadImage(file) {
+    if (this._loading) return
+    this._loading = true
+    try {
+      this.disposeModel()
+      const { group, objectUrl } = await createImagePlane(file)
+      this.modelGroup = group
+      this.currentObjectUrl = objectUrl
+      this.animGroup.add(this.modelGroup)
+      this.animGroup.rotation.set(0, 0, 0)
+      this.effect.startAnimation('fadeIn')
+    } finally {
+      this._loading = false
+    }
   }
 
   /** Alias for dispose(). Provided for npm package consumers. */
