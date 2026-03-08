@@ -11,7 +11,6 @@ import { RotationGizmoPanel } from '../RotationGizmo/RotationGizmoPanel.jsx'
 import { ExportPanel } from '../ExportPanel/ExportPanel.jsx'
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary.jsx'
 import { PresetGallery } from '../PresetGallery/PresetGallery.jsx'
-import { LayerPanel } from '../LayerPanel/LayerPanel.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
 
 function Section({ title, children, defaultOpen = true }) {
@@ -82,9 +81,6 @@ function Layout() {
         <UndoRedoBar />
         <Section title="Input">
           <InputSource />
-        </Section>
-        <Section title="Layers">
-          <LayerPanel />
         </Section>
         <Section title="Presets">
           <PresetGallery />
