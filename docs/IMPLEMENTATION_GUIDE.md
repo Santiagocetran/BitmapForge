@@ -715,13 +715,22 @@ The rendering mode is a setting in the store. When it changes, SceneManager swap
 ### Implementation Order
 
 ```
-1. #21 Built-in shape primitives     — Lowest friction, no file loading needed
-2. #19 Text input (3D extruded)      — High value, builds on shape infrastructure
-3. #20 Image/SVG input (2D mode)     — Different pipeline path, new concept
-4. #35c Validate renderer interface  — Prove the Phase 1 refactor works
-5. #37 TypeScript migration           — Architecture is now stable
-6. #22 Scene composition (layers)     — Largest scope, do last
+1. #21 Built-in shape primitives     ✅ Done
+2. #19 Text input (3D extruded)      ✅ Done
+3. #20 Image/SVG input (2D mode)     ✅ Done
+4. #35c Validate renderer interface  ✅ Done (PixelArtRenderer proves the interface)
+5. #37 TypeScript migration          — Deferred indefinitely (not needed at current scale)
+6. #22 Scene composition (layers)    — Deferred (see note below)
 ```
+
+> **#22 Deferred:** The engine layer system (#22a) was implemented (SceneManager now supports
+> `layers: Map<id, LayerEntry>` with full add/remove/transform/visibility API). However, the
+> layer panel UI (#22b) was reverted. The UX problem: users can't edit individual layers in depth
+> (each layer needs its own color palette, animation settings, etc.), so multi-object composition
+> would produce a confusing result without per-layer controls. Deferred until a proper per-object
+> editing model is designed. The engine internals remain and are backward-compatible.
+>
+> **Phase 2 is complete.** Move to Phase 3.
 
 ---
 
@@ -1026,28 +1035,12 @@ interface ProjectState {
 
 ---
 
-### #22 — Scene composition: multiple objects/layers
+### #22 — Scene composition: multiple objects/layers — DEFERRED
 
-**This is the largest issue in Phase 2. Split into sub-tasks.**
-
-**#22a: Engine layer system in SceneManager**
-
-- Replace single `modelGroup` with an array of layers
-- Each layer: `{ id, type, group, visible, transform }`
-- SceneManager methods: `addLayer()`, `removeLayer()`, `reorderLayers()`, `setLayerTransform()`
-- Each layer gets its own Three.js Group added to `animGroup`
-
-**#22b: Layer panel UI**
-
-- Sidebar panel showing layer list
-- Drag-to-reorder (using @dnd-kit, already a dependency)
-- Per-layer: visibility toggle, name, type icon
-- Click layer → show per-layer transform controls (position, rotation, scale)
-- Add button → choose input type (file, shape, text, image)
-
-**Dependency:** Requires #21, #19, #20 to be done (so all input types exist).
-
-**Estimated effort:** Large (12-20 hours across both sub-tasks)
+> **Status:** Engine layer system (#22a) is implemented in `SceneManager.js` (multi-layer Map,
+> full add/remove/transform API, backward-compatible). The layer panel UI (#22b) was reverted
+> because multi-object composition requires per-layer color/animation controls that don't exist yet.
+> Revisit in Phase 4 alongside the plugin API (#31) which would define per-renderer param contracts.
 
 ---
 
@@ -1058,19 +1051,18 @@ interface ProjectState {
 ### Implementation Order
 
 ```
-1. #24 Pixel art mode          — Simplest renderer (nearest-neighbor, no dither)
-2. #23 ASCII art mode          — High demand, straightforward character mapping
-3. #30 Dithering improvements  — (if not done in Phase 1, do here)
-4. #25 Halftone                — Classic graphic design look
-5. #26 LED matrix              — Variation on pixel grid with glow
-6. #27 CRT/Scanline            — Post-processing-heavy, good test of architecture
-7. #28 Stipple                 — Most complex (random placement, seeded)
-8. #29 Post-processing layer   — Stackable effects on top of any renderer
-9. #36 More animation presets  — Independent of renderers
-10. Export compatibility        — Ensure all 10 exports work with new renderers
+1. #24 Pixel art mode          ✅ Done (PixelArtRenderer in src/engine/renderers/, exposed via renderMode)
+2. #23 ASCII art mode          — NEXT: high demand, straightforward character mapping
+3. #25 Halftone                — Classic graphic design look
+4. #26 LED matrix              — Variation on pixel grid with glow
+5. #27 CRT/Scanline            — Post-processing-heavy, good test of architecture
+6. #28 Stipple                 — Most complex (random placement, seeded)
+7. #29 Post-processing layer   — Stackable effects on top of any renderer
+8. #36 More animation presets  — Independent of renderers
+9. Export compatibility        — Ensure all 10 exports work with new renderers
 ```
 
-**All rendering modes depend on #35 being done in Phase 1.**
+**All rendering modes depend on #35 (done in Phase 1) and the pluggable renderer interface.**
 
 ---
 

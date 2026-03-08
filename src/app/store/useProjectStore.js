@@ -44,7 +44,31 @@ const DEFAULT_STATE = {
   fontFamily: 'helvetiker',
   // Image input — File object excluded from undo history (binary data)
   imageSource: null,
-  status: { loading: false, error: '', exporting: false, message: '', progress: 0 }
+  status: { loading: false, error: '', exporting: false, message: '', progress: 0 },
+
+  // ---------------------------------------------------------------------------
+  // Scene composition (#22): multi-layer support
+  // ---------------------------------------------------------------------------
+  // layers: array of LayerDescriptor objects. Each descriptor is fully serializable
+  // (no File objects). File objects live in fileRegistry.js keyed by layer id.
+  //
+  // LayerDescriptor shape:
+  // {
+  //   id: string,          — nanoid or similar unique id
+  //   name: string,        — display name ('Cube 1', 'model.stl', ...)
+  //   type: 'model' | 'shape' | 'text' | 'image',
+  //   visible: boolean,
+  //   position: { x, y, z },
+  //   rotation: { x, y, z },
+  //   scale: number,
+  //   // Type-specific (all serializable):
+  //   // shape:  { shapeType, shapeParams }
+  //   // text:   { textContent, fontFamily, fontSize, extrudeDepth, bevelEnabled }
+  //   // model/image: { fileName, fileSize, format }  (File in fileRegistry)
+  // }
+  layers: [],
+  // id of the layer selected in the layer panel (UI-only, excluded from undo)
+  selectedLayerId: null
 }
 
 function clamp(value, min, max) {
@@ -129,14 +153,36 @@ const useProjectStore = create(
       setStatus: (partialStatus) => {
         set({ status: { ...get().status, ...partialStatus } })
       },
-      resetToDefaults: () => set({ ...DEFAULT_STATE, animationEffects: { ...DEFAULT_ANIMATION_EFFECTS } })
+      resetToDefaults: () => set({ ...DEFAULT_STATE, animationEffects: { ...DEFAULT_ANIMATION_EFFECTS } }),
+
+      // -------------------------------------------------------------------
+      // Layer actions (#22)
+      // -------------------------------------------------------------------
+      addLayer: (descriptor) => set((state) => ({ layers: [...state.layers, descriptor] })),
+      removeLayer: (id) => {
+        set((state) => ({ layers: state.layers.filter((l) => l.id !== id) }))
+      },
+      setLayerVisible: (id, visible) =>
+        set((state) => ({ layers: state.layers.map((l) => (l.id === id ? { ...l, visible } : l)) })),
+      setLayerTransform: (id, transform) =>
+        set((state) => ({ layers: state.layers.map((l) => (l.id === id ? { ...l, ...transform } : l)) })),
+      updateLayer: (id, partial) =>
+        set((state) => ({ layers: state.layers.map((l) => (l.id === id ? { ...l, ...partial } : l)) })),
+      reorderLayers: (newOrder) => set({ layers: newOrder }),
+      selectLayer: (id) => set({ selectedLayerId: id })
     })),
     {
-      // Only track meaningful visual state — exclude status, binary file objects, and all action functions
+      // Only track meaningful visual state — exclude status, binary file objects,
+      // UI-only selection state, and all action functions
       partialize: (state) =>
         Object.fromEntries(
           Object.entries(state).filter(
-            ([k, v]) => k !== 'status' && k !== 'model' && k !== 'imageSource' && typeof v !== 'function'
+            ([k, v]) =>
+              k !== 'status' &&
+              k !== 'model' &&
+              k !== 'imageSource' &&
+              k !== 'selectedLayerId' &&
+              typeof v !== 'function'
           )
         ),
       limit: 50
