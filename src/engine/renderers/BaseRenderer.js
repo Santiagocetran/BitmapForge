@@ -28,8 +28,7 @@ class BaseRenderer {
    * @param {number} gridH
    * @param {(brightness: number) => string} getColor - maps brightness [0,1] → CSS color
    */
-  render(imageData, gridW, gridH, getColor) {
-    // eslint-disable-line no-unused-vars
+  render(_imageData, _gridW, _gridH, _getColor) {
     throw new Error('BaseRenderer.render() not implemented')
   }
 
@@ -62,8 +61,7 @@ class BaseRenderer {
    * @param {number} y - grid y
    * @returns {boolean}
    */
-  shouldDraw(brightness, x, y) {
-    // eslint-disable-line no-unused-vars
+  shouldDraw(brightness, _x, _y) {
     return brightness > (this.options.minBrightness ?? 0.05)
   }
 
