@@ -17,14 +17,16 @@ function useKeyboardShortcuts({ onShowHelp } = {}) {
       // Ctrl+Z → undo
       if (ctrl && !e.shiftKey && e.key === 'z') {
         e.preventDefault()
-        useProjectStore.temporal.getState().undo()
+        const { undo, pastStates } = useProjectStore.temporal.getState()
+        if (pastStates.length > 0) undo()
         return
       }
 
       // Ctrl+Shift+Z → redo
       if (ctrl && e.shiftKey && e.key === 'z') {
         e.preventDefault()
-        useProjectStore.temporal.getState().redo()
+        const { redo, futureStates } = useProjectStore.temporal.getState()
+        if (futureStates.length > 0) redo()
         return
       }
 

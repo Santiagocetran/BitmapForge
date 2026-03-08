@@ -43,7 +43,9 @@ function UndoRedoBar() {
     <div className="flex items-center gap-1 px-1">
       <button
         type="button"
-        onClick={undo}
+        onClick={() => {
+          if (pastStates.length > 0) undo()
+        }}
         disabled={pastStates.length === 0}
         title="Undo (Ctrl+Z)"
         className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
@@ -52,7 +54,9 @@ function UndoRedoBar() {
       </button>
       <button
         type="button"
-        onClick={redo}
+        onClick={() => {
+          if (futureStates.length > 0) redo()
+        }}
         disabled={futureStates.length === 0}
         title="Redo (Ctrl+Shift+Z)"
         className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
