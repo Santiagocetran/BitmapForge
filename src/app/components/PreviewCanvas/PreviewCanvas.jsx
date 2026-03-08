@@ -3,6 +3,7 @@ import { shallow } from 'zustand/shallow'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { useSceneManager } from '../../context/SceneManagerContext.jsx'
+import { getFile } from '../../store/fileRegistry.js'
 
 function PreviewCanvas() {
   const sceneManagerRef = useSceneManager()
@@ -86,12 +87,73 @@ function PreviewCanvas() {
       (mode) => manager.setRenderMode(mode)
     )
 
+    // Multi-layer subscription (#22): sync store layers → engine
+    // Uses an ID-based diff: add new layers, remove deleted ones, update
+    // visible/transform on existing ones. Files are resolved from fileRegistry.
+    const prevLayerIds = new Set()
+    let prevLayerMap = new Map() // id → descriptor snapshot for change detection
+
+    const unsubLayers = useProjectStore.subscribe(
+      (state) => state.layers,
+      async (layers) => {
+        const newIds = new Set(layers.map((l) => l.id))
+
+        // Remove layers no longer present
+        for (const id of prevLayerIds) {
+          if (!newIds.has(id)) {
+            manager.removeLayer(id)
+            prevLayerIds.delete(id)
+            prevLayerMap.delete(id)
+          }
+        }
+
+        // Add new layers; update visibility/transform for existing ones
+        for (const layer of layers) {
+          if (!prevLayerIds.has(layer.id)) {
+            // New layer — load into engine
+            prevLayerIds.add(layer.id)
+            prevLayerMap.set(layer.id, layer)
+            try {
+              useProjectStore.getState().setStatus({ loading: true, error: '' })
+              await _addLayerToEngine(manager, layer)
+              useProjectStore.getState().setStatus({ loading: false })
+            } catch (err) {
+              useProjectStore.getState().setStatus({ loading: false, error: err.message })
+            }
+          } else {
+            // Existing layer — apply any changed properties
+            const prev = prevLayerMap.get(layer.id)
+            if (prev && prev.visible !== layer.visible) {
+              manager.setLayerVisible(layer.id, layer.visible)
+            }
+            if (
+              prev &&
+              (prev.position !== layer.position || prev.rotation !== layer.rotation || prev.scale !== layer.scale)
+            ) {
+              manager.setLayerTransform(layer.id, {
+                position: layer.position,
+                rotation: layer.rotation,
+                scale: layer.scale
+              })
+            }
+            prevLayerMap.set(layer.id, layer)
+          }
+        }
+
+        // Sync render order
+        if (layers.length > 0) {
+          manager.reorderLayers(layers.map((l) => l.id))
+        }
+      }
+    )
+
     return () => {
       unsubEffect()
       unsubAnim()
       unsubLight()
       unsubRotation()
       unsubRenderMode()
+      unsubLayers()
       resizeObserver.disconnect()
       manager.dispose()
       sceneManagerRef.current = null
@@ -243,6 +305,71 @@ function PreviewCanvas() {
       )}
     </div>
   )
+}
+
+/**
+ * Load a LayerDescriptor into the engine. Files are resolved from fileRegistry.
+ * @param {import('../../../engine/SceneManager.js').SceneManager} manager
+ * @param {object} layer - LayerDescriptor from the store
+ */
+async function _addLayerToEngine(manager, layer) {
+  switch (layer.type) {
+    case 'shape':
+      manager.addShapeLayer(layer.id, layer.shapeType, layer.shapeParams ?? {}, layer.name)
+      // Apply initial transform
+      manager.setLayerTransform(layer.id, {
+        position: layer.position,
+        rotation: layer.rotation,
+        scale: layer.scale
+      })
+      break
+
+    case 'text':
+      await manager.addTextLayer(
+        layer.id,
+        layer.textContent,
+        {
+          fontFamily: layer.fontFamily,
+          fontSize: layer.fontSize,
+          extrudeDepth: layer.extrudeDepth,
+          bevelEnabled: layer.bevelEnabled
+        },
+        layer.name
+      )
+      manager.setLayerTransform(layer.id, {
+        position: layer.position,
+        rotation: layer.rotation,
+        scale: layer.scale
+      })
+      break
+
+    case 'model': {
+      const file = getFile(layer.id)
+      if (!file) throw new Error(`File not found for layer "${layer.name}". Re-upload the file.`)
+      await manager.addModelLayer(layer.id, file, layer.name)
+      manager.setLayerTransform(layer.id, {
+        position: layer.position,
+        rotation: layer.rotation,
+        scale: layer.scale
+      })
+      break
+    }
+
+    case 'image': {
+      const file = getFile(layer.id)
+      if (!file) throw new Error(`File not found for layer "${layer.name}". Re-upload the file.`)
+      await manager.addImageLayer(layer.id, file, layer.name)
+      manager.setLayerTransform(layer.id, {
+        position: layer.position,
+        rotation: layer.rotation,
+        scale: layer.scale
+      })
+      break
+    }
+
+    default:
+      throw new Error(`Unknown layer type: ${layer.type}`)
+  }
 }
 
 export { PreviewCanvas }

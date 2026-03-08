@@ -14,6 +14,10 @@ import { createImagePlane } from './loaders/imageLoader.js'
  * Lifecycle: created by PreviewCanvas on mount, disposed on unmount.
  * All methods must be called on the UI thread.
  *
+ * Layer model: the scene supports N independent layers. Each layer is a named Three.js Group
+ * inside `animGroup`, so global animation (spin/float) applies to all layers together.
+ * Per-layer transforms (position/rotation/scale) are applied to the individual group.
+ *
  * @example
  * const manager = new SceneManager(containerDiv, { pixelSize: 3, colors: ['#000', '#fff'] })
  * await manager.loadModel(file)
@@ -63,8 +67,15 @@ class SceneManager {
     this.scene.add(this.baseGroup)
 
     this.animationEngine = new AnimationEngine()
-    this.modelGroup = null
-    this.currentObjectUrl = null
+
+    /**
+     * Active layers. Each entry: { id, group, objectUrl, type, name, visible }
+     * All groups are direct children of animGroup.
+     * @type {Map<string, {id: string, group: THREE.Group, objectUrl: string|null, type: string, name: string, visible: boolean}>}
+     */
+    this.layers = new Map()
+
+    this.currentObjectUrl = null // legacy alias kept for external compat; points to last loaded URL
     this.lastFrameTime = performance.now()
 
     this._onFrameRendered = null
@@ -72,7 +83,7 @@ class SceneManager {
       const now = performance.now()
       const deltaSeconds = Math.max(0, Math.min((now - this.lastFrameTime) / 1000, 0.25))
       this.lastFrameTime = now
-      if (this.modelGroup) {
+      if (this.hasLayers()) {
         this.animationEngine.update(this.animGroup, this.effect, deltaSeconds)
       }
       this.effect.render(this.scene, this.camera)
@@ -91,12 +102,261 @@ class SceneManager {
     this.renderer.domElement.addEventListener('webglcontextrestored', this._onContextRestored)
   }
 
+  // ---------------------------------------------------------------------------
+  // Layer management (multi-layer API)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Whether any layers are currently loaded.
+   * @returns {boolean}
+   */
+  hasLayers() {
+    return this.layers.size > 0
+  }
+
+  /**
+   * Get a snapshot of layer metadata (id, type, name, visible).
+   * Does not expose Three.js internals.
+   * @returns {Array<{id: string, type: string, name: string, visible: boolean}>}
+   */
+  getLayers() {
+    return Array.from(this.layers.values()).map(({ id, type, name, visible }) => ({ id, type, name, visible }))
+  }
+
+  /**
+   * Add a loaded 3D model file as a new layer. Does NOT clear other layers.
+   * @param {string} id - Unique layer id (caller-supplied, e.g. nanoid())
+   * @param {File} file
+   * @param {string} [name]
+   * @returns {Promise<void>}
+   */
+  async addModelLayer(id, file, name) {
+    const { group, objectUrl } = await loadModel(file)
+    this._addLayerEntry(id, group, objectUrl, 'model', name ?? file.name)
+  }
+
+  /**
+   * Add a built-in shape primitive as a new layer. Synchronous.
+   * @param {string} id
+   * @param {string} type - shape type key
+   * @param {object} [params]
+   * @param {string} [name]
+   */
+  addShapeLayer(id, type, params = {}, name) {
+    const group = createShape(type, params)
+    this._addLayerEntry(id, group, null, 'shape', name ?? type)
+  }
+
+  /**
+   * Add 3D extruded text as a new layer.
+   * @param {string} id
+   * @param {string} text
+   * @param {object} [opts]
+   * @param {string} [name]
+   * @returns {Promise<void>}
+   */
+  async addTextLayer(id, text, opts = {}, name) {
+    const group = await createTextGroup(text, opts)
+    this._addLayerEntry(id, group, null, 'text', name ?? `Text "${text.slice(0, 12)}"`)
+  }
+
+  /**
+   * Add an image/SVG file as a textured plane layer.
+   * @param {string} id
+   * @param {File} file
+   * @param {string} [name]
+   * @returns {Promise<void>}
+   */
+  async addImageLayer(id, file, name) {
+    const { group, objectUrl } = await createImagePlane(file)
+    this._addLayerEntry(id, group, objectUrl, 'image', name ?? file.name)
+  }
+
+  /**
+   * Internal: register a Three.js group as a layer, add it to animGroup.
+   * @param {string} id
+   * @param {THREE.Group} group
+   * @param {string|null} objectUrl
+   * @param {string} type
+   * @param {string} name
+   */
+  _addLayerEntry(id, group, objectUrl, type, name) {
+    const wasEmpty = this.layers.size === 0
+    const index = this.layers.size // renderOrder = position in insertion sequence
+    group.renderOrder = index
+    this.animGroup.add(group)
+    this.layers.set(id, { id, group, objectUrl, type, name, visible: true })
+    this.currentObjectUrl = objectUrl // legacy alias
+    if (wasEmpty) {
+      // Trigger fade-in animation only when scene goes from empty to having content
+      this.animGroup.rotation.set(0, 0, 0)
+      this.effect.startAnimation('fadeIn')
+    }
+  }
+
+  /**
+   * Remove a layer by id. Disposes Three.js resources and revokes object URLs.
+   * @param {string} id
+   */
+  removeLayer(id) {
+    const entry = this.layers.get(id)
+    if (!entry) return
+    this.animGroup.remove(entry.group)
+    _disposeGroup(entry.group)
+    if (entry.objectUrl) {
+      URL.revokeObjectURL(entry.objectUrl)
+    }
+    this.layers.delete(id)
+    // Reassign renderOrder to remaining layers to keep indices contiguous
+    let i = 0
+    for (const e of this.layers.values()) {
+      e.group.renderOrder = i++
+    }
+  }
+
+  /**
+   * Remove all layers, disposing their Three.js resources.
+   */
+  clearLayers() {
+    for (const id of Array.from(this.layers.keys())) {
+      this.removeLayer(id)
+    }
+  }
+
+  /**
+   * Show or hide a layer without removing it.
+   * @param {string} id
+   * @param {boolean} visible
+   */
+  setLayerVisible(id, visible) {
+    const entry = this.layers.get(id)
+    if (!entry) return
+    entry.group.visible = visible
+    entry.visible = visible
+  }
+
+  /**
+   * Apply a positional/rotational/scale transform to a layer group.
+   * Transform is relative to the scene centre (animGroup space).
+   * @param {string} id
+   * @param {{ position?: {x,y,z}, rotation?: {x,y,z}, scale?: number }} transform
+   */
+  setLayerTransform(id, transform) {
+    const entry = this.layers.get(id)
+    if (!entry) return
+    const { position, rotation, scale } = transform
+    if (position) entry.group.position.set(position.x, position.y, position.z)
+    if (rotation) entry.group.rotation.set(rotation.x, rotation.y, rotation.z)
+    if (scale !== undefined) entry.group.scale.setScalar(scale)
+  }
+
+  /**
+   * Reorder layers to match the supplied id array.
+   * Updates `renderOrder` on each group so painter's order is respected.
+   * @param {string[]} ids - Layer ids in desired display order (first = bottom)
+   */
+  reorderLayers(ids) {
+    ids.forEach((id, index) => {
+      const entry = this.layers.get(id)
+      if (entry) entry.group.renderOrder = index
+    })
+    // Rebuild Map in new order to keep getLayers() / iteration order consistent
+    const sorted = new Map()
+    for (const id of ids) {
+      const e = this.layers.get(id)
+      if (e) sorted.set(id, e)
+    }
+    // Preserve any ids not in the supplied list (shouldn't happen, but guard)
+    for (const [id, e] of this.layers) {
+      if (!sorted.has(id)) sorted.set(id, e)
+    }
+    this.layers = sorted
+  }
+
+  // ---------------------------------------------------------------------------
+  // Backward-compatible single-object API
+  // All four wrappers clear existing layers then add one, preserving old behavior.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * @deprecated Prefer addModelLayer() for multi-layer use.
+   * Load a 3D model file, replacing all existing layers.
+   * @param {File} file
+   * @returns {Promise<void>}
+   */
+  async loadModel(file) {
+    if (this._loading) return
+    this._loading = true
+    try {
+      this.clearLayers()
+      await this.addModelLayer(_tempId(), file, file.name)
+    } finally {
+      this._loading = false
+    }
+  }
+
+  /**
+   * @deprecated Prefer addShapeLayer() for multi-layer use.
+   * Load a shape, replacing all existing layers.
+   * @param {string} type
+   * @param {object} [params]
+   */
+  loadShape(type, params = {}) {
+    this.clearLayers()
+    this.addShapeLayer(_tempId(), type, params, type)
+  }
+
+  /**
+   * @deprecated Prefer addTextLayer() for multi-layer use.
+   * Load 3D text, replacing all existing layers.
+   * @param {string} text
+   * @param {object} [opts]
+   * @returns {Promise<void>}
+   */
+  async loadText(text, opts = {}) {
+    if (this._loading) return
+    this._loading = true
+    try {
+      this.clearLayers()
+      await this.addTextLayer(_tempId(), text, opts, `Text "${text.slice(0, 12)}"`)
+    } finally {
+      this._loading = false
+    }
+  }
+
+  /**
+   * @deprecated Prefer addImageLayer() for multi-layer use.
+   * Load an image, replacing all existing layers.
+   * @param {File} file
+   * @returns {Promise<void>}
+   */
+  async loadImage(file) {
+    if (this._loading) return
+    this._loading = true
+    try {
+      this.clearLayers()
+      await this.addImageLayer(_tempId(), file, file.name)
+    } finally {
+      this._loading = false
+    }
+  }
+
+  /**
+   * @deprecated Use clearLayers() for multi-layer use.
+   * Remove and dispose all current layers.
+   */
+  disposeModel() {
+    this.clearLayers()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scene settings
+  // ---------------------------------------------------------------------------
+
   /**
    * Resize the rendering viewport.
-   * Called by the React integration layer (PreviewCanvas) on container resize.
-   * The engine intentionally does not observe resize itself to stay framework-agnostic.
-   * @param {number} width - Width in CSS pixels
-   * @param {number} height - Height in CSS pixels
+   * @param {number} width
+   * @param {number} height
    */
   setSize(width, height) {
     const w = Math.max(1, Math.floor(width))
@@ -107,56 +367,8 @@ class SceneManager {
   }
 
   /**
-   * Load a 3D model file into the scene. Disposes any previous model.
-   * Triggers a fadeIn animation on success.
-   * Supported formats: .stl, .obj, .gltf, .glb
-   * @param {File} file - The model file to load
-   * @returns {Promise<void>}
-   */
-  async loadModel(file) {
-    if (this._loading) return
-    this._loading = true
-    try {
-      const { group, objectUrl } = await loadModel(file)
-      this.disposeModel()
-      this.modelGroup = group
-      this.currentObjectUrl = objectUrl
-      this.animGroup.add(this.modelGroup)
-      // Reset animation rotation so each new model starts from the base pose.
-      this.animGroup.rotation.set(0, 0, 0)
-      this.effect.startAnimation('fadeIn')
-    } finally {
-      this._loading = false
-    }
-  }
-
-  /**
-   * Remove and dispose the current 3D model, freeing GPU resources.
-   * Safe to call when no model is loaded (no-op).
-   */
-  disposeModel() {
-    if (!this.modelGroup) return
-    this.animGroup.remove(this.modelGroup)
-    this.modelGroup.traverse((obj) => {
-      if (obj.geometry) obj.geometry.dispose?.()
-      if (obj.material) {
-        if (Array.isArray(obj.material)) {
-          obj.material.forEach((mat) => mat?.dispose?.())
-        } else {
-          obj.material.dispose?.()
-        }
-      }
-    })
-    this.modelGroup = null
-    if (this.currentObjectUrl) {
-      URL.revokeObjectURL(this.currentObjectUrl)
-      this.currentObjectUrl = null
-    }
-  }
-
-  /**
-   * Update bitmap rendering options. Changes apply on the next render frame.
-   * @param {{ pixelSize?: number, ditherType?: string, colors?: string[], invert?: boolean, minBrightness?: number, backgroundColor?: string, animationDuration?: number }} options
+   * Update bitmap rendering options.
+   * @param {object} options
    */
   updateEffectOptions(options) {
     this.effect.updateOptions(options)
@@ -168,8 +380,8 @@ class SceneManager {
   }
 
   /**
-   * Update animation behavior. Changes apply on the next animation frame.
-   * @param {{ useFadeInOut?: boolean, animationEffects?: Record<string, boolean>, animationSpeed?: number, showPhaseDuration?: number, animationDuration?: number, animationPreset?: string, rotateOnShow?: boolean, showPreset?: string }} options
+   * Update animation behavior.
+   * @param {object} options
    */
   updateAnimationOptions(options) {
     this.animationEngine.setFadeOptions({
@@ -186,9 +398,6 @@ class SceneManager {
 
   /**
    * Move the key directional light to a new position.
-   * @param {number} x
-   * @param {number} y
-   * @param {number} z
    */
   setLightDirection(x, y, z) {
     this.keyLight.position.set(x, y, z)
@@ -196,18 +405,27 @@ class SceneManager {
 
   /**
    * Apply a base rotation offset to the model pose. Animation plays on top of this.
-   * @param {number} x - Euler X in radians
-   * @param {number} y - Euler Y in radians
-   * @param {number} z - Euler Z in radians
    */
   setBaseRotation(x, y, z) {
     this.baseGroup.rotation.set(x, y, z)
   }
 
   /**
-   * Get the bitmap output canvas element (the visible canvas with the dithered effect).
-   * Used by export functions to capture frames.
-   * @returns {HTMLCanvasElement | null}
+   * Swap the rendering mode.
+   * @param {string} mode
+   */
+  setRenderMode(mode) {
+    const newRenderer = createRenderer(mode, this.effect.options)
+    this.effect.setRenderer(newRenderer)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Export / playback utilities
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get the bitmap output canvas element.
+   * @returns {HTMLCanvasElement}
    */
   getCanvas() {
     if (!this.effect.bitmapCanvas) {
@@ -218,41 +436,31 @@ class SceneManager {
 
   /**
    * Get the total duration of one animation loop in milliseconds.
-   * Used by export functions to know how many frames to capture.
    * @returns {number}
    */
   getLoopDurationMs() {
     return this.animationEngine.getLoopDurationMs()
   }
 
-  /**
-   * Pause the live animation loop. Use before frame-stepping during export.
-   * Always call resumeLoop() when done.
-   */
+  /** Pause the live animation loop. */
   pauseLoop() {
     this.renderer.setAnimationLoop(null)
   }
 
-  /**
-   * Resume the live animation loop after export or pause.
-   * Resets lastFrameTime to avoid a large delta spike on the first resumed frame.
-   */
+  /** Resume the live animation loop. */
   resumeLoop() {
     this.lastFrameTime = performance.now()
     this.renderer.setAnimationLoop(this._animationLoop)
   }
 
-  /**
-   * Render a single frame with the current scene state. Does not advance animation time.
-   */
+  /** Render a single frame without advancing animation time. */
   renderOnce() {
     this.effect.render(this.scene, this.camera)
   }
 
   /**
-   * Seek the animation to a specific time within the loop and render one frame.
-   * Used for export: step through the loop to capture frames at precise timestamps.
-   * @param {number} absoluteTimeMs - Time in milliseconds within the loop (0 to getLoopDurationMs())
+   * Seek the animation to a specific time and render one frame.
+   * @param {number} absoluteTimeMs
    */
   renderAtTime(absoluteTimeMs) {
     this.animationEngine.seekTo(absoluteTimeMs, this.animGroup, this.effect)
@@ -260,29 +468,24 @@ class SceneManager {
   }
 
   /**
-   * Register a callback invoked once per animation frame, after the bitmap effect renders.
-   * Used by video export to composite frames to a recording canvas.
+   * Register a callback invoked once per animation frame.
    * @param {(() => void) | null} callback
    */
   setOnFrameRendered(callback) {
     this._onFrameRendered = callback
   }
 
-  /**
-   * Remove the frame-rendered callback.
-   */
+  /** Remove the frame-rendered callback. */
   clearOnFrameRendered() {
     this._onFrameRendered = null
   }
 
   /**
    * Reset animation to t=0 and render the first frame.
-   * Used before video recording to ensure the loop starts from the beginning.
    */
   resetToLoopStart() {
     this.animationEngine.resetToStart()
-    if (this.modelGroup) {
-      // Reset the animation layer only — baseGroup keeps the user's pose offset.
+    if (this.hasLayers()) {
       this.animGroup.rotation.set(0, 0, 0)
     }
     if (this.animationEngine.useFadeInOut) {
@@ -293,72 +496,9 @@ class SceneManager {
     this.renderOnce()
   }
 
-  /**
-   * Swap the rendering mode. Delegates to BitmapEffect.setRenderer().
-   * If a fade is in progress, the swap is deferred until the fade completes.
-   * @param {string} mode - render mode key ('bitmap' | 'pixelArt')
-   */
-  setRenderMode(mode) {
-    const newRenderer = createRenderer(mode, this.effect.options)
-    this.effect.setRenderer(newRenderer)
-  }
-
-  /**
-   * Load a built-in shape primitive into the scene. Disposes any previous model.
-   * @param {string} type - shape type key (see shapeGenerator.getShapeTypes())
-   * @param {object} [params] - shape-specific parameters
-   */
-  loadShape(type, params = {}) {
-    this.disposeModel()
-    const group = createShape(type, params)
-    this.modelGroup = group
-    this.animGroup.add(this.modelGroup)
-    this.animGroup.rotation.set(0, 0, 0)
-    this.effect.startAnimation('fadeIn')
-  }
-
-  /**
-   * Load 3D extruded text into the scene. Disposes any previous model.
-   * @param {string} text
-   * @param {{ fontFamily?: string, fontSize?: number, extrudeDepth?: number, bevelEnabled?: boolean }} [options]
-   * @returns {Promise<void>}
-   */
-  async loadText(text, options = {}) {
-    if (this._loading) return
-    this._loading = true
-    try {
-      this.disposeModel()
-      const group = await createTextGroup(text, options)
-      this.modelGroup = group
-      this.animGroup.add(this.modelGroup)
-      this.animGroup.rotation.set(0, 0, 0)
-      this.effect.startAnimation('fadeIn')
-    } finally {
-      this._loading = false
-    }
-  }
-
-  /**
-   * Load an image or SVG file as a 3D textured plane into the scene.
-   * Disposes any previous model.
-   * @param {File} file
-   * @returns {Promise<void>}
-   */
-  async loadImage(file) {
-    if (this._loading) return
-    this._loading = true
-    try {
-      this.disposeModel()
-      const { group, objectUrl } = await createImagePlane(file)
-      this.modelGroup = group
-      this.currentObjectUrl = objectUrl
-      this.animGroup.add(this.modelGroup)
-      this.animGroup.rotation.set(0, 0, 0)
-      this.effect.startAnimation('fadeIn')
-    } finally {
-      this._loading = false
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
 
   /** Alias for dispose(). Provided for npm package consumers. */
   destroy() {
@@ -366,22 +506,54 @@ class SceneManager {
   }
 
   /**
-   * Fully dispose the SceneManager: stops the animation loop, disposes the model,
+   * Fully dispose the SceneManager: stops the animation loop, disposes all layers,
    * effect, and WebGL renderer, and removes the canvas from the DOM.
-   * Safe to call multiple times (idempotent for the model and renderer).
    */
   dispose() {
     this.renderer.setAnimationLoop(null)
     this._onFrameRendered = null
     this.renderer.domElement.removeEventListener('webglcontextlost', this._onContextLost)
     this.renderer.domElement.removeEventListener('webglcontextrestored', this._onContextRestored)
-    this.disposeModel()
+    this.clearLayers()
     this.effect.dispose()
     this.renderer.dispose()
     if (this.effect.domElement.parentNode) {
       this.effect.domElement.parentNode.removeChild(this.effect.domElement)
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively dispose geometries, materials, and textures inside a Three.js object.
+ * @param {THREE.Object3D} obj
+ */
+function _disposeGroup(obj) {
+  obj.traverse((child) => {
+    if (child.geometry) child.geometry.dispose?.()
+    if (child.material) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      for (const mat of mats) {
+        if (!mat) continue
+        // Dispose any map textures attached to the material
+        for (const key of Object.keys(mat)) {
+          const val = mat[key]
+          if (val && typeof val === 'object' && typeof val.dispose === 'function' && val.isTexture) {
+            val.dispose()
+          }
+        }
+        mat.dispose?.()
+      }
+    }
+  })
+}
+
+/** Generate a short unique id for single-layer compat wrappers. */
+function _tempId() {
+  return Math.random().toString(36).slice(2, 10)
 }
 
 export { SceneManager }
