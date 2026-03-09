@@ -1,17 +1,20 @@
 import { BitmapRenderer } from './BitmapRenderer.js'
 import { PixelArtRenderer } from './PixelArtRenderer.js'
 import { AsciiRenderer } from './AsciiRenderer.js'
+import { HalftoneRenderer } from './HalftoneRenderer.js'
 
 const RENDERERS = {
   bitmap: BitmapRenderer,
   pixelArt: PixelArtRenderer,
-  ascii: AsciiRenderer
+  ascii: AsciiRenderer,
+  halftone: HalftoneRenderer
 }
 
 const RENDERER_LABELS = {
   bitmap: 'Bitmap (Dithered)',
   pixelArt: 'Pixel Art (Clean)',
-  ascii: 'ASCII Art'
+  ascii: 'ASCII Art',
+  halftone: 'Halftone'
 }
 
 /**

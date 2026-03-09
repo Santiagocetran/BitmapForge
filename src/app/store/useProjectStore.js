@@ -29,11 +29,14 @@ const DEFAULT_STATE = {
   // null = use legacy deterministic hash for particle scatter (backward compatible)
   // number = seeded PRNG — enables reproducible, user-controllable scatter patterns
   seed: null,
-  // Rendering mode ('bitmap' | 'pixelArt' | 'ascii') — controls active renderer in BitmapEffect
+  // Rendering mode ('bitmap' | 'pixelArt' | 'ascii' | 'halftone') — controls active renderer in BitmapEffect
   renderMode: 'bitmap',
   // ASCII renderer settings
   charRamp: 'classic', // key into CHAR_RAMPS: 'classic' | 'blocks' | 'dense' | 'minimal'
   asciiColored: false, // false = monochrome (brightest palette color), true = full-palette mapping
+  // Halftone renderer settings
+  halftoneDotShape: 'circle', // 'circle' | 'diamond'
+  halftoneAngle: 0, // degrees, normalized to [0, 180) by the renderer
   // Input source type — which tab is active in the input panel
   inputType: 'model', // 'model' | 'shape' | 'text' | 'image'
   // Shape primitive settings
@@ -153,6 +156,8 @@ const useProjectStore = create(
       },
       setCharRamp: (charRamp) => set({ charRamp }),
       setAsciiColored: (asciiColored) => set({ asciiColored }),
+      setHalftoneDotShape: (halftoneDotShape) => set({ halftoneDotShape }),
+      setHalftoneAngle: (halftoneAngle) => set({ halftoneAngle: Math.max(0, Math.min(179, halftoneAngle)) }),
       setInputType: (inputType) => set({ inputType }),
       setShapeType: (shapeType) => set({ shapeType, shapeParams: {} }),
       setShapeParam: (key, value) => set((state) => ({ shapeParams: { ...state.shapeParams, [key]: value } })),
