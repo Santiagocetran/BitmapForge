@@ -16,6 +16,10 @@ function QualitySettings() {
   const setCharRamp = useProjectStore((state) => state.setCharRamp)
   const asciiColored = useProjectStore((state) => state.asciiColored)
   const setAsciiColored = useProjectStore((state) => state.setAsciiColored)
+  const halftoneDotShape = useProjectStore((state) => state.halftoneDotShape)
+  const setHalftoneDotShape = useProjectStore((state) => state.setHalftoneDotShape)
+  const halftoneAngle = useProjectStore((state) => state.halftoneAngle)
+  const setHalftoneAngle = useProjectStore((state) => state.setHalftoneAngle)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -29,6 +33,7 @@ function QualitySettings() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const isAscii = renderMode === 'ascii'
+  const isHalftone = renderMode === 'halftone'
 
   // Shared advanced controls (background, seed, invert, min brightness)
   const sharedAdvanced = (
@@ -112,7 +117,7 @@ function QualitySettings() {
       <label className="block text-sm">
         <span className="flex items-center">
           Render Mode
-          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness." />
+          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens." />
         </span>
         <select
           className="mt-1 w-full rounded bg-zinc-800 p-1"
@@ -127,7 +132,64 @@ function QualitySettings() {
         </select>
       </label>
 
-      {isAscii ? (
+      {isHalftone ? (
+        /* ── Halftone mode controls ──────────────────────── */
+        <>
+          <label htmlFor="quality-dot-spacing" className="flex items-center text-sm">
+            Dot Spacing: {pixelSize}px
+            <InfoTooltip content="Grid cell size for each dot. Smaller = more dots (finer screen), larger = fewer dots (coarser screen)." />
+          </label>
+          <input
+            id="quality-dot-spacing"
+            type="range"
+            min="4"
+            max="20"
+            value={pixelSize}
+            onChange={(event) => setPixelSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label className="block text-sm">
+            <span className="flex items-center">
+              Dot Shape
+              <InfoTooltip content="Circle: standard halftone screen dots. Diamond: rotated square dots, gives a different texture." />
+            </span>
+            <select
+              className="mt-1 w-full rounded bg-zinc-800 p-1"
+              value={halftoneDotShape}
+              onChange={(e) => setHalftoneDotShape(e.target.value)}
+            >
+              <option value="circle">Circle</option>
+              <option value="diamond">Diamond</option>
+            </select>
+          </label>
+
+          <label htmlFor="quality-halftone-angle" className="flex items-center text-sm">
+            Screen Angle: {halftoneAngle}°
+            <InfoTooltip content="Rotates the dot grid. Classic print screens use 45° for black ink to reduce moiré patterns." />
+          </label>
+          <input
+            id="quality-halftone-angle"
+            type="range"
+            min="0"
+            max="179"
+            value={halftoneAngle}
+            onChange={(event) => setHalftoneAngle(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <details
+            className="rounded border border-zinc-700 p-2"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
+              Advanced
+            </summary>
+            <div className="mt-2 space-y-3">{sharedAdvanced}</div>
+          </details>
+        </>
+      ) : isAscii ? (
         /* ── ASCII mode controls ─────────────────────────── */
         <>
           <label className="block text-sm">

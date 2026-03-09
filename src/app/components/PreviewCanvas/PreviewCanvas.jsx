@@ -50,7 +50,9 @@ function PreviewCanvas() {
         fadeVariant: state.fadeVariant,
         seed: state.seed,
         charRamp: state.charRamp,
-        asciiColored: state.asciiColored
+        asciiColored: state.asciiColored,
+        halftoneDotShape: state.halftoneDotShape,
+        halftoneAngle: state.halftoneAngle
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
