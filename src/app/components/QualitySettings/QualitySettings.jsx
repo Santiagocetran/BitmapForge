@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 import { RENDERER_LABELS } from '../../../engine/renderers/index.js'
+import { CHAR_RAMP_LABELS } from '../../../engine/renderers/AsciiRenderer.js'
 
 function QualitySettings() {
   const pixelSize = useProjectStore((state) => state.pixelSize)
@@ -11,6 +12,10 @@ function QualitySettings() {
   const minBrightness = useProjectStore((state) => state.minBrightness)
   const renderMode = useProjectStore((state) => state.renderMode)
   const setRenderMode = useProjectStore((state) => state.setRenderMode)
+  const charRamp = useProjectStore((state) => state.charRamp)
+  const setCharRamp = useProjectStore((state) => state.setCharRamp)
+  const asciiColored = useProjectStore((state) => state.asciiColored)
+  const setAsciiColored = useProjectStore((state) => state.setAsciiColored)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -21,15 +26,93 @@ function QualitySettings() {
   const randomizeSeed = useProjectStore((state) => state.randomizeSeed)
   const setSeed = useProjectStore((state) => state.setSeed)
 
-  // Finding 15: track details open state for aria-expanded
   const [advancedOpen, setAdvancedOpen] = useState(false)
+
+  const isAscii = renderMode === 'ascii'
+
+  // Shared advanced controls (background, seed, invert, min brightness)
+  const sharedAdvanced = (
+    <>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={invert} onChange={(e) => setInvert(e.target.checked)} />
+        Invert Brightness
+        <InfoTooltip content="Swaps light and dark areas — bright areas become dark and vice versa." />
+      </label>
+
+      <label htmlFor="quality-min-brightness" className="flex items-center text-sm">
+        Min Brightness: {minBrightness.toFixed(2)}
+        <InfoTooltip content="Pixels below this luminance threshold are treated as fully dark and not drawn." />
+      </label>
+      <input
+        id="quality-min-brightness"
+        type="range"
+        min="0.01"
+        max="0.5"
+        step="0.01"
+        value={minBrightness}
+        onChange={(event) => setMinBrightness(Number(event.target.value))}
+        className="w-full"
+      />
+
+      <div className="flex items-center justify-between">
+        <span className="flex items-center text-sm">
+          Particle seed
+          <InfoTooltip content="Controls the scatter pattern during fade animations. Different seeds = different visual patterns." />
+        </span>
+        <div className="flex items-center gap-1">
+          <span className="font-mono text-xs text-zinc-400">
+            {seed === null ? 'auto' : `#${seed.toString(16).padStart(8, '0')}`}
+          </span>
+          <button
+            type="button"
+            onClick={randomizeSeed}
+            className="rounded bg-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-600"
+            title="Generate new random seed"
+          >
+            ↻
+          </button>
+          {seed !== null && (
+            <button
+              type="button"
+              onClick={() => setSeed(null)}
+              className="rounded bg-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-600"
+              title="Reset to auto (deterministic hash)"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      <label className="block text-sm">
+        <span className="flex items-center">
+          Background
+          <InfoTooltip content="Canvas background color. Choose Transparent for PNG/GIF exports with alpha." />
+        </span>
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            className={`${BTN.base} ${BTN.secondary}`}
+            onClick={() => setBackgroundColor('transparent')}
+          >
+            Transparent
+          </button>
+          <input
+            type="color"
+            value={backgroundColor === 'transparent' ? '#000000' : backgroundColor}
+            onChange={(event) => setBackgroundColor(event.target.value)}
+          />
+        </div>
+      </label>
+    </>
+  )
 
   return (
     <section className="space-y-3">
       <label className="block text-sm">
         <span className="flex items-center">
           Render Mode
-          <InfoTooltip content="Bitmap: dithered pixel grid with configurable algorithms. Pixel Art: clean squares, nearest-palette-color, no dithering." />
+          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness." />
         </span>
         <select
           className="mt-1 w-full rounded bg-zinc-800 p-1"
@@ -44,122 +127,108 @@ function QualitySettings() {
         </select>
       </label>
 
-      <label htmlFor="quality-pixel-size" className="flex items-center text-sm">
-        Pixel Size: {pixelSize}
-        <InfoTooltip content="Grid resolution. Smaller = more detail, larger = blockier/more pixelated." />
-      </label>
-      <input
-        id="quality-pixel-size"
-        type="range"
-        min="1"
-        max="20"
-        value={pixelSize}
-        onChange={(event) => setPixelSize(Number(event.target.value))}
-        className="w-full"
-      />
-
-      {/* Finding 15: controlled details with aria-expanded */}
-      <details
-        className="rounded border border-zinc-700 p-2"
-        open={advancedOpen}
-        onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
-      >
-        <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
-          Advanced
-        </summary>
-        <div className="mt-2 space-y-3">
+      {isAscii ? (
+        /* ── ASCII mode controls ─────────────────────────── */
+        <>
           <label className="block text-sm">
             <span className="flex items-center">
-              Dither Type
-              <InfoTooltip content="Algorithm for shading. Bayer = ordered grid pattern. Variable Dot = halftone circles. Floyd-Steinberg / Atkinson = error-diffusion (smoother gradients, slower)." />
+              Character Ramp
+              <InfoTooltip content="The set of characters used to represent brightness levels. Classic is the standard ASCII art ramp, Blocks uses Unicode fill chars, Dense has 70 levels, Minimal is high-contrast." />
             </span>
             <select
               className="mt-1 w-full rounded bg-zinc-800 p-1"
-              value={ditherType}
-              onChange={(event) => setDitherType(event.target.value)}
+              value={charRamp}
+              onChange={(e) => setCharRamp(e.target.value)}
             >
-              <option value="bayer4x4">Bayer 4×4</option>
-              <option value="bayer8x8">Bayer 8×8</option>
-              <option value="variableDot">Variable Dot</option>
-              <option value="floydSteinberg">Floyd-Steinberg</option>
-              <option value="atkinson">Atkinson</option>
+              {Object.entries(CHAR_RAMP_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
             </select>
           </label>
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={invert} onChange={(e) => setInvert(e.target.checked)} />
-            Invert Brightness
-            <InfoTooltip content="Swaps light and dark areas — bright areas become dark and vice versa." />
+            <input type="checkbox" checked={asciiColored} onChange={(e) => setAsciiColored(e.target.checked)} />
+            Colored Mode
+            <InfoTooltip content="When off, all characters use the brightest palette color (classic terminal look). When on, each character is tinted by its brightness zone using the full palette." />
           </label>
 
-          <label htmlFor="quality-min-brightness" className="flex items-center text-sm">
-            Min Brightness: {minBrightness.toFixed(2)}
-            <InfoTooltip content="Pixels below this luminance threshold are treated as fully dark and not drawn." />
+          <label htmlFor="quality-char-size" className="flex items-center text-sm">
+            Character Size: {pixelSize}px
+            <InfoTooltip content="Cell size for each character. Smaller = more characters, denser output. Larger = more readable individual chars. Keep above 8px for legible text." />
           </label>
           <input
-            id="quality-min-brightness"
+            id="quality-char-size"
             type="range"
-            min="0.01"
-            max="0.5"
-            step="0.01"
-            value={minBrightness}
-            onChange={(event) => setMinBrightness(Number(event.target.value))}
+            min="8"
+            max="32"
+            value={pixelSize}
+            onChange={(event) => setPixelSize(Number(event.target.value))}
             className="w-full"
           />
 
-          <div className="flex items-center justify-between">
-            <span className="flex items-center text-sm">
-              Particle seed
-              <InfoTooltip content="Controls the scatter pattern during fade animations. Different seeds = different visual patterns. Null uses a classic deterministic pattern." />
-            </span>
-            <div className="flex items-center gap-1">
-              <span className="font-mono text-xs text-zinc-400">
-                {seed === null ? 'auto' : `#${seed.toString(16).padStart(8, '0')}`}
-              </span>
-              <button
-                type="button"
-                onClick={randomizeSeed}
-                className="rounded bg-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-600"
-                title="Generate new random seed"
-              >
-                ↻
-              </button>
-              {seed !== null && (
-                <button
-                  type="button"
-                  onClick={() => setSeed(null)}
-                  className="rounded bg-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-600"
-                  title="Reset to auto (deterministic hash)"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          <label className="block text-sm">
-            <span className="flex items-center">
-              Background
-              <InfoTooltip content="Canvas background color. Choose Transparent for PNG/GIF exports with alpha." />
-            </span>
-            <div className="mt-1 flex items-center gap-2">
-              {/* Finding 22: standardized button style */}
-              <button
-                type="button"
-                className={`${BTN.base} ${BTN.secondary}`}
-                onClick={() => setBackgroundColor('transparent')}
-              >
-                Transparent
-              </button>
-              <input
-                type="color"
-                value={backgroundColor === 'transparent' ? '#000000' : backgroundColor}
-                onChange={(event) => setBackgroundColor(event.target.value)}
-              />
-            </div>
+          <details
+            className="rounded border border-zinc-700 p-2"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
+              Advanced
+            </summary>
+            <div className="mt-2 space-y-3">{sharedAdvanced}</div>
+          </details>
+        </>
+      ) : (
+        /* ── Bitmap / Pixel Art mode controls ───────────── */
+        <>
+          <label htmlFor="quality-pixel-size" className="flex items-center text-sm">
+            Pixel Size: {pixelSize}
+            <InfoTooltip content="Grid resolution. Smaller = more detail, larger = blockier/more pixelated." />
           </label>
-        </div>
-      </details>
+          <input
+            id="quality-pixel-size"
+            type="range"
+            min="1"
+            max="20"
+            value={pixelSize}
+            onChange={(event) => setPixelSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <details
+            className="rounded border border-zinc-700 p-2"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
+              Advanced
+            </summary>
+            <div className="mt-2 space-y-3">
+              {renderMode === 'bitmap' && (
+                <label className="block text-sm">
+                  <span className="flex items-center">
+                    Dither Type
+                    <InfoTooltip content="Algorithm for shading. Bayer = ordered grid pattern. Variable Dot = halftone circles. Floyd-Steinberg / Atkinson = error-diffusion (smoother gradients, slower)." />
+                  </span>
+                  <select
+                    className="mt-1 w-full rounded bg-zinc-800 p-1"
+                    value={ditherType}
+                    onChange={(event) => setDitherType(event.target.value)}
+                  >
+                    <option value="bayer4x4">Bayer 4×4</option>
+                    <option value="bayer8x8">Bayer 8×8</option>
+                    <option value="variableDot">Variable Dot</option>
+                    <option value="floydSteinberg">Floyd-Steinberg</option>
+                    <option value="atkinson">Atkinson</option>
+                  </select>
+                </label>
+              )}
+              {sharedAdvanced}
+            </div>
+          </details>
+        </>
+      )}
     </section>
   )
 }
