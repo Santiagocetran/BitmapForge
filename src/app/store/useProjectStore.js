@@ -29,8 +29,11 @@ const DEFAULT_STATE = {
   // null = use legacy deterministic hash for particle scatter (backward compatible)
   // number = seeded PRNG — enables reproducible, user-controllable scatter patterns
   seed: null,
-  // Rendering mode ('bitmap' | 'pixelArt') — controls active renderer in BitmapEffect
+  // Rendering mode ('bitmap' | 'pixelArt' | 'ascii') — controls active renderer in BitmapEffect
   renderMode: 'bitmap',
+  // ASCII renderer settings
+  charRamp: 'classic', // key into CHAR_RAMPS: 'classic' | 'blocks' | 'dense' | 'minimal'
+  asciiColored: false, // false = monochrome (brightest palette color), true = full-palette mapping
   // Input source type — which tab is active in the input panel
   inputType: 'model', // 'model' | 'shape' | 'text' | 'image'
   // Shape primitive settings
@@ -140,7 +143,16 @@ const useProjectStore = create(
       resetBaseRotation: () => set({ baseRotation: { x: 0, y: 0, z: 0 } }),
       setSeed: (seed) => set({ seed }),
       randomizeSeed: () => set({ seed: randomSeed() }),
-      setRenderMode: (renderMode) => set({ renderMode }),
+      setRenderMode: (renderMode) => {
+        const update = { renderMode }
+        // ASCII chars below 8px are unreadable — nudge pixelSize to a legible minimum
+        if (renderMode === 'ascii' && get().pixelSize < 8) {
+          update.pixelSize = 10
+        }
+        set(update)
+      },
+      setCharRamp: (charRamp) => set({ charRamp }),
+      setAsciiColored: (asciiColored) => set({ asciiColored }),
       setInputType: (inputType) => set({ inputType }),
       setShapeType: (shapeType) => set({ shapeType, shapeParams: {} }),
       setShapeParam: (key, value) => set((state) => ({ shapeParams: { ...state.shapeParams, [key]: value } })),

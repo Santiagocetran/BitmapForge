@@ -1,14 +1,17 @@
 import { BitmapRenderer } from './BitmapRenderer.js'
 import { PixelArtRenderer } from './PixelArtRenderer.js'
+import { AsciiRenderer } from './AsciiRenderer.js'
 
 const RENDERERS = {
   bitmap: BitmapRenderer,
-  pixelArt: PixelArtRenderer
+  pixelArt: PixelArtRenderer,
+  ascii: AsciiRenderer
 }
 
 const RENDERER_LABELS = {
   bitmap: 'Bitmap (Dithered)',
-  pixelArt: 'Pixel Art (Clean)'
+  pixelArt: 'Pixel Art (Clean)',
+  ascii: 'ASCII Art'
 }
 
 /**

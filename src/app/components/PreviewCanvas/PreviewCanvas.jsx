@@ -48,7 +48,9 @@ function PreviewCanvas() {
         backgroundColor: state.backgroundColor,
         animationDuration: state.animationDuration,
         fadeVariant: state.fadeVariant,
-        seed: state.seed
+        seed: state.seed,
+        charRamp: state.charRamp,
+        asciiColored: state.asciiColored
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }

@@ -17,6 +17,7 @@ const REQUIRED_PATHS = [
   'engine/renderers/BaseRenderer.js',
   'engine/renderers/BitmapRenderer.js',
   'engine/renderers/PixelArtRenderer.js',
+  'engine/renderers/AsciiRenderer.js',
   'engine/renderers/index.js',
   'engine/loaders/modelLoader.js',
   'engine/animation/AnimationEngine.js',
@@ -66,6 +67,7 @@ describe('ENGINE_SOURCES', () => {
       'engine/renderers/BaseRenderer.js',
       'engine/renderers/BitmapRenderer.js',
       'engine/renderers/PixelArtRenderer.js',
+      'engine/renderers/AsciiRenderer.js',
       'engine/renderers/index.js'
     ]
     const paths = new Set(ENGINE_SOURCES.map((e) => e.path))

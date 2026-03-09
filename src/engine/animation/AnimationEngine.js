@@ -176,14 +176,24 @@ class AnimationEngine {
     if (currentPhase === 'fadeIn' && effect.isAnimationComplete()) {
       effect.startAnimation('show')
       this.phaseStartTime = now
+      // Do NOT call applyEffects here. The transition frame must render at the same
+      // rotation the particles were computed from — any increment would cause a visible
+      // tilt as the static render snaps to a different pose than the particle positions.
+      // Rotation begins on the next frame when the show branch runs normally.
     } else if (currentPhase === 'show') {
       this.applyEffects(modelGroup, deltaSeconds)
       this._applyResetTransitions(modelGroup, deltaSeconds)
       if (now - this.phaseStartTime >= this.showPhaseDuration) {
         effect.startAnimation('fadeOut')
       }
-    } else if (currentPhase === 'fadeOut' && effect.isAnimationComplete()) {
-      effect.startAnimation('fadeIn')
+    } else if (currentPhase === 'fadeOut') {
+      // Continue rotating during fade-out — particles are 2D snapshots that fade
+      // independently of the 3D model, so rotation here is visually seamless.
+      this.applyEffects(modelGroup, deltaSeconds)
+      this._applyResetTransitions(modelGroup, deltaSeconds)
+      if (effect.isAnimationComplete()) {
+        effect.startAnimation('fadeIn')
+      }
     }
   }
 
@@ -222,13 +232,12 @@ class AnimationEngine {
       let showTs = ts // seconds elapsed within the show phase
       if (this.useFadeInOut) {
         const fadeDurS = this.animationDuration / 1000
-        const showDurS = this.showPhaseDuration / 1000
         if (ts < fadeDurS) {
           showTs = 0 // fade-in: model stationary at rotation 0
-        } else if (ts < fadeDurS + showDurS) {
-          showTs = ts - fadeDurS // show: accumulate from show start
         } else {
-          showTs = showDurS // fade-out: frozen at end-of-show rotation
+          // Both show and fade-out: rotation runs continuously from show start.
+          // fade-out keeps the model spinning (matches live animation behaviour).
+          showTs = ts - fadeDurS
         }
       }
 

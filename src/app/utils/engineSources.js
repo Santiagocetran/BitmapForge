@@ -14,6 +14,7 @@ import fadeVariantsIndexSrc from '../../engine/effects/fadeVariants/index.js?raw
 import BaseRendererSrc from '../../engine/renderers/BaseRenderer.js?raw'
 import BitmapRendererSrc from '../../engine/renderers/BitmapRenderer.js?raw'
 import PixelArtRendererSrc from '../../engine/renderers/PixelArtRenderer.js?raw'
+import AsciiRendererSrc from '../../engine/renderers/AsciiRenderer.js?raw'
 import renderersIndexSrc from '../../engine/renderers/index.js?raw'
 import modelLoaderSrc from '../../engine/loaders/modelLoader.js?raw'
 import AnimationEngineSrc from '../../engine/animation/AnimationEngine.js?raw'
@@ -43,6 +44,7 @@ const ENGINE_SOURCES = [
   { path: 'engine/renderers/BaseRenderer.js', content: BaseRendererSrc },
   { path: 'engine/renderers/BitmapRenderer.js', content: BitmapRendererSrc },
   { path: 'engine/renderers/PixelArtRenderer.js', content: PixelArtRendererSrc },
+  { path: 'engine/renderers/AsciiRenderer.js', content: AsciiRendererSrc },
   { path: 'engine/renderers/index.js', content: renderersIndexSrc },
   { path: 'engine/loaders/modelLoader.js', content: modelLoaderSrc },
   { path: 'engine/animation/AnimationEngine.js', content: AnimationEngineSrc },
