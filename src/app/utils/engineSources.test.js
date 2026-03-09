@@ -19,6 +19,7 @@ const REQUIRED_PATHS = [
   'engine/renderers/PixelArtRenderer.js',
   'engine/renderers/AsciiRenderer.js',
   'engine/renderers/HalftoneRenderer.js',
+  'engine/renderers/LedMatrixRenderer.js',
   'engine/renderers/index.js',
   'engine/loaders/modelLoader.js',
   'engine/animation/AnimationEngine.js',

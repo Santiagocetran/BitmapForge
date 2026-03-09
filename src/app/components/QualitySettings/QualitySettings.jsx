@@ -20,6 +20,12 @@ function QualitySettings() {
   const setHalftoneDotShape = useProjectStore((state) => state.setHalftoneDotShape)
   const halftoneAngle = useProjectStore((state) => state.halftoneAngle)
   const setHalftoneAngle = useProjectStore((state) => state.setHalftoneAngle)
+  const ledGap = useProjectStore((state) => state.ledGap)
+  const setLedGap = useProjectStore((state) => state.setLedGap)
+  const ledGlowRadius = useProjectStore((state) => state.ledGlowRadius)
+  const setLedGlowRadius = useProjectStore((state) => state.setLedGlowRadius)
+  const ledShape = useProjectStore((state) => state.ledShape)
+  const setLedShape = useProjectStore((state) => state.setLedShape)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -34,6 +40,7 @@ function QualitySettings() {
 
   const isAscii = renderMode === 'ascii'
   const isHalftone = renderMode === 'halftone'
+  const isLed = renderMode === 'ledMatrix'
 
   // Shared advanced controls (background, seed, invert, min brightness)
   const sharedAdvanced = (
@@ -117,7 +124,7 @@ function QualitySettings() {
       <label className="block text-sm">
         <span className="flex items-center">
           Render Mode
-          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens." />
+          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens. LED Matrix: glowing rounded LEDs on a dark panel." />
         </span>
         <select
           className="mt-1 w-full rounded bg-zinc-800 p-1"
@@ -132,7 +139,78 @@ function QualitySettings() {
         </select>
       </label>
 
-      {isHalftone ? (
+      {isLed ? (
+        /* ── LED Matrix mode controls ────────────────────── */
+        <>
+          <label htmlFor="quality-led-spacing" className="flex items-center text-sm">
+            LED Spacing: {pixelSize}px
+            <InfoTooltip content="Grid cell size for each LED. Smaller = more LEDs (denser panel), larger = fewer LEDs (coarser panel)." />
+          </label>
+          <input
+            id="quality-led-spacing"
+            type="range"
+            min="4"
+            max="20"
+            value={pixelSize}
+            onChange={(event) => setPixelSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="quality-led-gap" className="flex items-center text-sm">
+            LED Gap: {ledGap}px
+            <InfoTooltip content="Gap between each LED element. Larger gaps make individual LEDs more distinct." />
+          </label>
+          <input
+            id="quality-led-gap"
+            type="range"
+            min="0"
+            max="4"
+            value={ledGap}
+            onChange={(event) => setLedGap(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="quality-led-glow" className="flex items-center text-sm">
+            Glow Radius: {ledGlowRadius}px
+            <InfoTooltip content="Size of the light halo around each LED. Set to 0 to disable. Note: higher values with dense grids may reduce performance." />
+          </label>
+          <input
+            id="quality-led-glow"
+            type="range"
+            min="0"
+            max="8"
+            value={ledGlowRadius}
+            onChange={(event) => setLedGlowRadius(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label className="block text-sm">
+            <span className="flex items-center">
+              LED Shape
+              <InfoTooltip content="Circle: classic round LED dots. Round Rect: slightly square LED elements, like modern sign boards." />
+            </span>
+            <select
+              className="mt-1 w-full rounded bg-zinc-800 p-1"
+              value={ledShape}
+              onChange={(e) => setLedShape(e.target.value)}
+            >
+              <option value="circle">Circle</option>
+              <option value="roundRect">Round Rect</option>
+            </select>
+          </label>
+
+          <details
+            className="rounded border border-zinc-700 p-2"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
+              Advanced
+            </summary>
+            <div className="mt-2 space-y-3">{sharedAdvanced}</div>
+          </details>
+        </>
+      ) : isHalftone ? (
         /* ── Halftone mode controls ──────────────────────── */
         <>
           <label htmlFor="quality-dot-spacing" className="flex items-center text-sm">

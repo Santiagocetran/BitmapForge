@@ -52,7 +52,10 @@ function PreviewCanvas() {
         charRamp: state.charRamp,
         asciiColored: state.asciiColored,
         halftoneDotShape: state.halftoneDotShape,
-        halftoneAngle: state.halftoneAngle
+        halftoneAngle: state.halftoneAngle,
+        ledGap: state.ledGap,
+        ledGlowRadius: state.ledGlowRadius,
+        ledShape: state.ledShape
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
