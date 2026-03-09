@@ -123,6 +123,12 @@ class LedMatrixRenderer extends BaseRenderer {
     const ledSize = Math.max(1, pixelSize - ledGap)
     const halfLed = ledSize / 2
 
+    // Glow via shadowBlur — set once, updated only on color change (GPU-accelerated).
+    // This avoids creating a radial gradient object per cell per frame.
+    if (ledGlowRadius > 0) {
+      ctx.shadowBlur = ledGlowRadius * 2.5
+    }
+
     let lastColor = null
 
     for (let gy = 0; gy < gridH; gy++) {
@@ -146,24 +152,20 @@ class LedMatrixRenderer extends BaseRenderer {
 
         const color = getColor(adjusted)
 
-        // Glow pass — radial gradient halo around the LED
-        if (ledGlowRadius > 0) {
-          const glowR = halfLed + ledGlowRadius
-          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR)
-          grad.addColorStop(0, color)
-          grad.addColorStop(1, 'transparent')
-          ctx.fillStyle = grad
-          const glowBox = glowR
-          ctx.fillRect(cx - glowBox, cy - glowBox, glowBox * 2, glowBox * 2)
-        }
-
-        // LED element
         if (color !== lastColor) {
           ctx.fillStyle = color
+          if (ledGlowRadius > 0) ctx.shadowColor = color
           lastColor = color
         }
+
         this._drawLed(ctx, cx, cy, halfLed)
       }
+    }
+
+    // Reset shadow state so it doesn't bleed into other canvas operations
+    if (ledGlowRadius > 0) {
+      ctx.shadowBlur = 0
+      ctx.shadowColor = 'transparent'
     }
   }
 

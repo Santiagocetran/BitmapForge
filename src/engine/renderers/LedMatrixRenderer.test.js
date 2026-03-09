@@ -167,27 +167,50 @@ describe('LedMatrixRenderer — render (circle LEDs)', () => {
     expect(ctx.arc).not.toHaveBeenCalled()
   })
 
-  it('does not create radial gradient when ledGlowRadius is 0', () => {
+  it('does not set shadowBlur when ledGlowRadius is 0', () => {
     const imageData = makeImageData(2, 2)
-    r.render(imageData, 2, 2, getColor)
-    expect(ctx.createRadialGradient).not.toHaveBeenCalled()
+    // No shadowBlur property on this ctx mock — if renderer tried to set it, it would throw
+    delete ctx.shadowBlur
+    expect(() => r.render(imageData, 2, 2, getColor)).not.toThrow()
   })
 })
 
 describe('LedMatrixRenderer — render (glow)', () => {
-  let ctx, r
-
-  beforeEach(() => {
-    ctx = makeCtxMock()
-    r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 4, ledShape: 'circle' })
+  it('sets shadowBlur when ledGlowRadius > 0', () => {
+    const ctx = makeCtxMock()
+    // Track shadowBlur assignments
+    const shadowBlurValues = []
+    Object.defineProperty(ctx, 'shadowBlur', {
+      get: () => shadowBlurValues[shadowBlurValues.length - 1] ?? 0,
+      set: (v) => {
+        shadowBlurValues.push(v)
+      }
+    })
+    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 4, ledShape: 'circle' })
     r._bitmapCtx = ctx
     r._bitmapCanvas = makeCanvasMock(ctx)
-  })
-
-  it('creates a radial gradient when ledGlowRadius > 0', () => {
     const imageData = makeImageData(2, 2)
     r.render(imageData, 2, 2, getColor)
-    expect(ctx.createRadialGradient).toHaveBeenCalled()
+    // shadowBlur should be set to a positive value then reset to 0
+    expect(shadowBlurValues).toContain(4 * 2.5)
+    expect(shadowBlurValues[shadowBlurValues.length - 1]).toBe(0)
+  })
+
+  it('does not set shadowBlur when ledGlowRadius is 0', () => {
+    const ctx = makeCtxMock()
+    const shadowBlurValues = []
+    Object.defineProperty(ctx, 'shadowBlur', {
+      get: () => shadowBlurValues[shadowBlurValues.length - 1] ?? 0,
+      set: (v) => {
+        shadowBlurValues.push(v)
+      }
+    })
+    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 0, ledShape: 'circle' })
+    r._bitmapCtx = ctx
+    r._bitmapCanvas = makeCanvasMock(ctx)
+    const imageData = makeImageData(2, 2)
+    r.render(imageData, 2, 2, getColor)
+    expect(shadowBlurValues).toHaveLength(0)
   })
 })
 
