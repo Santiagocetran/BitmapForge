@@ -54,7 +54,6 @@ function PreviewCanvas() {
         halftoneDotShape: state.halftoneDotShape,
         halftoneAngle: state.halftoneAngle,
         ledGap: state.ledGap,
-        ledGlowRadius: state.ledGlowRadius,
         ledShape: state.ledShape
       }),
       (slice) => manager.updateEffectOptions(slice),

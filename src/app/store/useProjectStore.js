@@ -39,7 +39,6 @@ const DEFAULT_STATE = {
   halftoneAngle: 0, // degrees, normalized to [0, 180) by the renderer
   // LED Matrix renderer settings
   ledGap: 1, // gap between LED elements in px (0–4)
-  ledGlowRadius: 2, // glow halo radius around each LED in px (0–8)
   ledShape: 'circle', // 'circle' | 'roundRect'
   // Input source type — which tab is active in the input panel
   inputType: 'model', // 'model' | 'shape' | 'text' | 'image'
@@ -163,7 +162,6 @@ const useProjectStore = create(
       setHalftoneDotShape: (halftoneDotShape) => set({ halftoneDotShape }),
       setHalftoneAngle: (halftoneAngle) => set({ halftoneAngle: Math.max(0, Math.min(179, halftoneAngle)) }),
       setLedGap: (ledGap) => set({ ledGap: clamp(ledGap, 0, 4) }),
-      setLedGlowRadius: (ledGlowRadius) => set({ ledGlowRadius: clamp(ledGlowRadius, 0, 8) }),
       setLedShape: (ledShape) => set({ ledShape }),
       setInputType: (inputType) => set({ inputType }),
       setShapeType: (shapeType) => set({ shapeType, shapeParams: {} }),

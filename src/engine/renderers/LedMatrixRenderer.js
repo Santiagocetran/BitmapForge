@@ -5,13 +5,11 @@ import { BaseRenderer } from './BaseRenderer.js'
  *
  * Each grid cell is rendered as a rounded or circular LED element sitting on
  * a dark panel background. Brightness maps to color (bright pixel → lit LED,
- * dark pixel → unlit / skipped). An optional glow effect adds a radial
- * gradient halo around each lit LED.
+ * dark pixel → unlit / skipped).
  *
  * Options:
  *   pixelSize       — cell spacing in px (shared with all renderers)
  *   ledGap          — gap between LED elements in px (0–4, default 1)
- *   ledGlowRadius   — glow halo radius in px (0–8, default 2)
  *   ledShape        — 'circle' | 'roundRect' (default 'circle')
  *   minBrightness   — brightness threshold below which the LED is off
  *   invert          — invert brightness mapping
@@ -22,7 +20,6 @@ class LedMatrixRenderer extends BaseRenderer {
     super({
       pixelSize: 8,
       ledGap: 1,
-      ledGlowRadius: 2,
       ledShape: 'circle',
       minBrightness: 0.05,
       invert: false,
@@ -118,16 +115,10 @@ class LedMatrixRenderer extends BaseRenderer {
     const ctx = this._bitmapCtx
     if (!ctx) return
 
-    const { pixelSize, ledGap, ledGlowRadius, minBrightness, invert } = this.options
+    const { pixelSize, ledGap, minBrightness, invert } = this.options
     // Clamp ledSize ≥ 1 so LEDs are always visible even when gap equals spacing
     const ledSize = Math.max(1, pixelSize - ledGap)
     const halfLed = ledSize / 2
-
-    // Glow via shadowBlur — set once, updated only on color change (GPU-accelerated).
-    // This avoids creating a radial gradient object per cell per frame.
-    if (ledGlowRadius > 0) {
-      ctx.shadowBlur = ledGlowRadius * 2.5
-    }
 
     let lastColor = null
 
@@ -154,18 +145,11 @@ class LedMatrixRenderer extends BaseRenderer {
 
         if (color !== lastColor) {
           ctx.fillStyle = color
-          if (ledGlowRadius > 0) ctx.shadowColor = color
           lastColor = color
         }
 
         this._drawLed(ctx, cx, cy, halfLed)
       }
-    }
-
-    // Reset shadow state so it doesn't bleed into other canvas operations
-    if (ledGlowRadius > 0) {
-      ctx.shadowBlur = 0
-      ctx.shadowColor = 'transparent'
     }
   }
 

@@ -22,8 +22,6 @@ function QualitySettings() {
   const setHalftoneAngle = useProjectStore((state) => state.setHalftoneAngle)
   const ledGap = useProjectStore((state) => state.ledGap)
   const setLedGap = useProjectStore((state) => state.setLedGap)
-  const ledGlowRadius = useProjectStore((state) => state.ledGlowRadius)
-  const setLedGlowRadius = useProjectStore((state) => state.setLedGlowRadius)
   const ledShape = useProjectStore((state) => state.ledShape)
   const setLedShape = useProjectStore((state) => state.setLedShape)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
@@ -167,20 +165,6 @@ function QualitySettings() {
             max="4"
             value={ledGap}
             onChange={(event) => setLedGap(Number(event.target.value))}
-            className="w-full"
-          />
-
-          <label htmlFor="quality-led-glow" className="flex items-center text-sm">
-            Glow Radius: {ledGlowRadius}px
-            <InfoTooltip content="Size of the light halo around each LED. Set to 0 to disable. Note: higher values with dense grids may reduce performance." />
-          </label>
-          <input
-            id="quality-led-glow"
-            type="range"
-            min="0"
-            max="8"
-            value={ledGlowRadius}
-            onChange={(event) => setLedGlowRadius(Number(event.target.value))}
             className="w-full"
           />
 

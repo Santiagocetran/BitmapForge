@@ -17,10 +17,7 @@ function makeCtxMock({ hasRoundRect = true } = {}) {
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     closePath: vi.fn(),
-    fill: vi.fn(),
-    createRadialGradient: vi.fn(() => ({
-      addColorStop: vi.fn()
-    }))
+    fill: vi.fn()
   }
   if (hasRoundRect) {
     ctx.roundRect = vi.fn()
@@ -67,16 +64,14 @@ describe('LedMatrixRenderer — construction', () => {
     const r = new LedMatrixRenderer()
     expect(r.options.pixelSize).toBe(8)
     expect(r.options.ledGap).toBe(1)
-    expect(r.options.ledGlowRadius).toBe(2)
     expect(r.options.ledShape).toBe('circle')
     expect(r.options.backgroundColor).toBe('#111111')
   })
 
   it('merges constructor options', () => {
-    const r = new LedMatrixRenderer({ ledGap: 2, ledShape: 'roundRect', ledGlowRadius: 0 })
+    const r = new LedMatrixRenderer({ ledGap: 2, ledShape: 'roundRect' })
     expect(r.options.ledGap).toBe(2)
     expect(r.options.ledShape).toBe('roundRect')
-    expect(r.options.ledGlowRadius).toBe(0)
   })
 })
 
@@ -142,7 +137,7 @@ describe('LedMatrixRenderer — render (circle LEDs)', () => {
 
   beforeEach(() => {
     ctx = makeCtxMock()
-    r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 0, ledShape: 'circle' })
+    r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledShape: 'circle' })
     r._bitmapCtx = ctx
     r._bitmapCanvas = makeCanvasMock(ctx)
   })
@@ -166,52 +161,6 @@ describe('LedMatrixRenderer — render (circle LEDs)', () => {
     r.render(imageData, 2, 2, getColor)
     expect(ctx.arc).not.toHaveBeenCalled()
   })
-
-  it('does not set shadowBlur when ledGlowRadius is 0', () => {
-    const imageData = makeImageData(2, 2)
-    // No shadowBlur property on this ctx mock — if renderer tried to set it, it would throw
-    delete ctx.shadowBlur
-    expect(() => r.render(imageData, 2, 2, getColor)).not.toThrow()
-  })
-})
-
-describe('LedMatrixRenderer — render (glow)', () => {
-  it('sets shadowBlur when ledGlowRadius > 0', () => {
-    const ctx = makeCtxMock()
-    // Track shadowBlur assignments
-    const shadowBlurValues = []
-    Object.defineProperty(ctx, 'shadowBlur', {
-      get: () => shadowBlurValues[shadowBlurValues.length - 1] ?? 0,
-      set: (v) => {
-        shadowBlurValues.push(v)
-      }
-    })
-    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 4, ledShape: 'circle' })
-    r._bitmapCtx = ctx
-    r._bitmapCanvas = makeCanvasMock(ctx)
-    const imageData = makeImageData(2, 2)
-    r.render(imageData, 2, 2, getColor)
-    // shadowBlur should be set to a positive value then reset to 0
-    expect(shadowBlurValues).toContain(4 * 2.5)
-    expect(shadowBlurValues[shadowBlurValues.length - 1]).toBe(0)
-  })
-
-  it('does not set shadowBlur when ledGlowRadius is 0', () => {
-    const ctx = makeCtxMock()
-    const shadowBlurValues = []
-    Object.defineProperty(ctx, 'shadowBlur', {
-      get: () => shadowBlurValues[shadowBlurValues.length - 1] ?? 0,
-      set: (v) => {
-        shadowBlurValues.push(v)
-      }
-    })
-    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 0, ledShape: 'circle' })
-    r._bitmapCtx = ctx
-    r._bitmapCanvas = makeCanvasMock(ctx)
-    const imageData = makeImageData(2, 2)
-    r.render(imageData, 2, 2, getColor)
-    expect(shadowBlurValues).toHaveLength(0)
-  })
 })
 
 // ---------------------------------------------------------------------------
@@ -221,7 +170,7 @@ describe('LedMatrixRenderer — render (glow)', () => {
 describe('LedMatrixRenderer — render (ledSize clamp)', () => {
   it('still renders when pixelSize === ledGap (ledSize clamped to 1)', () => {
     const ctx = makeCtxMock()
-    const r = new LedMatrixRenderer({ pixelSize: 4, ledGap: 4, ledGlowRadius: 0, ledShape: 'circle' })
+    const r = new LedMatrixRenderer({ pixelSize: 4, ledGap: 4, ledShape: 'circle' })
     r._bitmapCtx = ctx
     r._bitmapCanvas = makeCanvasMock(ctx)
     const imageData = makeImageData(2, 2)
@@ -238,7 +187,7 @@ describe('LedMatrixRenderer — render (ledSize clamp)', () => {
 describe('LedMatrixRenderer — render (roundRect shape)', () => {
   it('calls ctx.roundRect when available', () => {
     const ctx = makeCtxMock({ hasRoundRect: true })
-    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 0, ledShape: 'roundRect' })
+    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledShape: 'roundRect' })
     r._bitmapCtx = ctx
     r._bitmapCanvas = makeCanvasMock(ctx)
     r._hasRoundRect = true
@@ -249,7 +198,7 @@ describe('LedMatrixRenderer — render (roundRect shape)', () => {
 
   it('uses manual arc fallback when ctx.roundRect is unavailable', () => {
     const ctx = makeCtxMock({ hasRoundRect: false })
-    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 0, ledShape: 'roundRect' })
+    const r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledShape: 'roundRect' })
     r._bitmapCtx = ctx
     r._bitmapCanvas = makeCanvasMock(ctx)
     r._hasRoundRect = false
@@ -270,7 +219,7 @@ describe('LedMatrixRenderer — drawPixel', () => {
 
   beforeEach(() => {
     ctx = makeCtxMock()
-    r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledGlowRadius: 0, ledShape: 'circle' })
+    r = new LedMatrixRenderer({ pixelSize: 8, ledGap: 1, ledShape: 'circle' })
     r._bitmapCtx = ctx
     r._bitmapCanvas = makeCanvasMock(ctx)
   })
@@ -354,9 +303,8 @@ describe('LedMatrixRenderer — dispose', () => {
 describe('LedMatrixRenderer — updateOptions', () => {
   it('merges new options without overwriting unrelated fields', () => {
     const r = new LedMatrixRenderer({ pixelSize: 8 })
-    r.updateOptions({ ledGap: 3, ledGlowRadius: 5 })
+    r.updateOptions({ ledGap: 3 })
     expect(r.options.ledGap).toBe(3)
-    expect(r.options.ledGlowRadius).toBe(5)
     expect(r.options.pixelSize).toBe(8)
   })
 })
