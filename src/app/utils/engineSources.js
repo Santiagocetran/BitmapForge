@@ -17,6 +17,7 @@ import PixelArtRendererSrc from '../../engine/renderers/PixelArtRenderer.js?raw'
 import AsciiRendererSrc from '../../engine/renderers/AsciiRenderer.js?raw'
 import HalftoneRendererSrc from '../../engine/renderers/HalftoneRenderer.js?raw'
 import LedMatrixRendererSrc from '../../engine/renderers/LedMatrixRenderer.js?raw'
+import StippleRendererSrc from '../../engine/renderers/StippleRenderer.js?raw'
 import renderersIndexSrc from '../../engine/renderers/index.js?raw'
 import modelLoaderSrc from '../../engine/loaders/modelLoader.js?raw'
 import AnimationEngineSrc from '../../engine/animation/AnimationEngine.js?raw'
@@ -49,6 +50,7 @@ const ENGINE_SOURCES = [
   { path: 'engine/renderers/AsciiRenderer.js', content: AsciiRendererSrc },
   { path: 'engine/renderers/HalftoneRenderer.js', content: HalftoneRendererSrc },
   { path: 'engine/renderers/LedMatrixRenderer.js', content: LedMatrixRendererSrc },
+  { path: 'engine/renderers/StippleRenderer.js', content: StippleRendererSrc },
   { path: 'engine/renderers/index.js', content: renderersIndexSrc },
   { path: 'engine/loaders/modelLoader.js', content: modelLoaderSrc },
   { path: 'engine/animation/AnimationEngine.js', content: AnimationEngineSrc },
