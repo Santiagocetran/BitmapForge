@@ -1,6 +1,8 @@
 import { BaseEffect } from './BaseEffect.js'
 import { createFadeVariant } from './fadeVariants/index.js'
 import { BitmapRenderer } from '../renderers/BitmapRenderer.js'
+import { PostProcessingChain } from '../postprocessing/PostProcessingChain.js'
+import { CrtEffect } from '../postprocessing/effects/CrtEffect.js'
 
 class BitmapEffect extends BaseEffect {
   constructor(renderer, options = {}) {
@@ -36,6 +38,10 @@ class BitmapEffect extends BaseEffect {
     this._activeRenderer = new BitmapRenderer(this.options)
     this._pendingRenderer = null
     this.domElement.appendChild(this._activeRenderer.canvas)
+
+    // Post-processing chain — effects applied after the renderer draws each frame
+    this._postChain = new PostProcessingChain()
+    this._postChain.addEffect('crt', new CrtEffect())
 
     // Active fade variant — recreated whenever options.fadeVariant changes.
     const initialVariant = this.options.fadeVariant ?? 'bloom'
@@ -162,9 +168,17 @@ class BitmapEffect extends BaseEffect {
     }
 
     this._activeRenderer.endFrame()
+
+    // Post-processing: applied after renderer draws, before next frame.
+    // CRT effect stacks on top of any render mode.
+    if (this.options.crtEnabled) {
+      const ctx = this._activeRenderer.canvas?.getContext('2d')
+      if (ctx) this._postChain.apply(ctx, this.width, this.height, this.options)
+    }
   }
 
   dispose() {
+    this._postChain = null
     this._activeRenderer?.dispose()
     this._activeRenderer = null
     this._pendingRenderer = null

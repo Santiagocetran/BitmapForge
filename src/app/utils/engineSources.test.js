@@ -25,7 +25,9 @@ const REQUIRED_PATHS = [
   'engine/animation/AnimationEngine.js',
   'engine/animation/presets.js',
   'engine/animation/effectTypes.js',
-  'engine/utils/seededRandom.js'
+  'engine/utils/seededRandom.js',
+  'engine/postprocessing/PostProcessingChain.js',
+  'engine/postprocessing/effects/CrtEffect.js'
 ]
 
 describe('ENGINE_SOURCES', () => {
