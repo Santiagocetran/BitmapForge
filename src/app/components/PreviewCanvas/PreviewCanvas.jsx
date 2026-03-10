@@ -56,7 +56,12 @@ function PreviewCanvas() {
         ledGap: state.ledGap,
         ledShape: state.ledShape,
         stippleDotSize: state.stippleDotSize,
-        stippleDensity: state.stippleDensity
+        stippleDensity: state.stippleDensity,
+        crtEnabled: state.crtEnabled,
+        scanlineGap: state.scanlineGap,
+        scanlineOpacity: state.scanlineOpacity,
+        chromaticAberration: state.chromaticAberration,
+        crtVignette: state.crtVignette
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
