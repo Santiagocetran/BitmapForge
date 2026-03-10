@@ -100,7 +100,7 @@ describe('buildCodeZip — engine sources', () => {
   it('ZIP contains 14 engine source files', async () => {
     const zip = await getCodeZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(23)
+    expect(engineFiles).toHaveLength(24)
   })
 
   it('ZIP contains engine/SceneManager.js', async () => {

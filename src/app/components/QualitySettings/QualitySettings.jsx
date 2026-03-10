@@ -24,6 +24,10 @@ function QualitySettings() {
   const setLedGap = useProjectStore((state) => state.setLedGap)
   const ledShape = useProjectStore((state) => state.ledShape)
   const setLedShape = useProjectStore((state) => state.setLedShape)
+  const stippleDotSize = useProjectStore((state) => state.stippleDotSize)
+  const setStippleDotSize = useProjectStore((state) => state.setStippleDotSize)
+  const stippleDensity = useProjectStore((state) => state.stippleDensity)
+  const setStippleDensity = useProjectStore((state) => state.setStippleDensity)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -39,6 +43,7 @@ function QualitySettings() {
   const isAscii = renderMode === 'ascii'
   const isHalftone = renderMode === 'halftone'
   const isLed = renderMode === 'ledMatrix'
+  const isStipple = renderMode === 'stipple'
 
   // Shared advanced controls (background, seed, invert, min brightness)
   const sharedAdvanced = (
@@ -122,7 +127,7 @@ function QualitySettings() {
       <label className="block text-sm">
         <span className="flex items-center">
           Render Mode
-          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens. LED Matrix: glowing rounded LEDs on a dark panel." />
+          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens. LED Matrix: glowing rounded LEDs on a dark panel. Stipple: random dot placement, like pointillist painting." />
         </span>
         <select
           className="mt-1 w-full rounded bg-zinc-800 p-1"
@@ -289,6 +294,62 @@ function QualitySettings() {
             max="32"
             value={pixelSize}
             onChange={(event) => setPixelSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <details
+            className="rounded border border-zinc-700 p-2"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
+              Advanced
+            </summary>
+            <div className="mt-2 space-y-3">{sharedAdvanced}</div>
+          </details>
+        </>
+      ) : isStipple ? (
+        /* ── Stipple mode controls ───────────────────────── */
+        <>
+          <label htmlFor="quality-stipple-spacing" className="flex items-center text-sm">
+            Cell Size: {pixelSize}px
+            <InfoTooltip content="Grid cell size. Each cell can hold multiple dots. Smaller = finer stipple pattern." />
+          </label>
+          <input
+            id="quality-stipple-spacing"
+            type="range"
+            min="4"
+            max="20"
+            value={pixelSize}
+            onChange={(event) => setPixelSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="quality-stipple-dot-size" className="flex items-center text-sm">
+            Dot Size: {stippleDotSize}px
+            <InfoTooltip content="Radius of individual dots. Larger dots give a bolder, more impressionistic look." />
+          </label>
+          <input
+            id="quality-stipple-dot-size"
+            type="range"
+            min="1"
+            max="6"
+            value={stippleDotSize}
+            onChange={(event) => setStippleDotSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="quality-stipple-density" className="flex items-center text-sm">
+            Dot Density: {stippleDensity}
+            <InfoTooltip content="Maximum dots per dark cell. Higher density fills dark areas more completely." />
+          </label>
+          <input
+            id="quality-stipple-density"
+            type="range"
+            min="1"
+            max="5"
+            value={stippleDensity}
+            onChange={(event) => setStippleDensity(Number(event.target.value))}
             className="w-full"
           />
 

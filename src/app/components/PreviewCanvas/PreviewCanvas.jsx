@@ -54,7 +54,9 @@ function PreviewCanvas() {
         halftoneDotShape: state.halftoneDotShape,
         halftoneAngle: state.halftoneAngle,
         ledGap: state.ledGap,
-        ledShape: state.ledShape
+        ledShape: state.ledShape,
+        stippleDotSize: state.stippleDotSize,
+        stippleDensity: state.stippleDensity
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
