@@ -14,12 +14,15 @@
  * mutating the frozen source.
  */
 
-/** @type {Readonly<{ spinX: boolean, spinY: boolean, spinZ: boolean, float: boolean }>} */
+/** @type {Readonly<{ spinX: boolean, spinY: boolean, spinZ: boolean, float: boolean, bounce: boolean, pulse: boolean, shake: boolean }>} */
 const DEFAULT_ANIMATION_EFFECTS = Object.freeze({
   spinX: false,
   spinY: true,
   spinZ: false,
-  float: false
+  float: false,
+  bounce: false,
+  pulse: false,
+  shake: false
 })
 
 /** @type {ReadonlyArray<string>} */
