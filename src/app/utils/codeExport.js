@@ -11,7 +11,8 @@ function createAnimationConfig(state) {
         invert: state.invert,
         minBrightness: state.minBrightness,
         backgroundColor: state.backgroundColor,
-        animationDuration: state.animationDuration
+        animationDuration: state.animationDuration,
+        renderMode: state.renderMode
       },
       animationPreset: state.animationPreset,
       animationSpeed: state.animationSpeed,

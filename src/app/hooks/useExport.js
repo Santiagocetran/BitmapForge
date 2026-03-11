@@ -11,6 +11,7 @@ import { buildReactComponent } from '../utils/reactComponentExport.js'
 import { buildWebComponent } from '../utils/webComponentExport.js'
 import { buildCssAnimation } from '../utils/cssExport.js'
 import { buildLottieJson, estimateLottieSizeMb, LOTTIE_MAX_PX } from '../utils/lottieExport.js'
+import { buildSpriteSheet } from '../utils/spriteSheetExport.js'
 
 const getState = useProjectStore.getState
 
@@ -61,27 +62,8 @@ function useExport(sceneManagerRef) {
           setStatus({ exporting: true, message: `Generating sprite sheet... ${Math.round((i / total) * 100)}%` })
       })
 
-      const { width, height } = sourceCanvas
-      const rows = Math.ceil(frameCount / columns)
-      const outCanvas = document.createElement('canvas')
-      outCanvas.width = columns * width
-      outCanvas.height = rows * height
-      const outCtx = outCanvas.getContext('2d')
-
-      for (let i = 0; i < frames.length; i++) {
-        const tempCanvas = document.createElement('canvas')
-        tempCanvas.width = width
-        tempCanvas.height = height
-        tempCanvas.getContext('2d').putImageData(frames[i], 0, 0)
-        outCtx.drawImage(tempCanvas, (i % columns) * width, Math.floor(i / columns) * height)
-      }
-
-      await new Promise((resolve) => {
-        outCanvas.toBlob((blob) => {
-          downloadBlob(blob, `bitmapforge-spritesheet-${Date.now()}.png`)
-          resolve()
-        }, 'image/png')
-      })
+      const blob = await buildSpriteSheet(frames, columns)
+      downloadBlob(blob, `bitmapforge-spritesheet-${Date.now()}.png`)
 
       setStatus({ exporting: false, message: 'Sprite sheet exported.' })
     } catch (error) {

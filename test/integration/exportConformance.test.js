@@ -8,7 +8,7 @@
  * All tests run in jsdom — no real canvas rendering, no Three.js, no network.
  * Frame data is provided as mock ImageData-like objects.
  */
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import JSZip from 'jszip'
 import { hasPngSignature, getChunkTypes } from '../helpers/pngChunks.js'
 
@@ -85,6 +85,7 @@ import { buildReactComponent } from '../../src/app/utils/reactComponentExport.js
 import { buildWebComponent } from '../../src/app/utils/webComponentExport.js'
 import { buildCssAnimation } from '../../src/app/utils/cssExport.js'
 import { buildCodeZip } from '../../src/app/utils/codeExport.js'
+import { buildSpriteSheet } from '../../src/app/utils/spriteSheetExport.js'
 
 // ─── 1. APNG ──────────────────────────────────────────────────────────────────
 
@@ -327,3 +328,62 @@ describe('Code ZIP conformance', () => {
     expect(engineFiles).toHaveLength(26)
   })
 })
+
+// ─── 8. Sprite Sheet ──────────────────────────────────────────────────────────
+
+describe('Sprite Sheet conformance', () => {
+  beforeAll(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (cb) {
+      cb(new Blob(['PNG'], { type: 'image/png' }))
+    })
+  })
+  afterAll(() => vi.restoreAllMocks())
+
+  it('produces a Blob', async () => {
+    const blob = await buildSpriteSheet(MOCK_FRAMES)
+    expect(blob).toBeInstanceOf(Blob)
+  })
+
+  it('Blob has image/png type', async () => {
+    const blob = await buildSpriteSheet(MOCK_FRAMES)
+    expect(blob.type).toBe('image/png')
+  })
+})
+
+// ─── 9. Code ZIP — render-mode sweep ─────────────────────────────────────────
+
+describe.each([
+  ['bitmap', {}],
+  ['pixelArt', {}],
+  ['ascii', { charRamp: 'classic', asciiColored: false }],
+  ['halftone', { halftoneDotShape: 'circle', halftoneAngle: 45 }],
+  ['ledMatrix', { ledGap: 1, ledShape: 'circle' }],
+  ['stipple', { stippleDotSize: 2, stippleDensity: 3 }]
+])('Code ZIP — renderMode=%s', (renderMode, extras) => {
+  it('ZIP contains correct renderMode in config.js', async () => {
+    const state = { ...CANONICAL_STATE, renderMode, ...extras }
+    const blob = await buildCodeZip(state)
+    const zip = await JSZip.loadAsync(blob)
+    const config = await zip.files['BitmapForge-export/config.js'].async('string')
+    expect(config).toContain(`"renderMode": "${renderMode}"`)
+  })
+})
+
+// ─── 10. APNG + Single HTML — render-mode agnostic sweep ─────────────────────
+
+describe.each([['bitmap'], ['pixelArt'], ['ascii'], ['halftone'], ['ledMatrix'], ['stipple']])(
+  'APNG + Single HTML — renderMode=%s',
+  (renderMode) => {
+    it('buildApng produces a valid Blob regardless of renderMode', () => {
+      const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+      expect(blob).toBeInstanceOf(Blob)
+      expect(blob.size).toBeGreaterThan(0)
+    })
+
+    it('buildSingleHtml produces a valid HTML Blob regardless of renderMode', async () => {
+      const state = { ...CANONICAL_STATE, renderMode }
+      const blob = await buildSingleHtml(MOCK_FRAMES, FPS, state.backgroundColor)
+      expect(blob.type).toBe('text/html')
+    })
+  }
+)
