@@ -24,6 +24,20 @@ function QualitySettings() {
   const setLedGap = useProjectStore((state) => state.setLedGap)
   const ledShape = useProjectStore((state) => state.ledShape)
   const setLedShape = useProjectStore((state) => state.setLedShape)
+  const stippleDotSize = useProjectStore((state) => state.stippleDotSize)
+  const setStippleDotSize = useProjectStore((state) => state.setStippleDotSize)
+  const stippleDensity = useProjectStore((state) => state.stippleDensity)
+  const setStippleDensity = useProjectStore((state) => state.setStippleDensity)
+  const crtEnabled = useProjectStore((state) => state.crtEnabled)
+  const setCrtEnabled = useProjectStore((state) => state.setCrtEnabled)
+  const scanlineGap = useProjectStore((state) => state.scanlineGap)
+  const setScanlineGap = useProjectStore((state) => state.setScanlineGap)
+  const scanlineOpacity = useProjectStore((state) => state.scanlineOpacity)
+  const setScanlineOpacity = useProjectStore((state) => state.setScanlineOpacity)
+  const chromaticAberration = useProjectStore((state) => state.chromaticAberration)
+  const setChromaticAberration = useProjectStore((state) => state.setChromaticAberration)
+  const crtVignette = useProjectStore((state) => state.crtVignette)
+  const setCrtVignette = useProjectStore((state) => state.setCrtVignette)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -39,6 +53,7 @@ function QualitySettings() {
   const isAscii = renderMode === 'ascii'
   const isHalftone = renderMode === 'halftone'
   const isLed = renderMode === 'ledMatrix'
+  const isStipple = renderMode === 'stipple'
 
   // Shared advanced controls (background, seed, invert, min brightness)
   const sharedAdvanced = (
@@ -122,7 +137,7 @@ function QualitySettings() {
       <label className="block text-sm">
         <span className="flex items-center">
           Render Mode
-          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens. LED Matrix: glowing rounded LEDs on a dark panel." />
+          <InfoTooltip content="Bitmap: dithered pixel grid. Pixel Art: clean squares, no dithering. ASCII: characters mapped from brightness. Halftone: variable-size dots, like print halftone screens. LED Matrix: glowing rounded LEDs on a dark panel. Stipple: random dot placement, like pointillist painting." />
         </span>
         <select
           className="mt-1 w-full rounded bg-zinc-800 p-1"
@@ -303,6 +318,62 @@ function QualitySettings() {
             <div className="mt-2 space-y-3">{sharedAdvanced}</div>
           </details>
         </>
+      ) : isStipple ? (
+        /* ── Stipple mode controls ───────────────────────── */
+        <>
+          <label htmlFor="quality-stipple-spacing" className="flex items-center text-sm">
+            Cell Size: {pixelSize}px
+            <InfoTooltip content="Grid cell size. Each cell can hold multiple dots. Smaller = finer stipple pattern." />
+          </label>
+          <input
+            id="quality-stipple-spacing"
+            type="range"
+            min="4"
+            max="20"
+            value={pixelSize}
+            onChange={(event) => setPixelSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="quality-stipple-dot-size" className="flex items-center text-sm">
+            Dot Size: {stippleDotSize}px
+            <InfoTooltip content="Radius of individual dots. Larger dots give a bolder, more impressionistic look." />
+          </label>
+          <input
+            id="quality-stipple-dot-size"
+            type="range"
+            min="1"
+            max="6"
+            value={stippleDotSize}
+            onChange={(event) => setStippleDotSize(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="quality-stipple-density" className="flex items-center text-sm">
+            Dot Density: {stippleDensity}
+            <InfoTooltip content="Maximum dots per dark cell. Higher density fills dark areas more completely." />
+          </label>
+          <input
+            id="quality-stipple-density"
+            type="range"
+            min="1"
+            max="5"
+            value={stippleDensity}
+            onChange={(event) => setStippleDensity(Number(event.target.value))}
+            className="w-full"
+          />
+
+          <details
+            className="rounded border border-zinc-700 p-2"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm" aria-expanded={advancedOpen}>
+              Advanced
+            </summary>
+            <div className="mt-2 space-y-3">{sharedAdvanced}</div>
+          </details>
+        </>
       ) : (
         /* ── Bitmap / Pixel Art mode controls ───────────── */
         <>
@@ -353,6 +424,83 @@ function QualitySettings() {
           </details>
         </>
       )}
+      {/* ── CRT Post Effects (always visible, any render mode) ── */}
+      <details className="rounded border border-zinc-700 p-2">
+        <summary className="cursor-pointer text-sm">
+          Post Effects
+          <InfoTooltip content="CRT-style post-processing applied on top of any render mode. Scanlines, chromatic aberration, and vignette." />
+        </summary>
+        <div className="mt-2 space-y-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={crtEnabled} onChange={(e) => setCrtEnabled(e.target.checked)} />
+            CRT Effect
+            <InfoTooltip content="Enables CRT monitor aesthetics: scanlines, color fringing, and darkened corners." />
+          </label>
+
+          {crtEnabled && (
+            <>
+              <label htmlFor="quality-scanline-gap" className="flex items-center text-sm">
+                Scanline Gap: {scanlineGap}px
+                <InfoTooltip content="Rows between horizontal scanline bands. Smaller = more scanlines (denser CRT look)." />
+              </label>
+              <input
+                id="quality-scanline-gap"
+                type="range"
+                min="2"
+                max="8"
+                value={scanlineGap}
+                onChange={(e) => setScanlineGap(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label htmlFor="quality-scanline-opacity" className="flex items-center text-sm">
+                Scanline Opacity: {scanlineOpacity.toFixed(1)}
+                <InfoTooltip content="Darkness of the scanline bands. Higher = more prominent lines." />
+              </label>
+              <input
+                id="quality-scanline-opacity"
+                type="range"
+                min="0.1"
+                max="0.8"
+                step="0.05"
+                value={scanlineOpacity}
+                onChange={(e) => setScanlineOpacity(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label htmlFor="quality-chroma" className="flex items-center text-sm">
+                Chromatic Aberration: {chromaticAberration}px
+                <InfoTooltip content="Shifts red and blue channels in opposite directions, mimicking lens color fringing." />
+              </label>
+              <input
+                id="quality-chroma"
+                type="range"
+                min="0"
+                max="5"
+                step="1"
+                value={chromaticAberration}
+                onChange={(e) => setChromaticAberration(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label htmlFor="quality-vignette" className="flex items-center text-sm">
+                Vignette: {crtVignette.toFixed(1)}
+                <InfoTooltip content="Darkens the corners of the frame, mimicking the curved screen falloff of a CRT monitor." />
+              </label>
+              <input
+                id="quality-vignette"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={crtVignette}
+                onChange={(e) => setCrtVignette(Number(e.target.value))}
+                className="w-full"
+              />
+            </>
+          )}
+        </div>
+      </details>
     </section>
   )
 }

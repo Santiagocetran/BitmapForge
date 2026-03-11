@@ -3,13 +3,15 @@ import { PixelArtRenderer } from './PixelArtRenderer.js'
 import { AsciiRenderer } from './AsciiRenderer.js'
 import { HalftoneRenderer } from './HalftoneRenderer.js'
 import { LedMatrixRenderer } from './LedMatrixRenderer.js'
+import { StippleRenderer } from './StippleRenderer.js'
 
 const RENDERERS = {
   bitmap: BitmapRenderer,
   pixelArt: PixelArtRenderer,
   ascii: AsciiRenderer,
   halftone: HalftoneRenderer,
-  ledMatrix: LedMatrixRenderer
+  ledMatrix: LedMatrixRenderer,
+  stipple: StippleRenderer
 }
 
 const RENDERER_LABELS = {
@@ -17,7 +19,8 @@ const RENDERER_LABELS = {
   pixelArt: 'Pixel Art (Clean)',
   ascii: 'ASCII Art',
   halftone: 'Halftone',
-  ledMatrix: 'LED Matrix'
+  ledMatrix: 'LED Matrix',
+  stipple: 'Stipple (Pointillism)'
 }
 
 /**

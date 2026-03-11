@@ -40,6 +40,15 @@ const DEFAULT_STATE = {
   // LED Matrix renderer settings
   ledGap: 1, // gap between LED elements in px (0–4)
   ledShape: 'circle', // 'circle' | 'roundRect'
+  // Stipple renderer settings
+  stippleDotSize: 2, // dot radius in px (1–6)
+  stippleDensity: 3, // max dots per dark cell (1–5)
+  // CRT post-processing effect settings
+  crtEnabled: false,
+  scanlineGap: 4, // rows between scanlines (2–8)
+  scanlineOpacity: 0.4, // darkness of scanline bands (0.1–0.8)
+  chromaticAberration: 0, // R/B channel pixel shift (0–5)
+  crtVignette: 0.3, // vignette corner strength (0–1)
   // Input source type — which tab is active in the input panel
   inputType: 'model', // 'model' | 'shape' | 'text' | 'image'
   // Shape primitive settings
@@ -163,6 +172,13 @@ const useProjectStore = create(
       setHalftoneAngle: (halftoneAngle) => set({ halftoneAngle: Math.max(0, Math.min(179, halftoneAngle)) }),
       setLedGap: (ledGap) => set({ ledGap: clamp(ledGap, 0, 4) }),
       setLedShape: (ledShape) => set({ ledShape }),
+      setStippleDotSize: (stippleDotSize) => set({ stippleDotSize: clamp(stippleDotSize, 1, 6) }),
+      setStippleDensity: (stippleDensity) => set({ stippleDensity: clamp(stippleDensity, 1, 5) }),
+      setCrtEnabled: (crtEnabled) => set({ crtEnabled }),
+      setScanlineGap: (scanlineGap) => set({ scanlineGap: clamp(scanlineGap, 2, 8) }),
+      setScanlineOpacity: (scanlineOpacity) => set({ scanlineOpacity: clamp(scanlineOpacity, 0.1, 0.8) }),
+      setChromaticAberration: (chromaticAberration) => set({ chromaticAberration: clamp(chromaticAberration, 0, 5) }),
+      setCrtVignette: (crtVignette) => set({ crtVignette: clamp(crtVignette, 0, 1) }),
       setInputType: (inputType) => set({ inputType }),
       setShapeType: (shapeType) => set({ shapeType, shapeParams: {} }),
       setShapeParam: (key, value) => set((state) => ({ shapeParams: { ...state.shapeParams, [key]: value } })),

@@ -17,12 +17,15 @@ import PixelArtRendererSrc from '../../engine/renderers/PixelArtRenderer.js?raw'
 import AsciiRendererSrc from '../../engine/renderers/AsciiRenderer.js?raw'
 import HalftoneRendererSrc from '../../engine/renderers/HalftoneRenderer.js?raw'
 import LedMatrixRendererSrc from '../../engine/renderers/LedMatrixRenderer.js?raw'
+import StippleRendererSrc from '../../engine/renderers/StippleRenderer.js?raw'
 import renderersIndexSrc from '../../engine/renderers/index.js?raw'
 import modelLoaderSrc from '../../engine/loaders/modelLoader.js?raw'
 import AnimationEngineSrc from '../../engine/animation/AnimationEngine.js?raw'
 import presetsSrc from '../../engine/animation/presets.js?raw'
 import effectTypesSrc from '../../engine/animation/effectTypes.js?raw'
 import seededRandomSrc from '../../engine/utils/seededRandom.js?raw'
+import PostProcessingChainSrc from '../../engine/postprocessing/PostProcessingChain.js?raw'
+import CrtEffectSrc from '../../engine/postprocessing/effects/CrtEffect.js?raw'
 
 // Each entry: { path, content }
 // path is relative to whatever root folder the consumer creates (e.g. 'engine/SceneManager.js')
@@ -30,7 +33,8 @@ import seededRandomSrc from '../../engine/utils/seededRandom.js?raw'
 //   engine/index.js, engine/SceneManager.js, engine/effects/BaseEffect.js,
 //   engine/effects/BitmapEffect.js, engine/effects/ditherStrategies.js,
 //   engine/effects/fadeVariants/*, engine/renderers/*, engine/loaders/modelLoader.js,
-//   engine/animation/*, engine/utils/seededRandom.js
+//   engine/animation/*, engine/utils/seededRandom.js,
+//   engine/postprocessing/PostProcessingChain.js, engine/postprocessing/effects/CrtEffect.js
 const ENGINE_SOURCES = [
   { path: 'engine/index.js', content: engineIndexSrc },
   { path: 'engine/SceneManager.js', content: SceneManagerSrc },
@@ -49,12 +53,15 @@ const ENGINE_SOURCES = [
   { path: 'engine/renderers/AsciiRenderer.js', content: AsciiRendererSrc },
   { path: 'engine/renderers/HalftoneRenderer.js', content: HalftoneRendererSrc },
   { path: 'engine/renderers/LedMatrixRenderer.js', content: LedMatrixRendererSrc },
+  { path: 'engine/renderers/StippleRenderer.js', content: StippleRendererSrc },
   { path: 'engine/renderers/index.js', content: renderersIndexSrc },
   { path: 'engine/loaders/modelLoader.js', content: modelLoaderSrc },
   { path: 'engine/animation/AnimationEngine.js', content: AnimationEngineSrc },
   { path: 'engine/animation/presets.js', content: presetsSrc },
   { path: 'engine/animation/effectTypes.js', content: effectTypesSrc },
-  { path: 'engine/utils/seededRandom.js', content: seededRandomSrc }
+  { path: 'engine/utils/seededRandom.js', content: seededRandomSrc },
+  { path: 'engine/postprocessing/PostProcessingChain.js', content: PostProcessingChainSrc },
+  { path: 'engine/postprocessing/effects/CrtEffect.js', content: CrtEffectSrc }
 ]
 
 export { ENGINE_SOURCES }

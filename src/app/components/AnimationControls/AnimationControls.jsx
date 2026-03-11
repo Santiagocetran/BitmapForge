@@ -7,7 +7,10 @@ const EFFECT_LABELS = {
   spinX: 'Spin X',
   spinY: 'Spin Y',
   spinZ: 'Spin Z',
-  float: 'Float'
+  float: 'Float',
+  bounce: 'Bounce',
+  pulse: 'Pulse',
+  shake: 'Shake'
 }
 
 function AnimationControls() {

@@ -1,5 +1,6 @@
 import { ANIMATION_PRESETS } from './presets.js'
 import { DEFAULT_ANIMATION_EFFECTS } from './effectTypes.js'
+import { createRNG } from '../utils/seededRandom.js'
 
 const FLOAT_PRESET = ANIMATION_PRESETS.float
 
@@ -26,7 +27,7 @@ class AnimationEngine {
 
     // Per-axis lerp state. null = no reset in progress.
     // { startRotation: number, elapsed: number }
-    this._resetTransitions = { x: null, y: null, z: null }
+    this._resetTransitions = { x: null, y: null, z: null, positionY: null, scale: null }
 
     // Snapshot of previous effects — populated on the first update() call so
     // startup never triggers a spurious reset.
@@ -66,12 +67,32 @@ class AnimationEngine {
     if (e.spinX && !this._resetTransitions.x) modelGroup.rotation.x += speed
     if (e.spinY && !this._resetTransitions.y) modelGroup.rotation.y += speed
     if (e.spinZ && !this._resetTransitions.z) modelGroup.rotation.z += speed
-    if (e.float) {
+
+    // Advance shared time for all time-dependent effects (once per frame)
+    if (e.float || e.bounce || e.pulse || e.shake) {
       this.time += deltaSeconds
+    }
+
+    if (e.float) {
       const ox = FLOAT_PRESET?.oscillateX ?? 0.15
       const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
       if (!this._resetTransitions.x) modelGroup.rotation.x += Math.sin(this.time * 0.5) * ox * deltaSeconds * 2
       if (!this._resetTransitions.z) modelGroup.rotation.z += Math.sin(this.time * 0.3) * oz * deltaSeconds * 2
+    }
+
+    if (e.bounce && !this._resetTransitions.positionY && modelGroup.position) {
+      modelGroup.position.y = Math.abs(Math.sin(this.time * this.speed * 1.8)) * 0.5
+    }
+
+    if (e.pulse && !this._resetTransitions.scale && modelGroup.scale?.setScalar) {
+      modelGroup.scale.setScalar(1 + Math.sin(this.time * this.speed * 1.5) * 0.12)
+    }
+
+    if (e.shake && modelGroup.position) {
+      const shakeSeed = (Math.floor(this.time * 30) * 0x9e3779b9) >>> 0
+      const rng = createRNG(shakeSeed)
+      modelGroup.position.x = (rng() - 0.5) * 0.08
+      modelGroup.position.z = (rng() - 0.5) * 0.08
     }
   }
 
@@ -122,6 +143,24 @@ class AnimationEngine {
       if (!curr.spinX) this._resetTransitions.x = null
       if (!curr.spinZ) this._resetTransitions.z = null
     }
+
+    // bounce drives position.y
+    if (prev.bounce && !curr.bounce && !this._resetTransitions.positionY && modelGroup.position) {
+      this._resetTransitions.positionY = { startValue: modelGroup.position.y, elapsed: 0 }
+    }
+    if (!prev.bounce && curr.bounce) this._resetTransitions.positionY = null
+
+    // pulse drives scale
+    if (prev.pulse && !curr.pulse && !this._resetTransitions.scale && modelGroup.scale) {
+      this._resetTransitions.scale = { startValue: modelGroup.scale.x ?? 1, elapsed: 0 }
+    }
+    if (!prev.pulse && curr.pulse) this._resetTransitions.scale = null
+
+    // shake: snap to zero immediately on toggle-off (jitter doesn't need smooth lerp)
+    if (prev.shake && !curr.shake && modelGroup.position) {
+      modelGroup.position.x = 0
+      modelGroup.position.z = 0
+    }
   }
 
   // Advance all active lerps and write corrected rotation values.
@@ -144,10 +183,34 @@ class AnimationEngine {
         this._resetTransitions[axis] = null
       }
     }
+
+    // positionY lerp (bounce toggle-off)
+    const pY = this._resetTransitions.positionY
+    if (pY && modelGroup.position) {
+      pY.elapsed += deltaSeconds * 1000
+      const t = easeOutCubic(Math.min(pY.elapsed / RESET_DURATION_MS, 1))
+      modelGroup.position.y = pY.startValue * (1 - t)
+      if (pY.elapsed >= RESET_DURATION_MS) {
+        modelGroup.position.y = 0
+        this._resetTransitions.positionY = null
+      }
+    }
+
+    // scale lerp (pulse toggle-off)
+    const sc = this._resetTransitions.scale
+    if (sc && modelGroup.scale?.setScalar) {
+      sc.elapsed += deltaSeconds * 1000
+      const t = easeOutCubic(Math.min(sc.elapsed / RESET_DURATION_MS, 1))
+      modelGroup.scale.setScalar(sc.startValue + (1 - sc.startValue) * t)
+      if (sc.elapsed >= RESET_DURATION_MS) {
+        modelGroup.scale.setScalar(1)
+        this._resetTransitions.scale = null
+      }
+    }
   }
 
   _clearResetTransitions() {
-    this._resetTransitions = { x: null, y: null, z: null }
+    this._resetTransitions = { x: null, y: null, z: null, positionY: null, scale: null }
   }
 
   update(modelGroup, effect, deltaSeconds = 1 / 60) {
@@ -223,6 +286,13 @@ class AnimationEngine {
     if (modelGroup) {
       // Start animGroup at zero — baseGroup holds the user's pose offset independently.
       modelGroup.rotation.set(0, 0, 0)
+      // Reset position and scale before analytically computing new values
+      if (modelGroup.position) {
+        modelGroup.position.x = 0
+        modelGroup.position.y = 0
+        modelGroup.position.z = 0
+      }
+      if (modelGroup.scale?.setScalar) modelGroup.scale.setScalar(1)
       const e = this.animationEffects
       const speed = this.speed
 
@@ -250,6 +320,19 @@ class AnimationEngine {
         // Analytical integral of the incremental float deltas applied per frame
         modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * showTs))
         modelGroup.rotation.z += ((oz * 2) / 0.3) * (1 - Math.cos(0.3 * showTs))
+      }
+
+      if (e.bounce && modelGroup.position) {
+        modelGroup.position.y = Math.abs(Math.sin(showTs * speed * 1.8)) * 0.5
+      }
+      if (e.pulse && modelGroup.scale?.setScalar) {
+        modelGroup.scale.setScalar(1 + Math.sin(showTs * speed * 1.5) * 0.12)
+      }
+      if (e.shake && modelGroup.position) {
+        const shakeSeed = (Math.floor(showTs * 30) * 0x9e3779b9) >>> 0
+        const rng = createRNG(shakeSeed)
+        modelGroup.position.x = (rng() - 0.5) * 0.08
+        modelGroup.position.z = (rng() - 0.5) * 0.08
       }
     }
 

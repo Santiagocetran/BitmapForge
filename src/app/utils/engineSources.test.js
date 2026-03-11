@@ -20,12 +20,15 @@ const REQUIRED_PATHS = [
   'engine/renderers/AsciiRenderer.js',
   'engine/renderers/HalftoneRenderer.js',
   'engine/renderers/LedMatrixRenderer.js',
+  'engine/renderers/StippleRenderer.js',
   'engine/renderers/index.js',
   'engine/loaders/modelLoader.js',
   'engine/animation/AnimationEngine.js',
   'engine/animation/presets.js',
   'engine/animation/effectTypes.js',
-  'engine/utils/seededRandom.js'
+  'engine/utils/seededRandom.js',
+  'engine/postprocessing/PostProcessingChain.js',
+  'engine/postprocessing/effects/CrtEffect.js'
 ]
 
 describe('ENGINE_SOURCES', () => {
