@@ -4,6 +4,15 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three']
+        }
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{js,jsx}', 'test/integration/**/*.test.{js,jsx}'],

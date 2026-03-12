@@ -1,17 +1,7 @@
-import GIF from 'gif.js'
-import gifWorkerUrl from 'gif.js/dist/gif.worker.js?url'
 import { useRef } from 'react'
 import { useProjectStore } from '../store/useProjectStore.js'
-import { buildCodeZip } from '../utils/codeExport.js'
-import { buildSingleHtml } from '../utils/singleHtmlExport.js'
-import { buildApng } from '../utils/apngExport.js'
 import { captureFrames, getFrameCount } from '../utils/framesProvider.js'
 import { saveProjectFile } from '../utils/projectFile.js'
-import { buildReactComponent } from '../utils/reactComponentExport.js'
-import { buildWebComponent } from '../utils/webComponentExport.js'
-import { buildCssAnimation } from '../utils/cssExport.js'
-import { buildLottieJson, estimateLottieSizeMb, LOTTIE_MAX_PX } from '../utils/lottieExport.js'
-import { buildSpriteSheet } from '../utils/spriteSheetExport.js'
 
 const getState = useProjectStore.getState
 
@@ -53,6 +43,7 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Generating sprite sheet...' })
     try {
+      const { buildSpriteSheet } = await import('../utils/spriteSheetExport.js')
       const sourceCanvas = manager.getCanvas()
       if (!sourceCanvas) throw new Error('No preview canvas available')
 
@@ -80,6 +71,10 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Encoding GIF...' })
     try {
+      const [{ default: GIF }, { default: gifWorkerUrl }] = await Promise.all([
+        import('gif.js'),
+        import('gif.js/dist/gif.worker.js?url')
+      ])
       const sourceCanvas = manager.getCanvas()
       if (!sourceCanvas) throw new Error('No preview canvas available')
 
@@ -134,6 +129,7 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Encoding APNG...' })
     try {
+      const { buildApng } = await import('../utils/apngExport.js')
       const loopMs = manager.getLoopDurationMs()
       const frameCount = getFrameCount(manager, fps)
       const frameDelay = Math.round(loopMs / frameCount)
@@ -234,6 +230,7 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Building Single HTML...' })
     try {
+      const { buildSingleHtml } = await import('../utils/singleHtmlExport.js')
       const frameCount = getFrameCount(manager, fps)
       const state = getState()
       const backgroundColor = state.backgroundColor || '#000000'
@@ -256,6 +253,7 @@ function useExport(sceneManagerRef) {
     const state = getState()
     setStatus({ exporting: true, message: 'Generating code ZIP...' })
     try {
+      const { buildCodeZip } = await import('../utils/codeExport.js')
       const blob = await buildCodeZip(state)
       downloadBlob(blob, `bitmapforge-export-${Date.now()}.zip`)
       setStatus({ exporting: false, message: 'Code ZIP exported.' })
@@ -268,6 +266,7 @@ function useExport(sceneManagerRef) {
     const state = getState()
     setStatus({ exporting: true, message: 'Building React component…' })
     try {
+      const { buildReactComponent } = await import('../utils/reactComponentExport.js')
       const blob = await buildReactComponent(state)
       downloadBlob(blob, `MyAnimation.zip`)
       setStatus({
@@ -283,6 +282,7 @@ function useExport(sceneManagerRef) {
     const state = getState()
     setStatus({ exporting: true, message: 'Building Web Component…' })
     try {
+      const { buildWebComponent } = await import('../utils/webComponentExport.js')
       const blob = await buildWebComponent(state)
       downloadBlob(blob, `bitmap-animation.zip`)
       setStatus({ exporting: false, message: 'Web Component exported. See README.md inside the ZIP for usage.' })
@@ -300,6 +300,7 @@ function useExport(sceneManagerRef) {
 
     setStatus({ exporting: true, message: 'Capturing frames…' })
     try {
+      const { buildCssAnimation } = await import('../utils/cssExport.js')
       const state = getState()
       const blob = await buildCssAnimation(manager, state, 'bitmapforge-animation', fps, {
         signal: controller.signal,
@@ -320,14 +321,18 @@ function useExport(sceneManagerRef) {
     const controller = new AbortController()
     abortRef.current = controller
 
-    const sourceCanvas = manager.getCanvas()
-    const frameCount = getFrameCount(manager, fps)
-    const estimatedMb = estimateLottieSizeMb(frameCount, sourceCanvas.width, sourceCanvas.height)
-    const capNote =
-      Math.max(sourceCanvas.width, sourceCanvas.height) > LOTTIE_MAX_PX ? ` (frames scaled to ${LOTTIE_MAX_PX}px)` : ''
-
-    setStatus({ exporting: true, message: `Encoding Lottie (raster)${capNote} — est. ~${estimatedMb} MB…` })
+    setStatus({ exporting: true, message: 'Loading Lottie encoder…' })
     try {
+      const { buildLottieJson, estimateLottieSizeMb, LOTTIE_MAX_PX } = await import('../utils/lottieExport.js')
+      const sourceCanvas = manager.getCanvas()
+      const frameCount = getFrameCount(manager, fps)
+      const estimatedMb = estimateLottieSizeMb(frameCount, sourceCanvas.width, sourceCanvas.height)
+      const capNote =
+        Math.max(sourceCanvas.width, sourceCanvas.height) > LOTTIE_MAX_PX
+          ? ` (frames scaled to ${LOTTIE_MAX_PX}px)`
+          : ''
+
+      setStatus({ exporting: true, message: `Encoding Lottie (raster)${capNote} — est. ~${estimatedMb} MB…` })
       const state = getState()
       const blob = await buildLottieJson(manager, state, 'bitmapforge-animation', fps, {
         signal: controller.signal,

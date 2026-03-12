@@ -1,5 +1,4 @@
 import JSZip from 'jszip'
-import { ENGINE_SOURCES } from './engineSources.js'
 
 function createComponentConfig(state) {
   const config = {
@@ -127,6 +126,7 @@ function App() {
 }
 
 async function buildReactComponent(state, componentName = 'MyAnimation') {
+  const { ENGINE_SOURCES } = await import('./engineSources.js')
   const zip = new JSZip()
   const root = zip.folder(componentName)
   const modelFileName = state.model?.name ?? null

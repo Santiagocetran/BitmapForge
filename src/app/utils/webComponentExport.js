@@ -1,5 +1,4 @@
 import JSZip from 'jszip'
-import { ENGINE_SOURCES } from './engineSources.js'
 
 // Config shape identical to reactComponentExport — same state fields
 function createComponentConfig(state) {
@@ -153,6 +152,7 @@ The element fills whatever space you give it. Control size with CSS \`width\`/\`
 }
 
 async function buildWebComponent(state, elementName = 'bitmap-animation') {
+  const { ENGINE_SOURCES } = await import('./engineSources.js')
   const zip = new JSZip()
   const root = zip.folder(elementName)
   const modelFileName = state.model?.name ?? null
