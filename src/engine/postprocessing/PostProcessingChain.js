@@ -33,6 +33,14 @@ class PostProcessingChain {
   }
 
   /**
+   * Returns true if at least one registered effect is enabled.
+   * @returns {boolean}
+   */
+  hasEnabledEffects() {
+    return this._effects.some((e) => e.enabled)
+  }
+
+  /**
    * Apply all enabled effects in registration order.
    * @param {CanvasRenderingContext2D|null} ctx
    * @param {number} width

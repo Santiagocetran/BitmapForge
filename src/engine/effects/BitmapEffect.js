@@ -3,6 +3,8 @@ import { createFadeVariant } from './fadeVariants/index.js'
 import { BitmapRenderer } from '../renderers/BitmapRenderer.js'
 import { PostProcessingChain } from '../postprocessing/PostProcessingChain.js'
 import { CrtEffect } from '../postprocessing/effects/CrtEffect.js'
+import { NoiseEffect } from '../postprocessing/effects/NoiseEffect.js'
+import { ColorShiftEffect } from '../postprocessing/effects/ColorShiftEffect.js'
 
 class BitmapEffect extends BaseEffect {
   constructor(renderer, options = {}) {
@@ -42,6 +44,8 @@ class BitmapEffect extends BaseEffect {
     // Post-processing chain — effects applied after the renderer draws each frame
     this._postChain = new PostProcessingChain()
     this._postChain.addEffect('crt', new CrtEffect())
+    this._postChain.addEffect('noise', new NoiseEffect())
+    this._postChain.addEffect('colorShift', new ColorShiftEffect())
 
     // Active fade variant — recreated whenever options.fadeVariant changes.
     const initialVariant = this.options.fadeVariant ?? 'bloom'
@@ -170,8 +174,12 @@ class BitmapEffect extends BaseEffect {
     this._activeRenderer.endFrame()
 
     // Post-processing: applied after renderer draws, before next frame.
-    // CRT effect stacks on top of any render mode.
-    if (this.options.crtEnabled) {
+    // Update enabled state for each effect from current options.
+    this._postChain.setEnabled('crt', !!this.options.crtEnabled)
+    this._postChain.setEnabled('noise', !!this.options.noiseEnabled)
+    this._postChain.setEnabled('colorShift', !!this.options.colorShiftEnabled)
+
+    if (this._postChain.hasEnabledEffects()) {
       const ctx = this._activeRenderer.canvas?.getContext('2d')
       if (ctx) this._postChain.apply(ctx, this.width, this.height, this.options)
     }

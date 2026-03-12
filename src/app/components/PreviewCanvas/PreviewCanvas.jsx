@@ -61,7 +61,13 @@ function PreviewCanvas() {
         scanlineGap: state.scanlineGap,
         scanlineOpacity: state.scanlineOpacity,
         chromaticAberration: state.chromaticAberration,
-        crtVignette: state.crtVignette
+        crtVignette: state.crtVignette,
+        noiseEnabled: state.noiseEnabled,
+        noiseAmount: state.noiseAmount,
+        noiseMonochrome: state.noiseMonochrome,
+        colorShiftEnabled: state.colorShiftEnabled,
+        colorShiftHue: state.colorShiftHue,
+        colorShiftSaturation: state.colorShiftSaturation
       }),
       (slice) => manager.updateEffectOptions(slice),
       { equalityFn: shallow }
