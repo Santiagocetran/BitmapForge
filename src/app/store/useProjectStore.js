@@ -49,6 +49,14 @@ const DEFAULT_STATE = {
   scanlineOpacity: 0.4, // darkness of scanline bands (0.1–0.8)
   chromaticAberration: 0, // R/B channel pixel shift (0–5)
   crtVignette: 0.3, // vignette corner strength (0–1)
+  // Noise/grain post-processing effect settings
+  noiseEnabled: false,
+  noiseAmount: 0.15, // grain strength (0–0.5)
+  noiseMonochrome: true, // same offset for R, G, B
+  // Color shift post-processing effect settings
+  colorShiftEnabled: false,
+  colorShiftHue: 0, // hue rotation in degrees (0–360)
+  colorShiftSaturation: 1.0, // saturation multiplier (0–2)
   // Input source type — which tab is active in the input panel
   inputType: 'model', // 'model' | 'shape' | 'text' | 'image'
   // Shape primitive settings
@@ -179,6 +187,13 @@ const useProjectStore = create(
       setScanlineOpacity: (scanlineOpacity) => set({ scanlineOpacity: clamp(scanlineOpacity, 0.1, 0.8) }),
       setChromaticAberration: (chromaticAberration) => set({ chromaticAberration: clamp(chromaticAberration, 0, 5) }),
       setCrtVignette: (crtVignette) => set({ crtVignette: clamp(crtVignette, 0, 1) }),
+      setNoiseEnabled: (noiseEnabled) => set({ noiseEnabled }),
+      setNoiseAmount: (noiseAmount) => set({ noiseAmount: clamp(noiseAmount, 0, 0.5) }),
+      setNoiseMonochrome: (noiseMonochrome) => set({ noiseMonochrome }),
+      setColorShiftEnabled: (colorShiftEnabled) => set({ colorShiftEnabled }),
+      setColorShiftHue: (colorShiftHue) => set({ colorShiftHue: clamp(colorShiftHue, 0, 360) }),
+      setColorShiftSaturation: (colorShiftSaturation) =>
+        set({ colorShiftSaturation: clamp(colorShiftSaturation, 0, 2) }),
       setInputType: (inputType) => set({ inputType }),
       setShapeType: (shapeType) => set({ shapeType, shapeParams: {} }),
       setShapeParam: (key, value) => set((state) => ({ shapeParams: { ...state.shapeParams, [key]: value } })),

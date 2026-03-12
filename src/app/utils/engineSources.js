@@ -26,6 +26,8 @@ import effectTypesSrc from '../../engine/animation/effectTypes.js?raw'
 import seededRandomSrc from '../../engine/utils/seededRandom.js?raw'
 import PostProcessingChainSrc from '../../engine/postprocessing/PostProcessingChain.js?raw'
 import CrtEffectSrc from '../../engine/postprocessing/effects/CrtEffect.js?raw'
+import NoiseEffectSrc from '../../engine/postprocessing/effects/NoiseEffect.js?raw'
+import ColorShiftEffectSrc from '../../engine/postprocessing/effects/ColorShiftEffect.js?raw'
 
 // Each entry: { path, content }
 // path is relative to whatever root folder the consumer creates (e.g. 'engine/SceneManager.js')
@@ -34,7 +36,7 @@ import CrtEffectSrc from '../../engine/postprocessing/effects/CrtEffect.js?raw'
 //   engine/effects/BitmapEffect.js, engine/effects/ditherStrategies.js,
 //   engine/effects/fadeVariants/*, engine/renderers/*, engine/loaders/modelLoader.js,
 //   engine/animation/*, engine/utils/seededRandom.js,
-//   engine/postprocessing/PostProcessingChain.js, engine/postprocessing/effects/CrtEffect.js
+//   engine/postprocessing/PostProcessingChain.js, engine/postprocessing/effects/*
 const ENGINE_SOURCES = [
   { path: 'engine/index.js', content: engineIndexSrc },
   { path: 'engine/SceneManager.js', content: SceneManagerSrc },
@@ -61,7 +63,9 @@ const ENGINE_SOURCES = [
   { path: 'engine/animation/effectTypes.js', content: effectTypesSrc },
   { path: 'engine/utils/seededRandom.js', content: seededRandomSrc },
   { path: 'engine/postprocessing/PostProcessingChain.js', content: PostProcessingChainSrc },
-  { path: 'engine/postprocessing/effects/CrtEffect.js', content: CrtEffectSrc }
+  { path: 'engine/postprocessing/effects/CrtEffect.js', content: CrtEffectSrc },
+  { path: 'engine/postprocessing/effects/NoiseEffect.js', content: NoiseEffectSrc },
+  { path: 'engine/postprocessing/effects/ColorShiftEffect.js', content: ColorShiftEffectSrc }
 ]
 
 export { ENGINE_SOURCES }

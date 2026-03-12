@@ -38,6 +38,18 @@ function QualitySettings() {
   const setChromaticAberration = useProjectStore((state) => state.setChromaticAberration)
   const crtVignette = useProjectStore((state) => state.crtVignette)
   const setCrtVignette = useProjectStore((state) => state.setCrtVignette)
+  const noiseEnabled = useProjectStore((state) => state.noiseEnabled)
+  const setNoiseEnabled = useProjectStore((state) => state.setNoiseEnabled)
+  const noiseAmount = useProjectStore((state) => state.noiseAmount)
+  const setNoiseAmount = useProjectStore((state) => state.setNoiseAmount)
+  const noiseMonochrome = useProjectStore((state) => state.noiseMonochrome)
+  const setNoiseMonochrome = useProjectStore((state) => state.setNoiseMonochrome)
+  const colorShiftEnabled = useProjectStore((state) => state.colorShiftEnabled)
+  const setColorShiftEnabled = useProjectStore((state) => state.setColorShiftEnabled)
+  const colorShiftHue = useProjectStore((state) => state.colorShiftHue)
+  const setColorShiftHue = useProjectStore((state) => state.setColorShiftHue)
+  const colorShiftSaturation = useProjectStore((state) => state.colorShiftSaturation)
+  const setColorShiftSaturation = useProjectStore((state) => state.setColorShiftSaturation)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -495,6 +507,87 @@ function QualitySettings() {
                 step="0.05"
                 value={crtVignette}
                 onChange={(e) => setCrtVignette(Number(e.target.value))}
+                className="w-full"
+              />
+            </>
+          )}
+
+          {/* ── Noise / Grain ── */}
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={noiseEnabled} onChange={(e) => setNoiseEnabled(e.target.checked)} />
+            Noise / Grain
+            <InfoTooltip content="Adds random film grain noise on top of the rendered frame." />
+          </label>
+
+          {noiseEnabled && (
+            <>
+              <label htmlFor="quality-noise-amount" className="flex items-center text-sm">
+                Amount: {noiseAmount.toFixed(2)}
+                <InfoTooltip content="Strength of the noise effect. Higher = more grain." />
+              </label>
+              <input
+                id="quality-noise-amount"
+                type="range"
+                min="0"
+                max="0.5"
+                step="0.01"
+                value={noiseAmount}
+                onChange={(e) => setNoiseAmount(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={noiseMonochrome}
+                  onChange={(e) => setNoiseMonochrome(e.target.checked)}
+                />
+                Monochrome
+                <InfoTooltip content="When on, grain is grayscale (same offset for R/G/B). When off, each channel gets independent noise (color grain)." />
+              </label>
+            </>
+          )}
+
+          {/* ── Color Shift ── */}
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={colorShiftEnabled}
+              onChange={(e) => setColorShiftEnabled(e.target.checked)}
+            />
+            Color Shift
+            <InfoTooltip content="Rotates the hue and adjusts saturation of the entire frame." />
+          </label>
+
+          {colorShiftEnabled && (
+            <>
+              <label htmlFor="quality-color-hue" className="flex items-center text-sm">
+                Hue: {colorShiftHue}°
+                <InfoTooltip content="Rotates all colors around the color wheel by the specified degrees." />
+              </label>
+              <input
+                id="quality-color-hue"
+                type="range"
+                min="0"
+                max="360"
+                step="1"
+                value={colorShiftHue}
+                onChange={(e) => setColorShiftHue(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label htmlFor="quality-color-saturation" className="flex items-center text-sm">
+                Saturation: {colorShiftSaturation.toFixed(2)}
+                <InfoTooltip content="Multiplies saturation. 0 = grayscale, 1 = unchanged, 2 = highly saturated." />
+              </label>
+              <input
+                id="quality-color-saturation"
+                type="range"
+                min="0"
+                max="2"
+                step="0.01"
+                value={colorShiftSaturation}
+                onChange={(e) => setColorShiftSaturation(Number(e.target.value))}
                 className="w-full"
               />
             </>
