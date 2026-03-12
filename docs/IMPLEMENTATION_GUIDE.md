@@ -93,27 +93,21 @@ bitmapCanvas         — visible output (appended to domElement, user-facing)
 
 **Goal:** Make the current tool feel professional before adding new features.
 
-### Implementation Order & Rationale
+### Implementation Order & Status
 
 ```
-1. #15 CI/CD                          — Safety net for everything else
-2. #16 Tooltips & onboarding          — Quick UX win, low risk
-3. #12 Keyboard shortcuts             — Power-user delight, pairs with tooltips
-4. #30 Additional dithering           — Extends existing pipeline, user value
-5. #11 Undo/Redo                      — Core UX improvement
-6. #13 Preset gallery (local only)    — Makes the tool immediately useful
-7. #18 Deterministic project files    — Foundation for sharing/reproducibility
-8. #14 Mobile responsive              — Broadens reach
-9. #17 Performance (export path)      — Tackle when exports get slow
-10. #35 Pluggable renderer refactor   — Architectural pivot (Phase 3 enabler)
-11. #37 TypeScript migration          — MOVED TO PHASE 2 (avoids double-rewrite)
+1. #15 CI/CD                          ✅ Done — ci.yml + Vercel gated deploy (PR #47)
+2. #16 Tooltips & onboarding          ✅ Done — InfoTooltip on all controls (PR #38)
+3. #12 Keyboard shortcuts             ✅ Done — useKeyboardShortcuts hook (PR #38)
+4. #30 Additional dithering           ✅ Done — Floyd-Steinberg + Atkinson (PR #38)
+5. #11 Undo/Redo                      ✅ Done — zundo temporal middleware (PR #38)
+6. #13 Preset gallery (local only)    ✅ Done — usePresetStore + 15 built-ins (PR #38)
+7. #18 Deterministic project files    ✅ Done — seededRandom.js + versioned schema (PR #38)
+8. #14 Mobile responsive              ✅ Done — bottom-sheet sidebar, accordion (PR #38)
+9. #17 Performance (export path)      ⏳ Not started — OffscreenCanvas worker path
+10. #35 Pluggable renderer refactor   ✅ Done — BaseRenderer + registry (PR #39), proven by 6 renderers
+11. #37 TypeScript migration          ⏸️  Deferred indefinitely — not needed at current scale
 ```
-
-> **Key reordering decisions** (from IA bridge audit):
->
-> - **#30 moved from Phase 3 to Phase 1**: Dithering algorithms are _intra-pipeline_ additions to `BitmapEffect.js` (~20 lines each). No architectural change needed.
-> - **#35 moved from Phase 3 to late Phase 1**: It's the architectural hinge — 6+ issues depend on it. Doing it now (when BitmapEffect is only 203 lines) is cheap. Doing it after 3 more features have been bolted on is expensive.
-> - **#37 moved to Phase 2**: Migrating to TS before #35 restructures the engine means rewriting files twice.
 
 ---
 
@@ -712,15 +706,15 @@ The rendering mode is a setting in the store. When it changes, SceneManager swap
 
 **Goal:** More inputs = more use cases. Text, images, and shapes dramatically increase BitmapForge's usefulness.
 
-### Implementation Order
+### Implementation Order & Status
 
 ```
-1. #21 Built-in shape primitives     ✅ Done
-2. #19 Text input (3D extruded)      ✅ Done
-3. #20 Image/SVG input (2D mode)     ✅ Done
-4. #35c Validate renderer interface  ✅ Done (PixelArtRenderer proves the interface)
-5. #37 TypeScript migration          — Deferred indefinitely (not needed at current scale)
-6. #22 Scene composition (layers)    — Deferred (see note below)
+1. #21 Built-in shape primitives     ✅ Done — 8 primitives, shapeGenerator.js (PR #39)
+2. #19 Text input (3D extruded)      ✅ Done — FontLoader + TextGeometry, textGenerator.js (PR #39)
+3. #20 Image/SVG input (2D mode)     ✅ Done — File→Texture→PlaneGeometry, imageLoader.js (PR #39)
+4. #35c Validate renderer interface  ✅ Done — PixelArtRenderer proves the interface (PR #39)
+5. #37 TypeScript migration          ⏸️  Deferred indefinitely — not needed at current scale
+6. #22 Scene composition (layers)    ⏸️  Deferred — see note below
 ```
 
 > **#22 Deferred:** The engine layer system (#22a) was implemented (SceneManager now supports
@@ -1048,18 +1042,20 @@ interface ProjectState {
 
 **Goal:** Expand the visual styles beyond bitmap dithering. Each new rendering mode goes through the same pipeline but draws differently.
 
-### Implementation Order
+> **Phase 3 is ~90% complete.** 6 renderers shipped, bounce/pulse/shake done, CRT post-processing done. Two items remain: additional post-processing effects (#29) and remaining animation presets (#36).
+
+### Implementation Order & Status
 
 ```
-1. #24 Pixel art mode          ✅ Done (PixelArtRenderer in src/engine/renderers/, exposed via renderMode)
-2. #23 ASCII art mode          — NEXT: high demand, straightforward character mapping
-3. #25 Halftone                — Classic graphic design look
-4. #26 LED matrix              — Variation on pixel grid with glow
-5. #27 CRT/Scanline            — Post-processing-heavy, good test of architecture
-6. #28 Stipple                 — Most complex (random placement, seeded)
-7. #29 Post-processing layer   — Stackable effects on top of any renderer
-8. #36 More animation presets  — Independent of renderers
-9. Export compatibility        — Ensure all 10 exports work with new renderers
+1. #24 Pixel art mode          ✅ Done — PixelArtRenderer, no dithering, retro palettes (PR #39)
+2. #23 ASCII art mode          ✅ Done — AsciiRenderer, char ramp, colored mode (PR #42)
+3. #25 Halftone                ✅ Done — HalftoneRenderer, circle/diamond, CMYK mode (PR #43)
+4. #26 LED matrix              ✅ Done — LedMatrixRenderer, dark BG, glow, round/rect LEDs (PR #44)
+5. #27 CRT/Scanline            ✅ Done — implemented as CRT post-processing effect (PR #45)
+6. #28 Stipple                 ✅ Done — StippleRenderer, seeded RNG, density map (PR #45)
+7. #29 Post-processing layer   🔄 Partial — PostProcessingChain + CrtEffect done; noise/bloom/color-shift remain
+8. #36 More animation presets  🔄 Partial — bounce/pulse/shake done; orbit/wave/path-follow remain
+9. Export compatibility        ✅ Done — all 10 export formats tested, engineSources.js has 26 entries
 ```
 
 **All rendering modes depend on #35 (done in Phase 1) and the pluggable renderer interface.**
@@ -1371,10 +1367,18 @@ render(sourcePixels, params) {
 
 ### #29 — Post-processing effects layer
 
-**Files to create:**
+> **Status:** `PostProcessingChain` architecture is done. `CrtEffect` (scanlines + chromatic aberration + vignette) shipped in PR #45. The remaining effects below are what's left.
 
-- `src/engine/postprocessing/PostProcessingChain.js`
-- `src/engine/postprocessing/effects/` — one file per effect
+**Existing files:**
+
+- `src/engine/postprocessing/PostProcessingChain.js` ✅
+- `src/engine/postprocessing/effects/CrtEffect.js` ✅
+
+**Files to create (remaining):**
+
+- `src/engine/postprocessing/effects/NoiseEffect.js`
+- `src/engine/postprocessing/effects/BloomEffect.js`
+- `src/engine/postprocessing/effects/ColorShiftEffect.js`
 
 **Architecture:**
 
@@ -1398,62 +1402,60 @@ class PostProcessingChain {
 }
 ```
 
-**Initial effects to implement:**
+**Remaining effects to implement:**
 
-1. **Scanlines** — horizontal line overlay
-2. **Noise/grain** — random noise per-frame (seeded)
+1. ~~**Scanlines** — horizontal line overlay~~ ✅ Done (part of CrtEffect)
+2. **Noise/grain** — random static per-frame (seeded for determinism)
 3. **Color shift** — hue rotation, sepia, saturation
 4. **Bloom** — bright area bleed (gaussian blur of bright pixels)
-5. **Vignette** — darkened corners
+5. ~~**Vignette** — darkened corners~~ ✅ Done (part of CrtEffect)
 
-**UI:** Stackable panel in sidebar with drag-to-reorder, per-effect toggle and params.
+**UI:** Stackable panel in sidebar with drag-to-reorder, per-effect toggle and params. Currently only CRT is exposed; the panel should expand to show all effects as individual toggles.
 
 **Integration point:** After the active renderer draws to `bitmapCanvas`, the post-processing chain applies on top.
 
-**Estimated effort:** Large (10-15 hours)
+**Estimated effort:** Medium (4-6 hours for remaining 3 effects + UI expansion)
 
 ---
 
 ### #36 — More animation presets
 
+> **Status:** Bounce, pulse, and shake shipped in PR #45. All three are in `seekTo()` for deterministic export. Remaining: orbit, wave, path-follow.
+
+**Implemented (effectTypes.js has 7 effects: spinX/Y/Z, float, bounce, pulse, shake):**
+
+```javascript
+// Already in AnimationEngine.applyEffects():
+// bounce: Math.abs(Math.sin(t * speed * 1.8)) * 0.5  — Y position
+// pulse:  1 + Math.sin(t * speed * 1.5) * 0.12       — uniform scale
+// shake:  seeded per-frame random x/z offset via createRNG
+```
+
+**Remaining animations to implement:**
+
+```javascript
+if (effects.orbit) {
+  // Camera orbits around the model — move camera position in a circle
+  // Needs special handling in SceneManager (camera.position not modelGroup)
+  const r = cameraDistance
+  camera.position.x = Math.sin(elapsed * speed) * r
+  camera.position.z = Math.cos(elapsed * speed) * r
+  camera.lookAt(0, 0, 0)
+}
+
+// wave and path-follow: more complex, deferred to after orbit validates camera animation
+```
+
 **Files to modify:**
 
-- `src/engine/animation/AnimationEngine.js` — add new effect types
-- `src/engine/animation/effectTypes.js` — add new flags
+- `src/engine/animation/AnimationEngine.js` — add orbit (+ SceneManager camera ref)
+- `src/engine/animation/effectTypes.js` — add orbit flag
 - `src/app/store/useProjectStore.js` — extend `animationEffects`
 - `src/app/components/AnimationControls/AnimationControls.jsx` — new toggles
 
-**New animations to implement:**
+**Important:** Each new animation must also be handled in `seekTo()` for deterministic export.
 
-```javascript
-// In AnimationEngine.applyEffects():
-if (effects.bounce) {
-  // Sinusoidal Y translation
-  modelGroup.position.y = Math.abs(Math.sin(elapsed * speed * 2)) * 0.5
-}
-
-if (effects.pulse) {
-  // Scale oscillation
-  const scale = 1 + Math.sin(elapsed * speed) * 0.15
-  modelGroup.scale.setScalar(scale)
-}
-
-if (effects.orbit) {
-  // Camera orbits (not model rotation) — move camera position
-  // This needs special handling in SceneManager
-}
-
-if (effects.shake) {
-  // Random small displacement (seeded)
-  const rng = createRNG(Math.floor(elapsed * 30)) // Per-frame seed
-  modelGroup.position.x = (rng() - 0.5) * 0.1
-  modelGroup.position.z = (rng() - 0.5) * 0.1
-}
-```
-
-**Important:** Each new animation must also be handled in `seekTo()` for deterministic export. Use analytical formulas (not incremental accumulation) to avoid drift.
-
-**Estimated effort:** Medium (5-8 hours)
+**Estimated effort:** Small-Medium (2-4 hours for orbit; wave/path-follow are larger)
 
 ---
 
