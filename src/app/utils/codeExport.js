@@ -1,5 +1,4 @@
 import JSZip from 'jszip'
-import { ENGINE_SOURCES } from './engineSources.js'
 
 function createAnimationConfig(state) {
   return `export const config = ${JSON.stringify(
@@ -27,6 +26,7 @@ function createAnimationConfig(state) {
 }
 
 async function buildCodeZip(state) {
+  const { ENGINE_SOURCES } = await import('./engineSources.js')
   const zip = new JSZip()
   const root = zip.folder('BitmapForge-export')
 
