@@ -22,7 +22,8 @@ const DEFAULT_ANIMATION_EFFECTS = Object.freeze({
   float: false,
   bounce: false,
   pulse: false,
-  shake: false
+  shake: false,
+  orbit: false
 })
 
 /** @type {ReadonlyArray<string>} */

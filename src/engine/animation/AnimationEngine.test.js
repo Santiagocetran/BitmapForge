@@ -71,6 +71,7 @@ describe('AnimationEngine', () => {
     expect(engine.animationEffects.bounce).toBe(false)
     expect(engine.animationEffects.pulse).toBe(false)
     expect(engine.animationEffects.shake).toBe(false)
+    expect(engine.animationEffects.orbit).toBe(false)
   })
 })
 
@@ -202,5 +203,139 @@ describe('AnimationEngine — seekTo with new effects', () => {
     engine.seekTo(3000, g2, null)
     expect(g1.position.x).toBe(g2.position.x)
     expect(g1.position.z).toBe(g2.position.z)
+  })
+})
+
+function makeCamera(x = 0, y = 0.5, z = 5) {
+  return {
+    position: {
+      x,
+      y,
+      z,
+      clone() {
+        return {
+          x: this.x,
+          y: this.y,
+          z: this.z,
+          length() {
+            return Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2)
+          }
+        }
+      },
+      set(nx, ny, nz) {
+        this.x = nx
+        this.y = ny
+        this.z = nz
+      },
+      copy(v) {
+        this.x = v.x
+        this.y = v.y
+        this.z = v.z
+      },
+      length() {
+        return Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2)
+      }
+    },
+    quaternion: {
+      x: 0,
+      y: 0,
+      z: 0,
+      w: 1,
+      clone() {
+        return { x: this.x, y: this.y, z: this.z, w: this.w }
+      },
+      copy(q) {
+        this.x = q.x
+        this.y = q.y
+        this.z = q.z
+        this.w = q.w
+      }
+    },
+    lookAt() {}
+  }
+}
+
+describe('AnimationEngine — orbit', () => {
+  it('moves camera position when orbit is active', () => {
+    const engine = new AnimationEngine()
+    engine.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS, spinY: false, orbit: true }
+    const group = makeFullGroup()
+    const camera = makeCamera()
+    const origZ = camera.position.z
+    engine.applyEffects(group, 0.5, camera)
+    const moved = camera.position.x !== 0 || camera.position.z !== origZ
+    expect(moved).toBe(true)
+  })
+
+  it('is a no-op when camera is null', () => {
+    const engine = new AnimationEngine()
+    engine.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS, spinY: false, orbit: true }
+    const group = makeFullGroup()
+    // Should not throw when camera is undefined
+    engine.applyEffects(group, 0.5)
+    expect(group.rotation.x).toBe(0)
+  })
+
+  it('produces identical camera pose for identical time in applyEffects vs seekTo', () => {
+    const engine = new AnimationEngine()
+    engine.useFadeInOut = false
+    engine.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS, spinY: false, orbit: true }
+
+    // Use applyEffects to advance to a known time
+    const cam1 = makeCamera()
+    const group1 = makeFullGroup()
+    engine.applyEffects(group1, 2.0, cam1)
+    const pos1 = { x: cam1.position.x, y: cam1.position.y, z: cam1.position.z }
+
+    // Use seekTo for the same absolute time (engine.time was set to 2.0 by applyEffects)
+    const cam2 = makeCamera()
+    const group2 = makeFullGroup()
+    engine.seekTo(2000, group2, null, cam2)
+    const pos2 = { x: cam2.position.x, y: cam2.position.y, z: cam2.position.z }
+
+    expect(pos1.x).toBeCloseTo(pos2.x, 5)
+    expect(pos1.y).toBeCloseTo(pos2.y, 5)
+    expect(pos1.z).toBeCloseTo(pos2.z, 5)
+  })
+
+  it('restores camera to baseline when orbit is toggled off', () => {
+    const engine = new AnimationEngine()
+    engine.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS, orbit: true }
+    engine._previousEffects = { ...engine.animationEffects }
+
+    const group = makeFullGroup()
+    const camera = makeCamera(0, 0.5, 5)
+
+    // Apply orbit to capture baseline and move camera
+    engine.applyEffects(group, 1.0, camera)
+    expect(engine._orbitBaseline).not.toBeNull()
+
+    // Toggle orbit off
+    engine.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS, orbit: false }
+
+    const mockEffect = {
+      getAnimationPhase: () => 'show',
+      isAnimationComplete: () => false,
+      startAnimation: () => {},
+      setPhaseProgress: () => {}
+    }
+    engine.update(group, mockEffect, 1 / 60, camera)
+
+    // Camera should be restored to baseline
+    expect(camera.position.x).toBeCloseTo(0, 5)
+    expect(camera.position.y).toBeCloseTo(0.5, 5)
+    expect(camera.position.z).toBeCloseTo(5, 5)
+  })
+
+  it('does not interfere with modelGroup rotation animations', () => {
+    const engine = new AnimationEngine()
+    engine.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS, spinY: true, orbit: true }
+    const group = makeFullGroup()
+    const camera = makeCamera()
+    engine.applyEffects(group, 0.5, camera)
+    // spinY should still rotate the model
+    expect(group.rotation.y).not.toBe(0)
+    // orbit should move the camera
+    expect(camera.position.x !== 0 || camera.position.z !== 5).toBe(true)
   })
 })
