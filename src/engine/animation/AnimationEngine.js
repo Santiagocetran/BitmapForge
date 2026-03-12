@@ -29,6 +29,10 @@ class AnimationEngine {
     // { startRotation: number, elapsed: number }
     this._resetTransitions = { x: null, y: null, z: null, positionY: null, scale: null }
 
+    // Orbit camera baseline — captured on first frame with orbit active.
+    this._orbitBaseline = null
+    this._orbitRestorePending = null
+
     // Snapshot of previous effects — populated on the first update() call so
     // startup never triggers a spurious reset.
     this._previousEffects = null
@@ -58,7 +62,7 @@ class AnimationEngine {
     this.baseRotation = { ...baseRot }
   }
 
-  applyEffects(modelGroup, deltaSeconds) {
+  applyEffects(modelGroup, deltaSeconds, camera) {
     if (!modelGroup) return
     const e = this.animationEffects
     const speed = this.speed * deltaSeconds
@@ -69,7 +73,7 @@ class AnimationEngine {
     if (e.spinZ && !this._resetTransitions.z) modelGroup.rotation.z += speed
 
     // Advance shared time for all time-dependent effects (once per frame)
-    if (e.float || e.bounce || e.pulse || e.shake) {
+    if (e.float || e.bounce || e.pulse || e.shake || e.orbit) {
       this.time += deltaSeconds
     }
 
@@ -93,6 +97,19 @@ class AnimationEngine {
       const rng = createRNG(shakeSeed)
       modelGroup.position.x = (rng() - 0.5) * 0.08
       modelGroup.position.z = (rng() - 0.5) * 0.08
+    }
+
+    if (e.orbit && camera) {
+      if (!this._orbitBaseline) {
+        this._orbitBaseline = {
+          pos: camera.position.clone(),
+          quat: camera.quaternion.clone()
+        }
+      }
+      const r = this._orbitBaseline.pos.length()
+      const angle = this.time * this.speed * 0.5
+      camera.position.set(Math.sin(angle) * r, this._orbitBaseline.pos.y, Math.cos(angle) * r)
+      camera.lookAt(0, 0, 0)
     }
   }
 
@@ -161,6 +178,15 @@ class AnimationEngine {
       modelGroup.position.x = 0
       modelGroup.position.z = 0
     }
+
+    // orbit: flag baseline for restoration on toggle-off (camera restore happens in update())
+    if (prev.orbit && !curr.orbit && this._orbitBaseline) {
+      this._orbitRestorePending = this._orbitBaseline
+      this._orbitBaseline = null
+    }
+    if (!prev.orbit && curr.orbit) {
+      this._orbitRestorePending = null
+    }
   }
 
   // Advance all active lerps and write corrected rotation values.
@@ -211,9 +237,10 @@ class AnimationEngine {
 
   _clearResetTransitions() {
     this._resetTransitions = { x: null, y: null, z: null, positionY: null, scale: null }
+    this._orbitRestorePending = null
   }
 
-  update(modelGroup, effect, deltaSeconds = 1 / 60) {
+  update(modelGroup, effect, deltaSeconds = 1 / 60, camera) {
     // Initialise the previous-effects snapshot on the very first frame so we
     // never trigger a spurious reset at startup.
     if (this._previousEffects === null) {
@@ -221,6 +248,14 @@ class AnimationEngine {
     }
 
     this._checkForResets(modelGroup)
+
+    // Restore camera from orbit baseline when orbit was just toggled off
+    if (this._orbitRestorePending && camera) {
+      camera.position.copy(this._orbitRestorePending.pos)
+      camera.quaternion.copy(this._orbitRestorePending.quat)
+      this._orbitRestorePending = null
+    }
+
     // Snapshot current state for the next frame — done after _checkForResets so
     // the comparison above always sees the transition that just happened.
     this._previousEffects = { ...this.animationEffects }
@@ -229,7 +264,7 @@ class AnimationEngine {
       if (effect.getAnimationPhase() !== 'show') {
         effect.startAnimation('show')
       }
-      this.applyEffects(modelGroup, deltaSeconds)
+      this.applyEffects(modelGroup, deltaSeconds, camera)
       this._applyResetTransitions(modelGroup, deltaSeconds)
       return
     }
@@ -244,7 +279,7 @@ class AnimationEngine {
       // tilt as the static render snaps to a different pose than the particle positions.
       // Rotation begins on the next frame when the show branch runs normally.
     } else if (currentPhase === 'show') {
-      this.applyEffects(modelGroup, deltaSeconds)
+      this.applyEffects(modelGroup, deltaSeconds, camera)
       this._applyResetTransitions(modelGroup, deltaSeconds)
       if (now - this.phaseStartTime >= this.showPhaseDuration) {
         effect.startAnimation('fadeOut')
@@ -252,7 +287,7 @@ class AnimationEngine {
     } else if (currentPhase === 'fadeOut') {
       // Continue rotating during fade-out — particles are 2D snapshots that fade
       // independently of the 3D model, so rotation here is visually seamless.
-      this.applyEffects(modelGroup, deltaSeconds)
+      this.applyEffects(modelGroup, deltaSeconds, camera)
       this._applyResetTransitions(modelGroup, deltaSeconds)
       if (effect.isAnimationComplete()) {
         effect.startAnimation('fadeIn')
@@ -271,12 +306,13 @@ class AnimationEngine {
     this.time = 0
     this.phaseStartTime = 0
     this._clearResetTransitions()
+    this._orbitBaseline = null
   }
 
   // Apply the animation state for an absolute position within the loop.
   // Sets model rotation from t=0 and configures effect phase/progress.
   // Safe to call with a paused renderer loop.
-  seekTo(absoluteTimeMs, modelGroup, effect) {
+  seekTo(absoluteTimeMs, modelGroup, effect, camera) {
     // Clear any in-progress resets — they're incompatible with deterministic seeking.
     this._clearResetTransitions()
 
@@ -334,6 +370,15 @@ class AnimationEngine {
         modelGroup.position.x = (rng() - 0.5) * 0.08
         modelGroup.position.z = (rng() - 0.5) * 0.08
       }
+    }
+
+    if (this.animationEffects.orbit && camera) {
+      const showTs = absoluteTimeMs / 1000
+      const r = this._orbitBaseline ? this._orbitBaseline.pos.length() : 5
+      const baseY = this._orbitBaseline ? this._orbitBaseline.pos.y : 0.5
+      const angle = showTs * this.speed * 0.5
+      camera.position.set(Math.sin(angle) * r, baseY, Math.cos(angle) * r)
+      camera.lookAt(0, 0, 0)
     }
 
     if (effect) {

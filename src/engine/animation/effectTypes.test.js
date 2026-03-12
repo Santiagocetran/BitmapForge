@@ -4,7 +4,7 @@ import { ANIMATION_EFFECT_KEYS, DEFAULT_ANIMATION_EFFECTS } from './effectTypes.
 describe('effectTypes', () => {
   it('ANIMATION_EFFECT_KEYS contains all expected effects', () => {
     expect(Array.isArray(ANIMATION_EFFECT_KEYS)).toBe(true)
-    expect(ANIMATION_EFFECT_KEYS).toHaveLength(7)
+    expect(ANIMATION_EFFECT_KEYS).toHaveLength(8)
     expect(ANIMATION_EFFECT_KEYS).toContain('spinX')
     expect(ANIMATION_EFFECT_KEYS).toContain('spinY')
     expect(ANIMATION_EFFECT_KEYS).toContain('spinZ')
@@ -12,6 +12,7 @@ describe('effectTypes', () => {
     expect(ANIMATION_EFFECT_KEYS).toContain('bounce')
     expect(ANIMATION_EFFECT_KEYS).toContain('pulse')
     expect(ANIMATION_EFFECT_KEYS).toContain('shake')
+    expect(ANIMATION_EFFECT_KEYS).toContain('orbit')
   })
 
   it('DEFAULT_ANIMATION_EFFECTS has spinY=true and rest false', () => {
@@ -22,6 +23,7 @@ describe('effectTypes', () => {
     expect(DEFAULT_ANIMATION_EFFECTS.bounce).toBe(false)
     expect(DEFAULT_ANIMATION_EFFECTS.pulse).toBe(false)
     expect(DEFAULT_ANIMATION_EFFECTS.shake).toBe(false)
+    expect(DEFAULT_ANIMATION_EFFECTS.orbit).toBe(false)
   })
 
   it('both are frozen', () => {

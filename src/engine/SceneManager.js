@@ -84,7 +84,7 @@ class SceneManager {
       const deltaSeconds = Math.max(0, Math.min((now - this.lastFrameTime) / 1000, 0.25))
       this.lastFrameTime = now
       if (this.hasLayers()) {
-        this.animationEngine.update(this.animGroup, this.effect, deltaSeconds)
+        this.animationEngine.update(this.animGroup, this.effect, deltaSeconds, this.camera)
       }
       this.effect.render(this.scene, this.camera)
       this._onFrameRendered?.()
@@ -463,7 +463,7 @@ class SceneManager {
    * @param {number} absoluteTimeMs
    */
   renderAtTime(absoluteTimeMs) {
-    this.animationEngine.seekTo(absoluteTimeMs, this.animGroup, this.effect)
+    this.animationEngine.seekTo(absoluteTimeMs, this.animGroup, this.effect, this.camera)
     this.renderOnce()
   }
 
@@ -488,6 +488,8 @@ class SceneManager {
     if (this.hasLayers()) {
       this.animGroup.rotation.set(0, 0, 0)
     }
+    this.camera.position.set(0, 0.5, 5)
+    this.camera.lookAt(0, 0, 0)
     if (this.animationEngine.useFadeInOut) {
       this.effect.startAnimation('fadeIn')
     } else {

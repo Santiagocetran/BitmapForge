@@ -10,7 +10,8 @@ const EFFECT_LABELS = {
   float: 'Float',
   bounce: 'Bounce',
   pulse: 'Pulse',
-  shake: 'Shake'
+  shake: 'Shake',
+  orbit: 'Orbit'
 }
 
 function AnimationControls() {
