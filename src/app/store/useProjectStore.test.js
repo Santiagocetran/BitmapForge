@@ -44,11 +44,11 @@ describe('useProjectStore', () => {
     expect(reordered[2]).toBe(original[0])
   })
 
-  it('setPixelSize clamps 1-20', () => {
+  it('setPixelSize clamps 1-32', () => {
     useProjectStore.getState().setPixelSize(0)
     expect(useProjectStore.getState().pixelSize).toBe(1)
     useProjectStore.getState().setPixelSize(50)
-    expect(useProjectStore.getState().pixelSize).toBe(20)
+    expect(useProjectStore.getState().pixelSize).toBe(32)
   })
 
   it('setMinBrightness clamps 0.01-0.5', () => {

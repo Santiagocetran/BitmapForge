@@ -15,15 +15,7 @@ function ColorSwatches({ colors }) {
 }
 
 function applyPreset(preset) {
-  // Single setState call = one undo history entry
-  useProjectStore.setState({
-    colors: preset.settings.colors,
-    pixelSize: preset.settings.pixelSize,
-    ditherType: preset.settings.ditherType,
-    invert: preset.settings.invert,
-    minBrightness: preset.settings.minBrightness,
-    backgroundColor: preset.settings.backgroundColor
-  })
+  useProjectStore.setState({ colors: preset.settings.colors })
 }
 
 function PresetGallery() {

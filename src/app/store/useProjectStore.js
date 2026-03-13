@@ -22,6 +22,9 @@ const DEFAULT_STATE = {
   // Base rotation offset (Euler angles in radians, XYZ order). Applied as a static
   // pose layer — animation plays on top via a separate animGroup child.
   baseRotation: { x: 0, y: 0, z: 0 },
+  // Uniform scale applied to the entire model group. Useful when imported models
+  // are too small or too large relative to the camera frustum.
+  modelScale: 1.0,
   // legacy (kept for migration; prefer animationEffects)
   animationPreset: 'spinY',
   rotateOnShow: false,
@@ -144,7 +147,7 @@ const useProjectStore = create(
         colors[index] = color
         set({ colors })
       },
-      setPixelSize: (pixelSize) => set({ pixelSize: clamp(pixelSize, 1, 20) }),
+      setPixelSize: (pixelSize) => set({ pixelSize: clamp(pixelSize, 1, 32) }),
       setDitherType: (ditherType) => set({ ditherType }),
       setInvert: (invert) => set({ invert }),
       setMinBrightness: (minBrightness) => set({ minBrightness: clamp(minBrightness, 0.01, 0.5) }),
@@ -164,6 +167,7 @@ const useProjectStore = create(
       setLightDirection: (lightDirection) => set({ lightDirection }),
       setBaseRotation: (x, y, z) => set({ baseRotation: { x, y, z } }),
       resetBaseRotation: () => set({ baseRotation: { x: 0, y: 0, z: 0 } }),
+      setModelScale: (scale) => set({ modelScale: clamp(scale, 0.1, 10) }),
       setSeed: (seed) => set({ seed }),
       randomizeSeed: () => set({ seed: randomSeed() }),
       setRenderMode: (renderMode) => {
