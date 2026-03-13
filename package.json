@@ -2,6 +2,9 @@
   "name": "bitmapforge",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "description": "Client-side web app to generate bitmap animations from 3D models.",
   "engines": {
