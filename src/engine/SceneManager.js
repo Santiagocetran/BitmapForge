@@ -411,6 +411,15 @@ class SceneManager {
   }
 
   /**
+   * Uniformly scale the entire model group. Useful when imported models are too
+   * small or too large relative to the camera frustum.
+   * @param {number} scale - Uniform scale factor (e.g. 0.5 = half size, 2 = double)
+   */
+  setModelScale(scale) {
+    this.baseGroup.scale.setScalar(scale)
+  }
+
+  /**
    * Swap the rendering mode.
    * @param {string} mode
    */

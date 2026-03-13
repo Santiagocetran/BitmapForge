@@ -104,13 +104,6 @@ function ColorPalette() {
   const [openPickerId, setOpenPickerId] = useState(null)
 
   const ids = colors.map((_, index) => `color-${index}`)
-  const presets = {
-    Green: ['#074434', '#0a5845', '#ABC685', '#E8FF99'],
-    Ocean: ['#012a4a', '#01497c', '#2a6f97', '#61a5c2'],
-    Sunset: ['#3f0d12', '#a71d31', '#f46036', '#f7b538'],
-    Mono: ['#111111', '#555555', '#aaaaaa', '#f2f2f2'],
-    Cyberpunk: ['#050014', '#1a1040', '#ff00a8', '#00f5ff']
-  }
 
   const onDragEnd = ({ active, over }) => {
     if (!over || active.id === over.id) return
@@ -167,14 +160,6 @@ function ColorPalette() {
         >
           Remove
         </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(presets).map(([name, value]) => (
-          <button key={name} type="button" className={`${BTN.base} ${BTN.ghost}`} onClick={() => setColors(value)}>
-            {name}
-          </button>
-        ))}
       </div>
     </section>
   )

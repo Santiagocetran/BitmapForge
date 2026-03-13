@@ -24,6 +24,25 @@ function PreviewCanvas() {
     })
     sceneManagerRef.current = manager
 
+    // Sync persisted state that isn't covered by the SceneManager constructor.
+    // Subscriptions only fire on *changes*, so without this initial push the
+    // engine would use its own defaults until the user moves a control.
+    const s = useProjectStore.getState()
+    manager.updateAnimationOptions({
+      useFadeInOut: s.useFadeInOut,
+      animationEffects: s.animationEffects,
+      animationSpeed: s.animationSpeed,
+      showPhaseDuration: s.showPhaseDuration,
+      animationDuration: s.animationDuration,
+      animationPreset: s.animationPreset,
+      rotateOnShow: s.rotateOnShow,
+      showPreset: s.showPreset
+    })
+    manager.setLightDirection(s.lightDirection.x, s.lightDirection.y, s.lightDirection.z)
+    manager.setBaseRotation(s.baseRotation.x, s.baseRotation.y, s.baseRotation.z)
+    manager.setModelScale(s.modelScale)
+    manager.setRenderMode(s.renderMode)
+
     // Size the canvas immediately — ResizeObserver fires asynchronously so the
     // first few render frames would otherwise use the 1×1 default grid.
     if (container.clientWidth > 0 && container.clientHeight > 0) {
@@ -100,6 +119,11 @@ function PreviewCanvas() {
       { equalityFn: shallow }
     )
 
+    const unsubModelScale = useProjectStore.subscribe(
+      (state) => state.modelScale,
+      (scale) => manager.setModelScale(scale)
+    )
+
     const unsubRenderMode = useProjectStore.subscribe(
       (state) => state.renderMode,
       (mode) => manager.setRenderMode(mode)
@@ -110,6 +134,7 @@ function PreviewCanvas() {
       unsubAnim()
       unsubLight()
       unsubRotation()
+      unsubModelScale()
       unsubRenderMode()
       resizeObserver.disconnect()
       manager.dispose()

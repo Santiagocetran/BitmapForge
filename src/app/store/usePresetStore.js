@@ -4,12 +4,7 @@ import { useProjectStore } from './useProjectStore.js'
 
 function extractSettings(state) {
   return {
-    colors: state.colors,
-    pixelSize: state.pixelSize,
-    ditherType: state.ditherType,
-    invert: state.invert,
-    minBrightness: state.minBrightness,
-    backgroundColor: state.backgroundColor
+    colors: state.colors
   }
 }
 
