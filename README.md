@@ -24,17 +24,26 @@
 Made for **indie game devs**, **pixel artists**, **creative coders**, and **Blender users** who want quick retro assets without the pipeline overhead.
 
 - 🎮 **Instant retro assets** — upload an OBJ/GLB and get a pixel-art GIF in under a minute
-- 🎨 **Full visual control** — dithering algorithms, custom color palettes, lighting, and 7 animation effects
-- 📦 **Export anywhere** — GIF, APNG, WebM, sprite sheets, standalone HTML, React/Web components, Lottie, CSS keyframes
+- 🎨 **Full visual control** — dithering algorithms, custom color palettes, lighting, and 8 animation effects
+- 📦 **Export anywhere** — GIF, APNG, WebM, sprite sheets, standalone HTML, React/Web components, Lottie, CSS keyframes, or a no-build Embed ZIP
 - 🔒 **100% private** — nothing ever leaves your browser. No uploads, no accounts, no backend
 
 ---
 
 ## 🖼️ Features
 
-### 🗂️ Flexible Input Formats
+### 🗂️ Flexible Input Sources
 
-Upload **STL, OBJ, GLTF, or GLB** files directly from your machine. No conversion needed.
+Not just 3D models — four input types supported:
+
+| Input        | Description                                              |
+| ------------ | -------------------------------------------------------- |
+| **3D Model** | Upload STL, OBJ, GLTF, or GLB directly from your machine |
+| **Shape**    | Built-in primitives: cube, sphere, torus, cone, and more |
+| **Text**     | Extruded 3D text with 10 font families                   |
+| **Image**    | PNG/JPG/SVG rendered as a flat plane                     |
+
+A **model scale slider** lets you normalize any model to fit the viewport regardless of original size.
 
 ![UI Screenshot](./docs/screenshot-ui.png)
 
@@ -57,15 +66,17 @@ Upload **STL, OBJ, GLTF, or GLB** files directly from your machine. No conversio
 
 Drag and reorder up to 6 colors. The palette is brightness-mapped: leftmost = shadows, rightmost = highlights.
 
+**Color-only presets** let you swap palette themes without touching dither type, pixel size, or other settings.
+
 ![Color Palette](./docs/screenshot-palette.png)
 
 ---
 
 ### 🎬 Animation Effects
 
-Combine any of 7 animation presets:
+Combine any of 8 effects simultaneously:
 
-`Spin X` · `Spin Y` · `Spin Z` · `Float` · `Bounce` · `Pulse` · `Shake`
+`Spin X` · `Spin Y` · `Spin Z` · `Float` · `Bounce` · `Pulse` · `Shake` · `Orbit`
 
 All animations loop seamlessly — perfect for game assets or loading screens.
 
@@ -74,24 +85,44 @@ All animations loop seamlessly — perfect for game assets or loading screens.
 ### 💡 Lighting & Post-Processing
 
 - Drag-to-position key light direction
-- **CRT effect**: scanlines, chromatic aberration, vignette
+- **CRT effect** — scanlines, chromatic aberration, vignette
+- **Noise/grain** — film grain overlay, monochrome or colored
+- **Color shift** — hue rotation and saturation multiplier
 
 ---
 
 ### 📤 Export Formats
 
-| Format              | Use Case                                  |
-| ------------------- | ----------------------------------------- |
-| **APNG**            | Full-color + alpha, web-ready _(default)_ |
-| **GIF**             | Universal compatibility, retro charm      |
-| **WebM Video**      | Game engines, editors                     |
-| **Sprite Sheet**    | Tilemap workflows, game frameworks        |
-| **Standalone HTML** | Drop one file anywhere, it just works     |
-| **React Component** | Drop into any React project               |
-| **Web Component**   | Framework-agnostic embed                  |
-| **CSS Keyframes**   | Pure CSS animation + sprite sheet         |
-| **Lottie JSON**     | Motion design pipelines                   |
-| **Code ZIP**        | Full engine source to self-host           |
+| Format              | Use Case                                                                |
+| ------------------- | ----------------------------------------------------------------------- |
+| **APNG**            | Full-color + alpha, web-ready _(default)_                               |
+| **GIF**             | Universal compatibility, retro charm                                    |
+| **WebM Video**      | Game engines, editors                                                   |
+| **Sprite Sheet**    | Tilemap workflows, game frameworks                                      |
+| **Standalone HTML** | Drop one file anywhere, it just works                                   |
+| **Embed ZIP**       | Upload to any host, embed with one `<bitmap-forge>` tag — no npm needed |
+| **React Component** | Drop into any React project                                             |
+| **Web Component**   | Framework-agnostic custom element                                       |
+| **CSS Keyframes**   | Pure CSS animation + sprite sheet — no JS required                      |
+| **Lottie JSON**     | Motion design pipelines                                                 |
+| **Code ZIP**        | Full Vite project with engine source to self-host                       |
+
+---
+
+### 📦 `@bitmapforge/embed` SDK
+
+The **Embed ZIP** export is powered by a standalone SDK in `packages/embed/`. It ships as a native web component — no framework required:
+
+```html
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js" } }
+</script>
+<script type="module" src="./bitmap-forge.es.js"></script>
+
+<bitmap-forge src="./animation.bforge" autoplay loop></bitmap-forge>
+```
+
+Features: lazy loading via IntersectionObserver, DPR-aware ResizeObserver, `prefers-reduced-motion` support, and Page Visibility API pause/resume. The `.bforge` file is just JSON — you can swap animations without touching the JS.
 
 ---
 
@@ -119,9 +150,10 @@ Open the local URL printed by Vite — that's it.
 ### Other commands
 
 ```bash
-npm run build     # Production build → dist/
-npm run preview   # Preview production build locally
-npm test          # Run all tests (357 tests across 21 files)
+npm run build         # Production build → dist/ (also builds embed SDK first)
+npm run build:embed   # Build embed SDK → copies to public/embed/
+npm run preview       # Preview production build locally
+npm test              # Run all tests (469 tests across 27 files)
 ```
 
 ---
@@ -129,34 +161,36 @@ npm test          # Run all tests (357 tests across 21 files)
 ## 🏗️ How It Works
 
 ```
-Upload model → Three.js renders to WebGL → BitmapEffect reads pixels
-→ Brightness → Dithering algorithm → Map to color palette → Visible canvas
-→ Export (capture one full animation loop)
+Input (model/shape/text/image) → Three.js renders to WebGL → BitmapEffect reads pixels
+→ Brightness per cell → Dithering algorithm → Map to color palette → Visible canvas
+→ Post-processing (CRT / Noise / Color Shift) → Export (capture one full animation loop)
 ```
 
 1. **Three.js** renders the 3D scene to a hidden WebGL canvas
 2. **BitmapEffect** reads pixel brightness per grid cell via `getImageData`
-3. The selected **dithering algorithm** converts brightness into pixel patterns
+3. The selected **renderer** converts brightness into pixel patterns (bitmap, halftone, ASCII, etc.)
 4. Brightness zones are mapped to your **color palette** (dark → light)
-5. **AnimationEngine** drives spin, float, bounce, pulse, and shake per frame
-6. Export tools capture the preview canvas across one full loop
+5. **Post-processing chain** applies CRT, noise, and color shift effects
+6. **AnimationEngine** drives spin, float, bounce, pulse, shake, and orbit per frame
+7. Export tools capture the preview canvas across one full loop
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer         | Tech              |
-| ------------- | ----------------- |
-| 3D Rendering  | Three.js          |
-| Framework     | React 19 + Vite 7 |
-| Styling       | Tailwind CSS 4    |
-| State         | Zustand           |
-| UI Primitives | Radix UI          |
-| GIF Export    | gif.js            |
-| APNG Export   | upng-js           |
-| ZIP Export    | JSZip             |
-| Drag & Drop   | @dnd-kit          |
-| Icons         | Lucide React      |
+| Layer         | Tech                               |
+| ------------- | ---------------------------------- |
+| 3D Rendering  | Three.js                           |
+| Framework     | React 19 + Vite 7                  |
+| Styling       | Tailwind CSS 4                     |
+| State         | Zustand                            |
+| UI Primitives | Radix UI                           |
+| GIF Export    | gif.js                             |
+| APNG Export   | upng-js                            |
+| ZIP Export    | JSZip                              |
+| Drag & Drop   | @dnd-kit                           |
+| Icons         | Lucide React                       |
+| Embed SDK     | `packages/embed/` (custom element) |
 
 ---
 

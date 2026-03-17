@@ -12,6 +12,8 @@
   },
   "scripts": {
     "dev": "vite",
+    "build:embed": "cd packages/embed && npm run build && cp dist/bitmap-forge.es.js ../../public/embed/bitmap-forge.es.js",
+    "prebuild": "npm run build:embed",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",

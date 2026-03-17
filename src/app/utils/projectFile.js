@@ -40,30 +40,18 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer
 }
 
+const TRANSIENT_KEYS = new Set(['model', 'imageSource', 'status', 'selectedLayerId', '_hasHydrated'])
+
 async function buildProjectPayload(state) {
+  const settings = {}
+  for (const [k, v] of Object.entries(state)) {
+    if (!TRANSIENT_KEYS.has(k) && typeof v !== 'function') settings[k] = v
+  }
+
   const payload = {
     version: PROJECT_VERSION,
     createdAt: new Date().toISOString(),
-    settings: {
-      colors: state.colors,
-      pixelSize: state.pixelSize,
-      ditherType: state.ditherType,
-      invert: state.invert,
-      minBrightness: state.minBrightness,
-      backgroundColor: state.backgroundColor,
-      useFadeInOut: state.useFadeInOut,
-      fadeVariant: state.fadeVariant,
-      animationEffects: state.animationEffects,
-      animationPreset: state.animationPreset,
-      animationSpeed: state.animationSpeed,
-      showPhaseDuration: state.showPhaseDuration,
-      animationDuration: state.animationDuration,
-      rotateOnShow: state.rotateOnShow,
-      showPreset: state.showPreset,
-      lightDirection: state.lightDirection,
-      baseRotation: state.baseRotation,
-      seed: state.seed
-    },
+    settings,
     model: null
   }
 
@@ -128,4 +116,4 @@ async function loadProjectFile(file) {
   return { settings: project.settings, modelFile }
 }
 
-export { saveProjectFile, loadProjectFile }
+export { saveProjectFile, loadProjectFile, buildProjectPayload }

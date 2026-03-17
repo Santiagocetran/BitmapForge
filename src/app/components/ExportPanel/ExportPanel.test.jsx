@@ -19,6 +19,7 @@ const mockExportFns = {
   exportWebComponent: vi.fn(async () => {}),
   exportCssAnimation: vi.fn(async () => {}),
   exportLottie: vi.fn(async () => {}),
+  exportEmbed: vi.fn(async () => {}),
   saveProject: vi.fn(async () => {}),
   cancelExport: vi.fn()
 }
@@ -53,7 +54,7 @@ afterEach(() => {
 // ─── Format buttons rendered ──────────────────────────────────────────────────
 
 describe('ExportPanel — format buttons', () => {
-  it('renders all 10 format buttons', () => {
+  it('renders all 11 format buttons', () => {
     renderPanel()
     const formatLabels = [
       'APNG',
@@ -65,7 +66,8 @@ describe('ExportPanel — format buttons', () => {
       'React',
       'Web Comp',
       'CSS Anim',
-      'Lottie'
+      'Lottie',
+      'Embed'
     ]
     for (const label of formatLabels) {
       expect(screen.getByRole('button', { name: label })).toBeDefined()
@@ -95,7 +97,8 @@ const FORMAT_ROUTING = [
   { label: 'React', fn: 'exportReactComponent' },
   { label: 'Web Comp', fn: 'exportWebComponent' },
   { label: 'CSS Anim', fn: 'exportCssAnimation' },
-  { label: 'Lottie', fn: 'exportLottie' }
+  { label: 'Lottie', fn: 'exportLottie' },
+  { label: 'Embed', fn: 'exportEmbed' }
 ]
 
 describe('ExportPanel — format routing', () => {
