@@ -2,6 +2,9 @@
   "name": "bitmapforge",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "description": "Client-side web app to generate bitmap animations from 3D models.",
   "engines": {
@@ -9,6 +12,8 @@
   },
   "scripts": {
     "dev": "vite",
+    "build:embed": "cd packages/embed && npm run build && cp dist/bitmap-forge.es.js ../../public/embed/bitmap-forge.es.js",
+    "prebuild": "npm run build:embed",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",

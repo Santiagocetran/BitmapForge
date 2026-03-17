@@ -349,6 +349,19 @@ function useExport(sceneManagerRef) {
     }
   }
 
+  async function exportEmbed() {
+    const state = getState()
+    setStatus({ exporting: true, message: 'Building Embed ZIP...' })
+    try {
+      const { buildEmbedZip } = await import('../utils/embedExport.js')
+      const blob = await buildEmbedZip(state)
+      downloadBlob(blob, `my-animation-embed.zip`)
+      setStatus({ exporting: false, message: 'Embed ZIP exported. Upload the folder to any web host.' })
+    } catch (error) {
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
   async function saveProject() {
     try {
       await saveProjectFile(getState())
@@ -369,6 +382,7 @@ function useExport(sceneManagerRef) {
     exportWebComponent,
     exportCssAnimation,
     exportLottie,
+    exportEmbed,
     saveProject,
     cancelExport
   }

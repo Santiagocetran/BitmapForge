@@ -15,7 +15,8 @@ const FORMAT_OPTIONS = [
   { value: 'react', label: 'React', description: 'Drop-in component — works with Vite & webpack 5' },
   { value: 'webcomponent', label: 'Web Comp', description: 'Custom element — works in any framework or plain HTML' },
   { value: 'css', label: 'CSS Anim', description: 'Pure CSS keyframe animation + sprite sheet — no JS required' },
-  { value: 'lottie', label: 'Lottie', description: 'Lottie (raster) — works with lottie-web, lottie-react, Framer' }
+  { value: 'lottie', label: 'Lottie', description: 'Lottie (raster) — works with lottie-web, lottie-react, Framer' },
+  { value: 'embed', label: 'Embed', description: 'Live animation — upload ZIP to any web host' }
 ]
 
 function ExportPanel() {
@@ -31,11 +32,13 @@ function ExportPanel() {
     exportWebComponent,
     exportCssAnimation,
     exportLottie,
+    exportEmbed,
     saveProject
   } = useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
+  const inputType = useProjectStore((s) => s.inputType)
 
   const [selectedFormat, setSelectedFormat] = useState('apng')
 
@@ -51,7 +54,8 @@ function ExportPanel() {
       react: () => exportReactComponent(),
       webcomponent: () => exportWebComponent(),
       css: () => exportCssAnimation(),
-      lottie: () => exportLottie()
+      lottie: () => exportLottie(),
+      embed: () => exportEmbed()
     }
     await map[selectedFormat]?.()
   }
@@ -95,9 +99,13 @@ function ExportPanel() {
 
       {selectedOption?.description && <p className="text-xs text-zinc-400">{selectedOption.description}</p>}
 
+      {selectedFormat === 'embed' && inputType === 'image' && (
+        <p className="text-xs text-amber-400">Image input cannot be embedded — switch to model, shape, or text.</p>
+      )}
+
       <button
         type="button"
-        disabled={status.exporting}
+        disabled={status.exporting || (selectedFormat === 'embed' && inputType === 'image')}
         onClick={onExport}
         className={`w-full ${BTN.base} ${BTN.primary} disabled:opacity-50`}
       >

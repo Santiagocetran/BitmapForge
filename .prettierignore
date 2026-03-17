@@ -1,0 +1,4 @@
+dist/
+public/embed/
+packages/embed/dist/
+node_modules/
