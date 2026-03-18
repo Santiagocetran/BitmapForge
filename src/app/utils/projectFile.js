@@ -40,7 +40,7 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer
 }
 
-const TRANSIENT_KEYS = new Set(['model', 'imageSource', 'status', 'selectedLayerId', '_hasHydrated'])
+const TRANSIENT_KEYS = new Set(['model', 'imageSource', 'status', '_hasHydrated'])
 
 async function buildProjectPayload(state) {
   const settings = {}
