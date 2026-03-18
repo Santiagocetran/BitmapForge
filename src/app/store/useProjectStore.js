@@ -97,7 +97,9 @@ const DEFAULT_STATE = {
   // }
   layers: [],
   // id of the layer selected in the layer panel (UI-only, excluded from undo)
-  selectedLayerId: null
+  selectedLayerId: null,
+  // Arbitrary key→value map for plugin-contributed params (excluded from undo)
+  pluginParams: {}
 }
 
 function clamp(value, min, max) {
@@ -226,7 +228,8 @@ const useProjectStore = create(
       updateLayer: (id, partial) =>
         set((state) => ({ layers: state.layers.map((l) => (l.id === id ? { ...l, ...partial } : l)) })),
       reorderLayers: (newOrder) => set({ layers: newOrder }),
-      selectLayer: (id) => set({ selectedLayerId: id })
+      selectLayer: (id) => set({ selectedLayerId: id }),
+      setPluginParam: (key, value) => set((state) => ({ pluginParams: { ...state.pluginParams, [key]: value } }))
     })),
     {
       // Only track meaningful visual state — exclude status, binary file objects,
@@ -239,6 +242,7 @@ const useProjectStore = create(
               k !== 'model' &&
               k !== 'imageSource' &&
               k !== 'selectedLayerId' &&
+              k !== 'pluginParams' &&
               typeof v !== 'function'
           )
         ),

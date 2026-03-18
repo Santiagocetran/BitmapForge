@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 import { InfoTooltip } from '../ui/InfoTooltip.jsx'
-import { RENDERER_LABELS } from '../../../engine/renderers/index.js'
+import { pluginRegistry } from '../../../engine/plugins/PluginRegistry.js'
 import { CHAR_RAMP_LABELS } from '../../../engine/renderers/AsciiRenderer.js'
 
 function QualitySettings() {
@@ -156,8 +156,8 @@ function QualitySettings() {
           value={renderMode}
           onChange={(e) => setRenderMode(e.target.value)}
         >
-          {Object.entries(RENDERER_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
+          {pluginRegistry.listRenderers().map(({ id, label }) => (
+            <option key={id} value={id}>
               {label}
             </option>
           ))}

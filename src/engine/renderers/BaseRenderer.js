@@ -81,7 +81,12 @@ class BaseRenderer {
     Object.assign(this.options, options)
   }
 
-  /** Return a JSON Schema describing renderer-specific configurable parameters. */
+  /**
+   * Return a JSON Schema describing renderer-specific configurable parameters.
+   * @deprecated Use `pluginRegistry.getRenderer(id).schema` instead.
+   *   The schema is now the single source of truth, registered via builtinPlugins.js.
+   *   This method is kept for backward compatibility with any subclass overrides.
+   */
   getParameterSchema() {
     return {}
   }
