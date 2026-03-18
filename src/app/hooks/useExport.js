@@ -140,7 +140,7 @@ function useExport(sceneManagerRef) {
           setStatus({ exporting: true, message: `Encoding APNG... ${Math.round((i / total) * 100)}%` })
       })
 
-      const blob = buildApng(frames, frameDelay)
+      const blob = await buildApng(frames, frameDelay)
       downloadBlob(blob, `bitmapforge-${Date.now()}.png`)
       setStatus({ exporting: false, message: 'APNG exported.' })
     } catch (error) {
@@ -148,7 +148,7 @@ function useExport(sceneManagerRef) {
     }
   }
 
-  async function exportVideo() {
+  async function exportVideoLegacy() {
     const manager = sceneManagerRef.current
     if (!manager) return
     const canvas = manager.getCanvas()
@@ -217,6 +217,86 @@ function useExport(sceneManagerRef) {
       setStatus({ exporting: false, message: 'Video exported.' })
     } catch (error) {
       manager.clearOnFrameRendered?.()
+      setStatus({ exporting: false, error: friendlyExportError(error) })
+    }
+  }
+
+  async function exportVideo(fps = 30) {
+    const manager = sceneManagerRef.current
+    if (!manager) return
+    const canvas = manager.getCanvas()
+    if (!canvas) throw new Error('No preview canvas available')
+
+    // Browsers without WebCodecs: fall back to live MediaRecorder recording
+    if (!window.VideoEncoder) {
+      return exportVideoLegacy()
+    }
+
+    const controller = new AbortController()
+    abortRef.current = controller
+    const { signal } = controller
+
+    setStatus({ exporting: true, message: 'Capturing frames…' })
+    try {
+      const frameCount = getFrameCount(manager, fps)
+
+      const frames = await captureFrames(manager, frameCount, {
+        signal,
+        onProgress: (i, total) =>
+          setStatus({ exporting: true, message: `Encoding video… ${Math.round((i / total) * 100)}%` })
+      })
+
+      const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
+
+      const target = new ArrayBufferTarget()
+      const muxer = new Muxer({
+        target,
+        video: {
+          codec: 'avc',
+          width: canvas.width,
+          height: canvas.height
+        },
+        fastStart: 'in-memory'
+      })
+
+      let encoderError = null
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: (e) => {
+          encoderError = e
+        }
+      })
+
+      encoder.configure({
+        codec: 'avc1.4d0028',
+        width: canvas.width,
+        height: canvas.height,
+        bitrate: 8_000_000,
+        framerate: fps,
+        latencyMode: 'quality'
+      })
+
+      for (let i = 0; i < frames.length; i++) {
+        if (signal.aborted) break
+
+        const timestamp = Math.round((i / fps) * 1_000_000) // microseconds
+        const duration = Math.round((1 / fps) * 1_000_000) // microseconds
+
+        const videoFrame = new VideoFrame(frames[i], { timestamp, duration })
+        encoder.encode(videoFrame, { keyFrame: i % 30 === 0 })
+        videoFrame.close()
+      }
+
+      await encoder.flush()
+      if (signal.aborted) throw new DOMException('Export cancelled', 'AbortError')
+      if (encoderError) throw encoderError
+
+      muxer.finalize()
+
+      const blob = new Blob([target.buffer], { type: 'video/mp4' })
+      downloadBlob(blob, `bitmapforge-${Date.now()}.mp4`)
+      setStatus({ exporting: false, message: 'Video exported as MP4.' })
+    } catch (error) {
       setStatus({ exporting: false, error: friendlyExportError(error) })
     }
   }

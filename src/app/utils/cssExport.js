@@ -99,7 +99,17 @@ async function buildCssAnimation(
   const frames = await captureFrames(manager, frameCount, { signal, onProgress })
 
   const spriteCanvas = buildSpriteSheetCanvas(frames, frameW, frameH)
-  const spriteBlob = await new Promise((resolve) => spriteCanvas.toBlob(resolve, 'image/png'))
+  const spriteBlob = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(
+      () => reject(new Error('Sprite sheet encoding timed out — canvas may be too large')),
+      30_000
+    )
+    spriteCanvas.toBlob((blob) => {
+      clearTimeout(timeout)
+      if (blob) resolve(blob)
+      else reject(new Error('Canvas toBlob returned null — canvas may be too large'))
+    }, 'image/png')
+  })
   const css = generateCss(name, frameW, frameH, frameCount, loopMs)
 
   const zip = new JSZip()

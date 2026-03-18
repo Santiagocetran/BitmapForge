@@ -1,22 +1,34 @@
-import UPNG from 'upng-js'
-
 /**
  * Encode an array of ImageData frames into an APNG Blob.
+ * Encoding runs in a Web Worker to avoid blocking the main thread.
  * @param {ImageData[]} frames
  * @param {number} delayMs - delay per frame in milliseconds
- * @returns {Blob} image/png Blob
+ * @returns {Promise<Blob>} image/png Blob
  */
 function buildApng(frames, delayMs) {
-  if (frames.length === 0) throw new Error('No frames to encode')
+  if (frames.length === 0) return Promise.reject(new Error('No frames to encode'))
 
   const { width, height } = frames[0]
-  const buffers = frames.map((f) => f.data.buffer)
-  const delays = frames.map(() => delayMs)
 
-  // UPNG.encode(frames, width, height, colorDepth, delays)
-  // colorDepth 0 = auto (lossless, full RGBA)
-  const arrayBuffer = UPNG.encode(buffers, width, height, 0, delays)
-  return new Blob([arrayBuffer], { type: 'image/png' })
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('../workers/apngWorker.js', import.meta.url), { type: 'module' })
+
+    // Transfer Uint8Array views — zero-copy, buffers detach on main thread
+    const uint8Frames = frames.map((f) => new Uint8Array(f.data.buffer))
+    const transferList = uint8Frames.map((u) => u.buffer)
+
+    worker.onmessage = ({ data }) => {
+      worker.terminate()
+      if (data.ok) resolve(new Blob([data.arrayBuffer], { type: 'image/png' }))
+      else reject(new Error(data.error))
+    }
+    worker.onerror = (e) => {
+      worker.terminate()
+      reject(e)
+    }
+
+    worker.postMessage({ frames: uint8Frames, width, height, delayMs }, transferList)
+  })
 }
 
 export { buildApng }

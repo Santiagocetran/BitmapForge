@@ -8,7 +8,8 @@
  * All tests run in jsdom — no real canvas rendering, no Three.js, no network.
  * Frame data is provided as mock ImageData-like objects.
  */
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import UPNG from 'upng-js'
 import JSZip from 'jszip'
 import { hasPngSignature, getChunkTypes } from '../helpers/pngChunks.js'
 
@@ -77,6 +78,34 @@ vi.mock('../../src/app/utils/framesProvider.js', () => ({
   captureFrames: vi.fn(async () => MOCK_FRAMES)
 }))
 
+// Worker mock for apngExport — runs UPNG synchronously so PNG structure is preserved
+function makeWorkerMock() {
+  return vi.fn().mockImplementation(function WorkerMock() {
+    this.terminate = vi.fn()
+    this.onerror = null
+    this.onmessage = null
+    this.postMessage = (data) => {
+      queueMicrotask(() => {
+        try {
+          const delays = data.frames.map(() => data.delayMs)
+          const arrayBuffer = UPNG.encode(data.frames, data.width, data.height, 0, delays)
+          this.onmessage?.({ data: { ok: true, arrayBuffer } })
+        } catch (err) {
+          this.onmessage?.({ data: { ok: false, error: err.message } })
+        }
+      })
+    }
+  })
+}
+
+beforeEach(() => {
+  vi.stubGlobal('Worker', makeWorkerMock())
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 // ─── Top-level imports (vi.mock is hoisted before these) ──────────────────────
 import { buildApng } from '../../src/app/utils/apngExport.js'
 import { buildSingleHtml } from '../../src/app/utils/singleHtmlExport.js'
@@ -90,19 +119,19 @@ import { buildSpriteSheet } from '../../src/app/utils/spriteSheetExport.js'
 // ─── 1. APNG ──────────────────────────────────────────────────────────────────
 
 describe('APNG conformance', () => {
-  it('produces a non-empty Blob', () => {
-    const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+  it('produces a non-empty Blob', async () => {
+    const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
     expect(blob).toBeInstanceOf(Blob)
     expect(blob.size).toBeGreaterThan(0)
   })
 
   it('output has valid PNG signature', async () => {
-    const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+    const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
     expect(hasPngSignature(await blob.arrayBuffer())).toBe(true)
   })
 
   it('output is animated (acTL + fcTL chunks present)', async () => {
-    const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+    const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
     const types = getChunkTypes(await blob.arrayBuffer())
     expect(types).toContain('acTL')
     expect(types.some((t) => t === 'fcTL')).toBe(true)
@@ -374,8 +403,8 @@ describe.each([
 describe.each([['bitmap'], ['pixelArt'], ['ascii'], ['halftone'], ['ledMatrix'], ['stipple']])(
   'APNG + Single HTML — renderMode=%s',
   (renderMode) => {
-    it('buildApng produces a valid Blob regardless of renderMode', () => {
-      const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+    it('buildApng produces a valid Blob regardless of renderMode', async () => {
+      const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
       expect(blob).toBeInstanceOf(Blob)
       expect(blob.size).toBeGreaterThan(0)
     })
