@@ -56,11 +56,6 @@ const DEFAULT_STATE = {
   noiseEnabled: false,
   noiseAmount: 0.15, // grain strength (0–0.5)
   noiseMonochrome: true, // same offset for R, G, B
-  // Bloom post-processing effect settings
-  bloomEnabled: false,
-  bloomThreshold: 0.7, // luminance threshold for bright-pass (0.4–0.95)
-  bloomRadius: 4, // blur radius in pixels (1–12)
-  bloomStrength: 0.6, // blend intensity (0.1–1.0)
   // Color shift post-processing effect settings
   colorShiftEnabled: false,
   colorShiftHue: 0, // hue rotation in degrees (0–360)
@@ -201,10 +196,6 @@ const useProjectStore = create(
       setNoiseEnabled: (noiseEnabled) => set({ noiseEnabled }),
       setNoiseAmount: (noiseAmount) => set({ noiseAmount: clamp(noiseAmount, 0, 0.5) }),
       setNoiseMonochrome: (noiseMonochrome) => set({ noiseMonochrome }),
-      setBloomEnabled: (bloomEnabled) => set({ bloomEnabled }),
-      setBloomThreshold: (bloomThreshold) => set({ bloomThreshold: clamp(bloomThreshold, 0.4, 0.95) }),
-      setBloomRadius: (bloomRadius) => set({ bloomRadius: clamp(bloomRadius, 1, 12) }),
-      setBloomStrength: (bloomStrength) => set({ bloomStrength: clamp(bloomStrength, 0.1, 1.0) }),
       setColorShiftEnabled: (colorShiftEnabled) => set({ colorShiftEnabled }),
       setColorShiftHue: (colorShiftHue) => set({ colorShiftHue: clamp(colorShiftHue, 0, 360) }),
       setColorShiftSaturation: (colorShiftSaturation) =>

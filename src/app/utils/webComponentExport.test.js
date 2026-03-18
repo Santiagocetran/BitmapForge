@@ -58,7 +58,7 @@ describe('buildWebComponent — ZIP structure', () => {
   it('ZIP contains 14 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(29)
+    expect(engineFiles).toHaveLength(28)
   })
 
   it('uses custom element name for folder and file', async () => {

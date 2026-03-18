@@ -15,7 +15,6 @@ import { AsciiRenderer } from '../renderers/AsciiRenderer.js'
 import { HalftoneRenderer } from '../renderers/HalftoneRenderer.js'
 import { LedMatrixRenderer } from '../renderers/LedMatrixRenderer.js'
 import { StippleRenderer } from '../renderers/StippleRenderer.js'
-import { BloomEffect } from '../postprocessing/effects/BloomEffect.js'
 import { CrtEffect } from '../postprocessing/effects/CrtEffect.js'
 import { NoiseEffect } from '../postprocessing/effects/NoiseEffect.js'
 import { ColorShiftEffect } from '../postprocessing/effects/ColorShiftEffect.js'
@@ -90,15 +89,6 @@ function registerBuiltins() {
   })
 
   // ── Post-effects ───────────────────────────────────────────────────────────
-
-  pluginRegistry.registerPostEffect('bloom', BloomEffect, {
-    label: 'Bloom',
-    schema: {
-      bloomThreshold: { type: 'number', title: 'Threshold', minimum: 0.4, maximum: 0.95, default: 0.7 },
-      bloomRadius: { type: 'integer', title: 'Radius', minimum: 1, maximum: 12, default: 4 },
-      bloomStrength: { type: 'number', title: 'Strength', minimum: 0.1, maximum: 1.0, default: 0.6 }
-    }
-  })
 
   pluginRegistry.registerPostEffect('crt', CrtEffect, {
     label: 'CRT Effect',

@@ -158,14 +158,13 @@ describe('registerBuiltins()', () => {
     expect(ids).toHaveLength(6)
   })
 
-  it('registers all 4 built-in post-effects without throwing', () => {
+  it('registers all 3 built-in post-effects without throwing', () => {
     registerBuiltins()
     const ids = pluginRegistry.listPostEffects().map((e) => e.id)
-    expect(ids).toContain('bloom')
     expect(ids).toContain('crt')
     expect(ids).toContain('noise')
     expect(ids).toContain('colorShift')
-    expect(ids).toHaveLength(4)
+    expect(ids).toHaveLength(3)
   })
 
   it('second call to registerBuiltins() is a no-op (idempotent)', () => {

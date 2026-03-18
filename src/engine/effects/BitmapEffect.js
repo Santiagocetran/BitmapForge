@@ -2,7 +2,6 @@ import { BaseEffect } from './BaseEffect.js'
 import { createFadeVariant } from './fadeVariants/index.js'
 import { BitmapRenderer } from '../renderers/BitmapRenderer.js'
 import { PostProcessingChain } from '../postprocessing/PostProcessingChain.js'
-import { BloomEffect } from '../postprocessing/effects/BloomEffect.js'
 import { CrtEffect } from '../postprocessing/effects/CrtEffect.js'
 import { NoiseEffect } from '../postprocessing/effects/NoiseEffect.js'
 import { ColorShiftEffect } from '../postprocessing/effects/ColorShiftEffect.js'
@@ -42,10 +41,8 @@ class BitmapEffect extends BaseEffect {
     this._pendingRenderer = null
     this.domElement.appendChild(this._activeRenderer.canvas)
 
-    // Post-processing chain — effects applied after the renderer draws each frame.
-    // Bloom is first: it operates on clean renderer output before CRT/noise/colorShift.
+    // Post-processing chain — effects applied after the renderer draws each frame
     this._postChain = new PostProcessingChain()
-    this._postChain.addEffect('bloom', new BloomEffect())
     this._postChain.addEffect('crt', new CrtEffect())
     this._postChain.addEffect('noise', new NoiseEffect())
     this._postChain.addEffect('colorShift', new ColorShiftEffect())
@@ -178,7 +175,6 @@ class BitmapEffect extends BaseEffect {
 
     // Post-processing: applied after renderer draws, before next frame.
     // Update enabled state for each effect from current options.
-    this._postChain.setEnabled('bloom', !!this.options.bloomEnabled)
     this._postChain.setEnabled('crt', !!this.options.crtEnabled)
     this._postChain.setEnabled('noise', !!this.options.noiseEnabled)
     this._postChain.setEnabled('colorShift', !!this.options.colorShiftEnabled)
