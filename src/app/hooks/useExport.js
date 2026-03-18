@@ -246,6 +246,10 @@ function useExport(sceneManagerRef) {
           setStatus({ exporting: true, message: `Encoding video… ${Math.round((i / total) * 100)}%` })
       })
 
+      // H.264 requires even width and height (YCbCr 4:2:0 chroma sub-sampling)
+      const evenWidth = canvas.width % 2 === 0 ? canvas.width : canvas.width + 1
+      const evenHeight = canvas.height % 2 === 0 ? canvas.height : canvas.height + 1
+
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
 
       const target = new ArrayBufferTarget()
@@ -253,8 +257,8 @@ function useExport(sceneManagerRef) {
         target,
         video: {
           codec: 'avc',
-          width: canvas.width,
-          height: canvas.height
+          width: evenWidth,
+          height: evenHeight
         },
         fastStart: 'in-memory'
       })
@@ -269,12 +273,14 @@ function useExport(sceneManagerRef) {
 
       encoder.configure({
         codec: 'avc1.4d0028',
-        width: canvas.width,
-        height: canvas.height,
+        width: evenWidth,
+        height: evenHeight,
         bitrate: 8_000_000,
         framerate: fps,
         latencyMode: 'quality'
       })
+
+      const needsPad = evenWidth !== canvas.width || evenHeight !== canvas.height
 
       for (let i = 0; i < frames.length; i++) {
         if (signal.aborted) break
@@ -283,10 +289,21 @@ function useExport(sceneManagerRef) {
         const duration = Math.round((1 / fps) * 1_000_000) // microseconds
 
         const frame = frames[i]
-        const videoFrame = new VideoFrame(frame.data.buffer, {
+        let frameBuffer = frame.data.buffer
+
+        if (needsPad) {
+          // Pad odd-dimension frames row by row; extra pixels are black/transparent
+          const padded = new Uint8Array(evenWidth * evenHeight * 4)
+          for (let y = 0; y < frame.height; y++) {
+            padded.set(new Uint8Array(frame.data.buffer, y * frame.width * 4, frame.width * 4), y * evenWidth * 4)
+          }
+          frameBuffer = padded.buffer
+        }
+
+        const videoFrame = new VideoFrame(frameBuffer, {
           format: 'RGBA',
-          codedWidth: frame.width,
-          codedHeight: frame.height,
+          codedWidth: evenWidth,
+          codedHeight: evenHeight,
           timestamp,
           duration
         })
