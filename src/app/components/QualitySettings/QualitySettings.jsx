@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 import { InfoTooltip } from '../ui/InfoTooltip.jsx'
-import { RENDERER_LABELS } from '../../../engine/renderers/index.js'
+import { pluginRegistry } from '../../../engine/plugins/PluginRegistry.js'
 import { CHAR_RAMP_LABELS } from '../../../engine/renderers/AsciiRenderer.js'
 
 function QualitySettings() {
@@ -50,6 +50,14 @@ function QualitySettings() {
   const setColorShiftHue = useProjectStore((state) => state.setColorShiftHue)
   const colorShiftSaturation = useProjectStore((state) => state.colorShiftSaturation)
   const setColorShiftSaturation = useProjectStore((state) => state.setColorShiftSaturation)
+  const bloomEnabled = useProjectStore((state) => state.bloomEnabled)
+  const setBloomEnabled = useProjectStore((state) => state.setBloomEnabled)
+  const bloomThreshold = useProjectStore((state) => state.bloomThreshold)
+  const setBloomThreshold = useProjectStore((state) => state.setBloomThreshold)
+  const bloomRadius = useProjectStore((state) => state.bloomRadius)
+  const setBloomRadius = useProjectStore((state) => state.setBloomRadius)
+  const bloomStrength = useProjectStore((state) => state.bloomStrength)
+  const setBloomStrength = useProjectStore((state) => state.setBloomStrength)
   const backgroundColor = useProjectStore((state) => state.backgroundColor)
   const seed = useProjectStore((state) => state.seed)
   const setPixelSize = useProjectStore((state) => state.setPixelSize)
@@ -156,8 +164,8 @@ function QualitySettings() {
           value={renderMode}
           onChange={(e) => setRenderMode(e.target.value)}
         >
-          {Object.entries(RENDERER_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
+          {pluginRegistry.listRenderers().map(({ id, label }) => (
+            <option key={id} value={id}>
               {label}
             </option>
           ))}
@@ -588,6 +596,62 @@ function QualitySettings() {
                 step="0.01"
                 value={colorShiftSaturation}
                 onChange={(e) => setColorShiftSaturation(Number(e.target.value))}
+                className="w-full"
+              />
+            </>
+          )}
+
+          {/* ── Bloom ── */}
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={bloomEnabled} onChange={(e) => setBloomEnabled(e.target.checked)} />
+            Bloom
+            <InfoTooltip content="Adds a glow/bloom effect around bright areas. Extracts bright pixels, blurs them, and screen-blends back for a luminous look." />
+          </label>
+
+          {bloomEnabled && (
+            <>
+              <label htmlFor="quality-bloom-threshold" className="flex items-center text-sm">
+                Threshold: {bloomThreshold.toFixed(2)}
+                <InfoTooltip content="Luminance cutoff for the bright-pass. Only pixels above this value contribute to the bloom. Lower = more pixels glow." />
+              </label>
+              <input
+                id="quality-bloom-threshold"
+                type="range"
+                min="0.4"
+                max="0.95"
+                step="0.01"
+                value={bloomThreshold}
+                onChange={(e) => setBloomThreshold(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label htmlFor="quality-bloom-radius" className="flex items-center text-sm">
+                Radius: {bloomRadius}px
+                <InfoTooltip content="Blur radius of the glow spread. Larger values create a softer, wider halo." />
+              </label>
+              <input
+                id="quality-bloom-radius"
+                type="range"
+                min="1"
+                max="12"
+                step="1"
+                value={bloomRadius}
+                onChange={(e) => setBloomRadius(Number(e.target.value))}
+                className="w-full"
+              />
+
+              <label htmlFor="quality-bloom-strength" className="flex items-center text-sm">
+                Strength: {bloomStrength.toFixed(2)}
+                <InfoTooltip content="Blend intensity of the bloom. 1.0 = full screen blend, lower values give a subtle glow." />
+              </label>
+              <input
+                id="quality-bloom-strength"
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.05"
+                value={bloomStrength}
+                onChange={(e) => setBloomStrength(Number(e.target.value))}
                 className="w-full"
               />
             </>

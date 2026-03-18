@@ -4,6 +4,7 @@ import { AsciiRenderer } from './AsciiRenderer.js'
 import { HalftoneRenderer } from './HalftoneRenderer.js'
 import { LedMatrixRenderer } from './LedMatrixRenderer.js'
 import { StippleRenderer } from './StippleRenderer.js'
+import { pluginRegistry } from '../plugins/PluginRegistry.js'
 
 const RENDERERS = {
   bitmap: BitmapRenderer,
@@ -30,9 +31,13 @@ const RENDERER_LABELS = {
  * @returns {import('./BaseRenderer.js').BaseRenderer}
  */
 function createRenderer(mode, options = {}) {
+  // First: built-in map — zero overhead for the common case
   const Renderer = RENDERERS[mode]
-  if (!Renderer) throw new Error(`Unknown render mode: "${mode}". Valid modes: ${Object.keys(RENDERERS).join(', ')}`)
-  return new Renderer(options)
+  if (Renderer) return new Renderer(options)
+  // Fallback: plugin registry — enables third-party renderer plugins
+  const plugin = pluginRegistry.getRenderer(mode)
+  if (plugin) return new plugin.RendererClass(options)
+  throw new Error(`Unknown render mode: "${mode}". Valid modes: ${Object.keys(RENDERERS).join(', ')}`)
 }
 
 export { RENDERERS, RENDERER_LABELS, createRenderer }

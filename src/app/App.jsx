@@ -5,6 +5,11 @@ import { useAutoSave } from './hooks/useAutoSave.js'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js'
 import { ShortcutsModal } from './components/ui/ShortcutsModal.jsx'
 import { SceneManagerProvider } from './context/SceneManagerContext.jsx'
+import { registerBuiltins } from '../engine/plugins/builtinPlugins.js'
+
+// Register all built-in renderers and post-effects with the plugin registry.
+// Must run before any engine instantiation so createRenderer() can resolve all modes.
+registerBuiltins()
 
 function App() {
   useAutoSave()

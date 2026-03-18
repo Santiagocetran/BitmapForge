@@ -25,6 +25,7 @@ import presetsSrc from '../../engine/animation/presets.js?raw'
 import effectTypesSrc from '../../engine/animation/effectTypes.js?raw'
 import seededRandomSrc from '../../engine/utils/seededRandom.js?raw'
 import PostProcessingChainSrc from '../../engine/postprocessing/PostProcessingChain.js?raw'
+import BloomEffectSrc from '../../engine/postprocessing/effects/BloomEffect.js?raw'
 import CrtEffectSrc from '../../engine/postprocessing/effects/CrtEffect.js?raw'
 import NoiseEffectSrc from '../../engine/postprocessing/effects/NoiseEffect.js?raw'
 import ColorShiftEffectSrc from '../../engine/postprocessing/effects/ColorShiftEffect.js?raw'
@@ -63,6 +64,7 @@ const ENGINE_SOURCES = [
   { path: 'engine/animation/effectTypes.js', content: effectTypesSrc },
   { path: 'engine/utils/seededRandom.js', content: seededRandomSrc },
   { path: 'engine/postprocessing/PostProcessingChain.js', content: PostProcessingChainSrc },
+  { path: 'engine/postprocessing/effects/BloomEffect.js', content: BloomEffectSrc },
   { path: 'engine/postprocessing/effects/CrtEffect.js', content: CrtEffectSrc },
   { path: 'engine/postprocessing/effects/NoiseEffect.js', content: NoiseEffectSrc },
   { path: 'engine/postprocessing/effects/ColorShiftEffect.js', content: ColorShiftEffectSrc }
