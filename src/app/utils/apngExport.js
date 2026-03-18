@@ -13,8 +13,12 @@ function buildApng(frames, delayMs) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('../workers/apngWorker.js', import.meta.url), { type: 'module' })
 
-    // Transfer Uint8Array views — zero-copy, buffers detach on main thread
-    const uint8Frames = frames.map((f) => new Uint8Array(f.data.buffer))
+    // Copy pixel data into independent Uint8Arrays before transfer.
+    // new Uint8Array(f.data.buffer) would share the ImageData's backing buffer,
+    // which the browser may mark non-transferable (canvas store). That causes a
+    // silent transfer failure → worker receives zeroed buffers → all-white output.
+    // new Uint8Array(f.data) uses the TypedArray copy constructor → own buffer.
+    const uint8Frames = frames.map((f) => new Uint8Array(f.data))
     const transferList = uint8Frames.map((u) => u.buffer)
 
     worker.onmessage = ({ data }) => {
