@@ -282,7 +282,14 @@ function useExport(sceneManagerRef) {
         const timestamp = Math.round((i / fps) * 1_000_000) // microseconds
         const duration = Math.round((1 / fps) * 1_000_000) // microseconds
 
-        const videoFrame = new VideoFrame(frames[i], { timestamp, duration })
+        const frame = frames[i]
+        const videoFrame = new VideoFrame(frame.data.buffer, {
+          format: 'RGBA',
+          codedWidth: frame.width,
+          codedHeight: frame.height,
+          timestamp,
+          duration
+        })
         encoder.encode(videoFrame, { keyFrame: i % 30 === 0 })
         videoFrame.close()
       }
