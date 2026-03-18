@@ -14,10 +14,6 @@ import { createImagePlane } from './loaders/imageLoader.js'
  * Lifecycle: created by PreviewCanvas on mount, disposed on unmount.
  * All methods must be called on the UI thread.
  *
- * Layer model: the scene supports N independent layers. Each layer is a named Three.js Group
- * inside `animGroup`, so global animation (spin/float) applies to all layers together.
- * Per-layer transforms (position/rotation/scale) are applied to the individual group.
- *
  * @example
  * const manager = new SceneManager(containerDiv, { pixelSize: 3, colors: ['#000', '#fff'] })
  * await manager.loadModel(file)
@@ -68,14 +64,8 @@ class SceneManager {
 
     this.animationEngine = new AnimationEngine()
 
-    /**
-     * Active layers. Each entry: { id, group, objectUrl, type, name, visible }
-     * All groups are direct children of animGroup.
-     * @type {Map<string, {id: string, group: THREE.Group, objectUrl: string|null, type: string, name: string, visible: boolean}>}
-     */
-    this.layers = new Map()
-
-    this.currentObjectUrl = null // legacy alias kept for external compat; points to last loaded URL
+    this.objectGroup = null
+    this.currentObjectUrl = null
     this.lastFrameTime = performance.now()
 
     this._onFrameRendered = null
@@ -83,7 +73,7 @@ class SceneManager {
       const now = performance.now()
       const deltaSeconds = Math.max(0, Math.min((now - this.lastFrameTime) / 1000, 0.25))
       this.lastFrameTime = now
-      if (this.hasLayers()) {
+      if (this.hasObject()) {
         this.animationEngine.update(this.animGroup, this.effect, deltaSeconds, this.camera)
       }
       this.effect.render(this.scene, this.camera)
@@ -102,251 +92,66 @@ class SceneManager {
     this.renderer.domElement.addEventListener('webglcontextrestored', this._onContextRestored)
   }
 
-  // ---------------------------------------------------------------------------
-  // Layer management (multi-layer API)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Whether any layers are currently loaded.
-   * @returns {boolean}
-   */
-  hasLayers() {
-    return this.layers.size > 0
+  hasObject() {
+    return this.objectGroup !== null
   }
 
-  /**
-   * Get a snapshot of layer metadata (id, type, name, visible).
-   * Does not expose Three.js internals.
-   * @returns {Array<{id: string, type: string, name: string, visible: boolean}>}
-   */
-  getLayers() {
-    return Array.from(this.layers.values()).map(({ id, type, name, visible }) => ({ id, type, name, visible }))
-  }
-
-  /**
-   * Add a loaded 3D model file as a new layer. Does NOT clear other layers.
-   * @param {string} id - Unique layer id (caller-supplied, e.g. nanoid())
-   * @param {File} file
-   * @param {string} [name]
-   * @returns {Promise<void>}
-   */
-  async addModelLayer(id, file, name) {
-    const { group, objectUrl } = await loadModel(file)
-    this._addLayerEntry(id, group, objectUrl, 'model', name ?? file.name)
-  }
-
-  /**
-   * Add a built-in shape primitive as a new layer. Synchronous.
-   * @param {string} id
-   * @param {string} type - shape type key
-   * @param {object} [params]
-   * @param {string} [name]
-   */
-  addShapeLayer(id, type, params = {}, name) {
-    const group = createShape(type, params)
-    this._addLayerEntry(id, group, null, 'shape', name ?? type)
-  }
-
-  /**
-   * Add 3D extruded text as a new layer.
-   * @param {string} id
-   * @param {string} text
-   * @param {object} [opts]
-   * @param {string} [name]
-   * @returns {Promise<void>}
-   */
-  async addTextLayer(id, text, opts = {}, name) {
-    const group = await createTextGroup(text, opts)
-    this._addLayerEntry(id, group, null, 'text', name ?? `Text "${text.slice(0, 12)}"`)
-  }
-
-  /**
-   * Add an image/SVG file as a textured plane layer.
-   * @param {string} id
-   * @param {File} file
-   * @param {string} [name]
-   * @returns {Promise<void>}
-   */
-  async addImageLayer(id, file, name) {
-    const { group, objectUrl } = await createImagePlane(file)
-    this._addLayerEntry(id, group, objectUrl, 'image', name ?? file.name)
-  }
-
-  /**
-   * Internal: register a Three.js group as a layer, add it to animGroup.
-   * @param {string} id
-   * @param {THREE.Group} group
-   * @param {string|null} objectUrl
-   * @param {string} type
-   * @param {string} name
-   */
-  _addLayerEntry(id, group, objectUrl, type, name) {
-    const wasEmpty = this.layers.size === 0
-    const index = this.layers.size // renderOrder = position in insertion sequence
-    group.renderOrder = index
+  _setObject(group, objectUrl = null) {
+    this.disposeModel()
+    this.objectGroup = group
+    this.currentObjectUrl = objectUrl
     this.animGroup.add(group)
-    this.layers.set(id, { id, group, objectUrl, type, name, visible: true })
-    this.currentObjectUrl = objectUrl // legacy alias
-    if (wasEmpty) {
-      // Trigger fade-in animation only when scene goes from empty to having content
-      this.animGroup.rotation.set(0, 0, 0)
-      this.effect.startAnimation('fadeIn')
-    }
+    this.animGroup.rotation.set(0, 0, 0)
+    this.effect.startAnimation('fadeIn')
   }
 
-  /**
-   * Remove a layer by id. Disposes Three.js resources and revokes object URLs.
-   * @param {string} id
-   */
-  removeLayer(id) {
-    const entry = this.layers.get(id)
-    if (!entry) return
-    this.animGroup.remove(entry.group)
-    _disposeGroup(entry.group)
-    if (entry.objectUrl) {
-      URL.revokeObjectURL(entry.objectUrl)
-    }
-    this.layers.delete(id)
-    // Reassign renderOrder to remaining layers to keep indices contiguous
-    let i = 0
-    for (const e of this.layers.values()) {
-      e.group.renderOrder = i++
-    }
-  }
-
-  /**
-   * Remove all layers, disposing their Three.js resources.
-   */
-  clearLayers() {
-    for (const id of Array.from(this.layers.keys())) {
-      this.removeLayer(id)
-    }
-  }
-
-  /**
-   * Show or hide a layer without removing it.
-   * @param {string} id
-   * @param {boolean} visible
-   */
-  setLayerVisible(id, visible) {
-    const entry = this.layers.get(id)
-    if (!entry) return
-    entry.group.visible = visible
-    entry.visible = visible
-  }
-
-  /**
-   * Apply a positional/rotational/scale transform to a layer group.
-   * Transform is relative to the scene centre (animGroup space).
-   * @param {string} id
-   * @param {{ position?: {x,y,z}, rotation?: {x,y,z}, scale?: number }} transform
-   */
-  setLayerTransform(id, transform) {
-    const entry = this.layers.get(id)
-    if (!entry) return
-    const { position, rotation, scale } = transform
-    if (position) entry.group.position.set(position.x, position.y, position.z)
-    if (rotation) entry.group.rotation.set(rotation.x, rotation.y, rotation.z)
-    if (scale !== undefined) entry.group.scale.setScalar(scale)
-  }
-
-  /**
-   * Reorder layers to match the supplied id array.
-   * Updates `renderOrder` on each group so painter's order is respected.
-   * @param {string[]} ids - Layer ids in desired display order (first = bottom)
-   */
-  reorderLayers(ids) {
-    ids.forEach((id, index) => {
-      const entry = this.layers.get(id)
-      if (entry) entry.group.renderOrder = index
-    })
-    // Rebuild Map in new order to keep getLayers() / iteration order consistent
-    const sorted = new Map()
-    for (const id of ids) {
-      const e = this.layers.get(id)
-      if (e) sorted.set(id, e)
-    }
-    // Preserve any ids not in the supplied list (shouldn't happen, but guard)
-    for (const [id, e] of this.layers) {
-      if (!sorted.has(id)) sorted.set(id, e)
-    }
-    this.layers = sorted
-  }
-
-  // ---------------------------------------------------------------------------
-  // Backward-compatible single-object API
-  // All four wrappers clear existing layers then add one, preserving old behavior.
-  // ---------------------------------------------------------------------------
-
-  /**
-   * @deprecated Prefer addModelLayer() for multi-layer use.
-   * Load a 3D model file, replacing all existing layers.
-   * @param {File} file
-   * @returns {Promise<void>}
-   */
   async loadModel(file) {
     if (this._loading) return
     this._loading = true
     try {
-      this.clearLayers()
-      await this.addModelLayer(_tempId(), file, file.name)
+      const { group, objectUrl } = await loadModel(file)
+      this._setObject(group, objectUrl)
     } finally {
       this._loading = false
     }
   }
 
-  /**
-   * @deprecated Prefer addShapeLayer() for multi-layer use.
-   * Load a shape, replacing all existing layers.
-   * @param {string} type
-   * @param {object} [params]
-   */
   loadShape(type, params = {}) {
-    this.clearLayers()
-    this.addShapeLayer(_tempId(), type, params, type)
+    this._setObject(createShape(type, params))
   }
 
-  /**
-   * @deprecated Prefer addTextLayer() for multi-layer use.
-   * Load 3D text, replacing all existing layers.
-   * @param {string} text
-   * @param {object} [opts]
-   * @returns {Promise<void>}
-   */
   async loadText(text, opts = {}) {
     if (this._loading) return
     this._loading = true
     try {
-      this.clearLayers()
-      await this.addTextLayer(_tempId(), text, opts, `Text "${text.slice(0, 12)}"`)
+      const group = await createTextGroup(text, opts)
+      this._setObject(group)
     } finally {
       this._loading = false
     }
   }
 
-  /**
-   * @deprecated Prefer addImageLayer() for multi-layer use.
-   * Load an image, replacing all existing layers.
-   * @param {File} file
-   * @returns {Promise<void>}
-   */
   async loadImage(file) {
     if (this._loading) return
     this._loading = true
     try {
-      this.clearLayers()
-      await this.addImageLayer(_tempId(), file, file.name)
+      const { group, objectUrl } = await createImagePlane(file)
+      this._setObject(group, objectUrl)
     } finally {
       this._loading = false
     }
   }
 
-  /**
-   * @deprecated Use clearLayers() for multi-layer use.
-   * Remove and dispose all current layers.
-   */
   disposeModel() {
-    this.clearLayers()
+    if (this.objectGroup) {
+      this.animGroup.remove(this.objectGroup)
+      _disposeGroup(this.objectGroup)
+      this.objectGroup = null
+    }
+    if (this.currentObjectUrl) {
+      URL.revokeObjectURL(this.currentObjectUrl)
+      this.currentObjectUrl = null
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -494,7 +299,7 @@ class SceneManager {
    */
   resetToLoopStart() {
     this.animationEngine.resetToStart()
-    if (this.hasLayers()) {
+    if (this.hasObject()) {
       this.animGroup.rotation.set(0, 0, 0)
     }
     this.camera.position.set(0, 0.5, 5)
@@ -517,7 +322,7 @@ class SceneManager {
   }
 
   /**
-   * Fully dispose the SceneManager: stops the animation loop, disposes all layers,
+   * Fully dispose the SceneManager: stops the animation loop, disposes the current object,
    * effect, and WebGL renderer, and removes the canvas from the DOM.
    */
   dispose() {
@@ -525,7 +330,7 @@ class SceneManager {
     this._onFrameRendered = null
     this.renderer.domElement.removeEventListener('webglcontextlost', this._onContextLost)
     this.renderer.domElement.removeEventListener('webglcontextrestored', this._onContextRestored)
-    this.clearLayers()
+    this.disposeModel()
     this.effect.dispose()
     this.renderer.dispose()
     if (this.effect.domElement.parentNode) {
@@ -560,11 +365,6 @@ function _disposeGroup(obj) {
       }
     }
   })
-}
-
-/** Generate a short unique id for single-layer compat wrappers. */
-function _tempId() {
-  return Math.random().toString(36).slice(2, 10)
 }
 
 export { SceneManager }
