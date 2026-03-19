@@ -13,12 +13,10 @@ const mockExportFns = {
   exportGif: vi.fn(async () => {}),
   exportVideo: vi.fn(async () => {}),
   exportSpriteSheet: vi.fn(async () => {}),
-  exportSingleHtml: vi.fn(async () => {}),
   exportCodeZip: vi.fn(async () => {}),
   exportReactComponent: vi.fn(async () => {}),
   exportWebComponent: vi.fn(async () => {}),
   exportCssAnimation: vi.fn(async () => {}),
-  exportLottie: vi.fn(async () => {}),
   exportEmbed: vi.fn(async () => {}),
   saveProject: vi.fn(async () => {}),
   cancelExport: vi.fn()
@@ -54,24 +52,18 @@ afterEach(() => {
 // ─── Format buttons rendered ──────────────────────────────────────────────────
 
 describe('ExportPanel — format buttons', () => {
-  it('renders all 11 format buttons', () => {
+  it('renders all 9 format buttons', () => {
     renderPanel()
-    const formatLabels = [
-      'APNG',
-      'GIF',
-      'Video',
-      'Sprite Sheet',
-      'Single HTML',
-      'Code ZIP',
-      'React',
-      'Web Comp',
-      'CSS Anim',
-      'Lottie',
-      'Embed'
-    ]
+    const formatLabels = ['APNG', 'GIF', 'Video', 'Sprite Sheet', 'CSS Anim', 'React', 'Web Comp', 'Embed', 'Code ZIP']
     for (const label of formatLabels) {
       expect(screen.getByRole('button', { name: label })).toBeDefined()
     }
+  })
+
+  it('does not render removed formats', () => {
+    renderPanel()
+    expect(screen.queryByRole('button', { name: 'Lottie' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Single HTML' })).toBeNull()
   })
 })
 
@@ -92,12 +84,10 @@ const FORMAT_ROUTING = [
   { label: 'GIF', fn: 'exportGif' },
   { label: 'Video', fn: 'exportVideo' },
   { label: 'Sprite Sheet', fn: 'exportSpriteSheet' },
-  { label: 'Single HTML', fn: 'exportSingleHtml' },
   { label: 'Code ZIP', fn: 'exportCodeZip' },
   { label: 'React', fn: 'exportReactComponent' },
   { label: 'Web Comp', fn: 'exportWebComponent' },
   { label: 'CSS Anim', fn: 'exportCssAnimation' },
-  { label: 'Lottie', fn: 'exportLottie' },
   { label: 'Embed', fn: 'exportEmbed' }
 ]
 

@@ -325,34 +325,6 @@ function useExport(sceneManagerRef) {
     }
   }
 
-  async function exportSingleHtml(fps = 16) {
-    const manager = sceneManagerRef.current
-    if (!manager) return
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    setStatus({ exporting: true, message: 'Building Single HTML...' })
-    try {
-      const { buildSingleHtml } = await import('../utils/singleHtmlExport.js')
-      const frameCount = getFrameCount(manager, fps)
-      const state = getState()
-      const backgroundColor = state.backgroundColor || '#000000'
-
-      const frames = await captureFrames(manager, frameCount, {
-        signal: controller.signal,
-        onProgress: (i, total) =>
-          setStatus({ exporting: true, message: `Building Single HTML... ${Math.round((i / total) * 100)}%` })
-      })
-
-      const blob = await buildSingleHtml(frames, fps, backgroundColor)
-      downloadBlob(blob, `bitmapforge-${Date.now()}.html`)
-      setStatus({ exporting: false, message: 'Single HTML exported.' })
-    } catch (error) {
-      setStatus({ exporting: false, error: friendlyExportError(error) })
-    }
-  }
-
   async function exportCodeZip() {
     const state = getState()
     setStatus({ exporting: true, message: 'Generating code ZIP...' })
@@ -418,41 +390,6 @@ function useExport(sceneManagerRef) {
     }
   }
 
-  async function exportLottie(fps = 16) {
-    const manager = sceneManagerRef.current
-    if (!manager) return
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    setStatus({ exporting: true, message: 'Loading Lottie encoder…' })
-    try {
-      const { buildLottieJson, estimateLottieSizeMb, LOTTIE_MAX_PX } = await import('../utils/lottieExport.js')
-      const sourceCanvas = manager.getCanvas()
-      const frameCount = getFrameCount(manager, fps)
-      const estimatedMb = estimateLottieSizeMb(frameCount, sourceCanvas.width, sourceCanvas.height)
-      const capNote =
-        Math.max(sourceCanvas.width, sourceCanvas.height) > LOTTIE_MAX_PX
-          ? ` (frames scaled to ${LOTTIE_MAX_PX}px)`
-          : ''
-
-      setStatus({ exporting: true, message: `Encoding Lottie (raster)${capNote} — est. ~${estimatedMb} MB…` })
-      const state = getState()
-      const blob = await buildLottieJson(manager, state, 'bitmapforge-animation', fps, {
-        signal: controller.signal,
-        onProgress: (i, total) =>
-          setStatus({ exporting: true, message: `Encoding Lottie… ${Math.round((i / total) * 100)}%` })
-      })
-      downloadBlob(blob, `bitmapforge-animation.json`)
-      setStatus({
-        exporting: false,
-        message: `Lottie JSON exported (~${estimatedMb} MB). Works with lottie-web, lottie-react, Framer.`
-      })
-    } catch (error) {
-      setStatus({ exporting: false, error: friendlyExportError(error) })
-    }
-  }
-
   async function exportEmbed() {
     const state = getState()
     setStatus({ exporting: true, message: 'Building Embed ZIP...' })
@@ -480,12 +417,10 @@ function useExport(sceneManagerRef) {
     exportGif,
     exportApng,
     exportVideo,
-    exportSingleHtml,
     exportCodeZip,
     exportReactComponent,
     exportWebComponent,
     exportCssAnimation,
-    exportLottie,
     exportEmbed,
     saveProject,
     cancelExport

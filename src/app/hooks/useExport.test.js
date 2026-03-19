@@ -26,10 +26,6 @@ vi.mock('mp4-muxer', () => ({
   })
 }))
 
-vi.mock('../utils/singleHtmlExport.js', () => ({
-  buildSingleHtml: vi.fn(async () => new Blob(['html'], { type: 'text/html' }))
-}))
-
 vi.mock('../utils/codeExport.js', () => ({
   buildCodeZip: vi.fn(async () => new Blob(['zip']))
 }))
@@ -44,12 +40,6 @@ vi.mock('../utils/webComponentExport.js', () => ({
 
 vi.mock('../utils/cssExport.js', () => ({
   buildCssAnimation: vi.fn(async () => new Blob(['zip']))
-}))
-
-vi.mock('../utils/lottieExport.js', () => ({
-  buildLottieJson: vi.fn(async () => new Blob(['{}'], { type: 'application/json' })),
-  estimateLottieSizeMb: vi.fn(() => '0.1'),
-  LOTTIE_MAX_PX: 256
 }))
 
 vi.mock('../utils/projectFile.js', () => ({
@@ -168,20 +158,6 @@ describe('useExport — exportCodeZip', () => {
       await result.current.exportCodeZip()
     })
     expect(getStatus().error).toContain('zip failed')
-  })
-})
-
-// ─── exportSingleHtml ─────────────────────────────────────────────────────────
-
-describe('useExport — exportSingleHtml', () => {
-  it('sets exporting=false on success', async () => {
-    const ref = makeMockSceneManagerRef()
-    const { result } = renderHook(() => useExport(ref))
-    await act(async () => {
-      await result.current.exportSingleHtml()
-    })
-    expect(getStatus().exporting).toBe(false)
-    expect(getStatus().error).toBeFalsy()
   })
 })
 

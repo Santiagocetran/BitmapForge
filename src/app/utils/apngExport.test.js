@@ -19,7 +19,12 @@ function makeWorkerMock() {
       queueMicrotask(() => {
         try {
           const delays = data.frames.map(() => data.delayMs)
-          const arrayBuffer = UPNG.encode(data.frames, data.width, data.height, 0, delays)
+          const bufs = data.frames.map((f) =>
+            f.byteOffset === 0 && f.byteLength === f.buffer.byteLength
+              ? f.buffer
+              : f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength)
+          )
+          const arrayBuffer = UPNG.encode(bufs, data.width, data.height, 0, delays)
           this.onmessage?.({ data: { ok: true, arrayBuffer } })
         } catch (err) {
           this.onmessage?.({ data: { ok: false, error: err.message } })

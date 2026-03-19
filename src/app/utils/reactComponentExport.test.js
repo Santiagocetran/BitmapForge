@@ -182,6 +182,12 @@ describe('buildReactComponent — index.jsx content', () => {
     const jsx = await getJsx()
     expect(jsx).toContain('setBaseRotation')
   })
+
+  it('calls setRenderMode with typeof guard', async () => {
+    const jsx = await getJsx()
+    expect(jsx).toContain('setRenderMode')
+    expect(jsx).toContain('typeof manager.setRenderMode')
+  })
 })
 
 // ─── Generated config.js content ─────────────────────────────────────────────
@@ -220,5 +226,18 @@ describe('buildReactComponent — config.js content', () => {
   it('serializes state values from input', async () => {
     const config = await getConfig()
     expect(config).toContain('"pixelSize": 3')
+  })
+
+  it('contains renderMode in effectOptions', async () => {
+    const config = await getConfig()
+    expect(config).toContain('"renderMode"')
+  })
+
+  it('defaults renderMode to bitmap when state has none', async () => {
+    const state = { ...BASE_STATE }
+    delete state.renderMode
+    const zip = await getZip(state)
+    const config = await zip.files['MyAnimation/config.js'].async('string')
+    expect(config).toContain('"renderMode": "bitmap"')
   })
 })
