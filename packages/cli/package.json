@@ -11,7 +11,7 @@
   "scripts": {
     "build": "vite build",
     "prepare": "npm run build",
-    "test": "node --experimental-vm-modules node_modules/.bin/vitest run"
+    "test": "vitest run"
   },
   "dependencies": {
     "minimist": "^1.2.8",

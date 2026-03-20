@@ -50,3 +50,16 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install root deps
+        run: npm ci
+      - name: Build CLI headless bundle
+        run: cd packages/cli && npm install && npm run build
+      - name: Run CLI unit tests
+        run: cd packages/cli && npm test
