@@ -1,0 +1,24 @@
+{
+  "name": "@bitmapforge/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "bitmapforge": "./src/index.js"
+  },
+  "scripts": {
+    "build": "vite build",
+    "prepare": "npm run build",
+    "test": "node --experimental-vm-modules node_modules/.bin/vitest run"
+  },
+  "dependencies": {
+    "minimist": "^1.2.8",
+    "puppeteer": "^22.0.0"
+  },
+  "devDependencies": {
+    "vite": "^7.2.4",
+    "vitest": "^4.0.18"
+  }
+}

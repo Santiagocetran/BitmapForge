@@ -6,12 +6,8 @@
     "node": ">=20"
   },
   "exports": {
-    ".": {
-      "import": "./dist/bitmap-forge.es.js",
-      "default": "./dist/bitmap-forge.iife.js"
-    }
+    ".": "./dist/bitmap-forge.es.js"
   },
-  "main": "dist/bitmap-forge.iife.js",
   "module": "dist/bitmap-forge.es.js",
   "files": [
     "dist/"
