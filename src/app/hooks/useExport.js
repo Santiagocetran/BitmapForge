@@ -140,7 +140,7 @@ function useExport(sceneManagerRef) {
           setStatus({ exporting: true, message: `Encoding APNG... ${Math.round((i / total) * 100)}%` })
       })
 
-      const blob = buildApng(frames, frameDelay)
+      const blob = await buildApng(frames, frameDelay)
       downloadBlob(blob, `bitmapforge-${Date.now()}.png`)
       setStatus({ exporting: false, message: 'APNG exported.' })
     } catch (error) {
@@ -148,7 +148,7 @@ function useExport(sceneManagerRef) {
     }
   }
 
-  async function exportVideo() {
+  async function exportVideoLegacy() {
     const manager = sceneManagerRef.current
     if (!manager) return
     const canvas = manager.getCanvas()
@@ -221,29 +221,105 @@ function useExport(sceneManagerRef) {
     }
   }
 
-  async function exportSingleHtml(fps = 16) {
+  async function exportVideo(fps = 30) {
     const manager = sceneManagerRef.current
     if (!manager) return
+    const canvas = manager.getCanvas()
+    if (!canvas) throw new Error('No preview canvas available')
+
+    // Browsers without WebCodecs: fall back to live MediaRecorder recording
+    if (!window.VideoEncoder) {
+      return exportVideoLegacy()
+    }
 
     const controller = new AbortController()
     abortRef.current = controller
+    const { signal } = controller
 
-    setStatus({ exporting: true, message: 'Building Single HTML...' })
+    setStatus({ exporting: true, message: 'Capturing frames…' })
     try {
-      const { buildSingleHtml } = await import('../utils/singleHtmlExport.js')
       const frameCount = getFrameCount(manager, fps)
-      const state = getState()
-      const backgroundColor = state.backgroundColor || '#000000'
 
       const frames = await captureFrames(manager, frameCount, {
-        signal: controller.signal,
+        signal,
         onProgress: (i, total) =>
-          setStatus({ exporting: true, message: `Building Single HTML... ${Math.round((i / total) * 100)}%` })
+          setStatus({ exporting: true, message: `Encoding video… ${Math.round((i / total) * 100)}%` })
       })
 
-      const blob = await buildSingleHtml(frames, fps, backgroundColor)
-      downloadBlob(blob, `bitmapforge-${Date.now()}.html`)
-      setStatus({ exporting: false, message: 'Single HTML exported.' })
+      // H.264 requires even width and height (YCbCr 4:2:0 chroma sub-sampling)
+      const evenWidth = canvas.width % 2 === 0 ? canvas.width : canvas.width + 1
+      const evenHeight = canvas.height % 2 === 0 ? canvas.height : canvas.height + 1
+
+      const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
+
+      const target = new ArrayBufferTarget()
+      const muxer = new Muxer({
+        target,
+        video: {
+          codec: 'avc',
+          width: evenWidth,
+          height: evenHeight
+        },
+        fastStart: 'in-memory'
+      })
+
+      let encoderError = null
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: (e) => {
+          encoderError = e
+        }
+      })
+
+      encoder.configure({
+        codec: 'avc1.4d0028',
+        width: evenWidth,
+        height: evenHeight,
+        bitrate: 8_000_000,
+        framerate: fps,
+        latencyMode: 'quality'
+      })
+
+      const needsPad = evenWidth !== canvas.width || evenHeight !== canvas.height
+
+      for (let i = 0; i < frames.length; i++) {
+        if (signal.aborted) break
+
+        const timestamp = Math.round((i / fps) * 1_000_000) // microseconds
+        const duration = Math.round((1 / fps) * 1_000_000) // microseconds
+
+        const frame = frames[i]
+        let frameBuffer = frame.data.buffer
+
+        if (needsPad) {
+          // Pad odd-dimension frames row by row; extra pixels are black/transparent
+          const padded = new Uint8Array(evenWidth * evenHeight * 4)
+          for (let y = 0; y < frame.height; y++) {
+            padded.set(new Uint8Array(frame.data.buffer, y * frame.width * 4, frame.width * 4), y * evenWidth * 4)
+          }
+          frameBuffer = padded.buffer
+        }
+
+        const videoFrame = new VideoFrame(frameBuffer, {
+          format: 'RGBA',
+          codedWidth: evenWidth,
+          codedHeight: evenHeight,
+          timestamp,
+          duration
+        })
+        encoder.encode(videoFrame, { keyFrame: i % 30 === 0 })
+        videoFrame.close()
+      }
+
+      await encoder.flush()
+      if (signal.aborted) throw new DOMException('Export cancelled', 'AbortError')
+      if (encoderError) throw encoderError
+
+      muxer.finalize()
+
+      const blob = new Blob([target.buffer], { type: 'video/mp4' })
+      downloadBlob(blob, `bitmapforge-${Date.now()}.mp4`)
+      setStatus({ exporting: false, message: 'Video exported as MP4.' })
     } catch (error) {
       setStatus({ exporting: false, error: friendlyExportError(error) })
     }
@@ -314,41 +390,6 @@ function useExport(sceneManagerRef) {
     }
   }
 
-  async function exportLottie(fps = 16) {
-    const manager = sceneManagerRef.current
-    if (!manager) return
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    setStatus({ exporting: true, message: 'Loading Lottie encoder…' })
-    try {
-      const { buildLottieJson, estimateLottieSizeMb, LOTTIE_MAX_PX } = await import('../utils/lottieExport.js')
-      const sourceCanvas = manager.getCanvas()
-      const frameCount = getFrameCount(manager, fps)
-      const estimatedMb = estimateLottieSizeMb(frameCount, sourceCanvas.width, sourceCanvas.height)
-      const capNote =
-        Math.max(sourceCanvas.width, sourceCanvas.height) > LOTTIE_MAX_PX
-          ? ` (frames scaled to ${LOTTIE_MAX_PX}px)`
-          : ''
-
-      setStatus({ exporting: true, message: `Encoding Lottie (raster)${capNote} — est. ~${estimatedMb} MB…` })
-      const state = getState()
-      const blob = await buildLottieJson(manager, state, 'bitmapforge-animation', fps, {
-        signal: controller.signal,
-        onProgress: (i, total) =>
-          setStatus({ exporting: true, message: `Encoding Lottie… ${Math.round((i / total) * 100)}%` })
-      })
-      downloadBlob(blob, `bitmapforge-animation.json`)
-      setStatus({
-        exporting: false,
-        message: `Lottie JSON exported (~${estimatedMb} MB). Works with lottie-web, lottie-react, Framer.`
-      })
-    } catch (error) {
-      setStatus({ exporting: false, error: friendlyExportError(error) })
-    }
-  }
-
   async function exportEmbed() {
     const state = getState()
     setStatus({ exporting: true, message: 'Building Embed ZIP...' })
@@ -376,12 +417,10 @@ function useExport(sceneManagerRef) {
     exportGif,
     exportApng,
     exportVideo,
-    exportSingleHtml,
     exportCodeZip,
     exportReactComponent,
     exportWebComponent,
     exportCssAnimation,
-    exportLottie,
     exportEmbed,
     saveProject,
     cancelExport

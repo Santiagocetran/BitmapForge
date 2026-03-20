@@ -11,7 +11,8 @@ function createComponentConfig(state) {
       minBrightness: state.minBrightness,
       backgroundColor: state.backgroundColor,
       animationDuration: state.animationDuration,
-      fadeVariant: state.fadeVariant
+      fadeVariant: state.fadeVariant,
+      renderMode: state.renderMode ?? 'bitmap'
     },
     useFadeInOut: state.useFadeInOut,
     animationEffects: state.animationEffects,
@@ -60,6 +61,7 @@ export default function ${componentName}({ className, style }) {
 
     const manager = new SceneManager(container, config.effectOptions)
     managerRef.current = manager
+    if (typeof manager.setRenderMode === 'function') manager.setRenderMode(config.effectOptions.renderMode)
 
     // rAF avoids measuring 0×0 before the browser has laid out the container
     requestAnimationFrame(() => {

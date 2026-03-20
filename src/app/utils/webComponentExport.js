@@ -12,7 +12,8 @@ function createComponentConfig(state) {
       minBrightness: state.minBrightness,
       backgroundColor: state.backgroundColor,
       animationDuration: state.animationDuration,
-      fadeVariant: state.fadeVariant
+      fadeVariant: state.fadeVariant,
+      renderMode: state.renderMode ?? 'bitmap'
     },
     useFadeInOut: state.useFadeInOut,
     animationEffects: state.animationEffects,
@@ -66,6 +67,7 @@ class BitmapAnimationElement extends HTMLElement {
 
     const manager = new SceneManager(this._shadow, config.effectOptions)
     this._manager = manager
+    if (typeof manager.setRenderMode === 'function') manager.setRenderMode(config.effectOptions.renderMode)
 
     const resize = () => manager.setSize(this.clientWidth || 300, this.clientHeight || 300)
     // rAF avoids measuring 0×0 before browser layout

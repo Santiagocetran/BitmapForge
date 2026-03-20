@@ -163,4 +163,25 @@ describe('buildCssAnimation', () => {
       expect.objectContaining({ signal: controller.signal, onProgress })
     )
   })
+
+  it('rejects when toBlob returns null', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (callback) {
+      callback(null)
+    })
+    await expect(buildCssAnimation(makeMockManager(), {}, 'my-anim', 16)).rejects.toThrow('Canvas toBlob returned null')
+  })
+
+  it('rejects when toBlob times out', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(() => {
+      // never calls back
+    })
+    const promise = buildCssAnimation(makeMockManager(), {}, 'my-anim', 16)
+    // Suppress unhandled rejection from any extra timer ticks after the test
+    promise.catch(() => {})
+    await vi.advanceTimersByTimeAsync(30_001)
+    await expect(promise).rejects.toThrow('timed out')
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
 })

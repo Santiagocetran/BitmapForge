@@ -82,6 +82,20 @@ describe('buildWebComponent — no model', () => {
     expect(config).toContain('"modelFileName": null')
   })
 
+  it('config.js contains renderMode in effectOptions', async () => {
+    const zip = await getZip()
+    const config = await zip.files['bitmap-animation/config.js'].async('string')
+    expect(config).toContain('"renderMode"')
+  })
+
+  it('defaults renderMode to bitmap when state has none', async () => {
+    const state = { ...BASE_STATE }
+    delete state.renderMode
+    const zip = await getZip(state)
+    const config = await zip.files['bitmap-animation/config.js'].async('string')
+    expect(config).toContain('"renderMode": "bitmap"')
+  })
+
   it('component JS does not contain new URL when no model', async () => {
     const zip = await getZip()
     const js = await zip.files['bitmap-animation/bitmap-animation.js'].async('string')
@@ -179,6 +193,12 @@ describe('buildWebComponent — component JS content', () => {
   it('calls setBaseRotation', async () => {
     const js = await getJs()
     expect(js).toContain('setBaseRotation')
+  })
+
+  it('calls setRenderMode with typeof guard', async () => {
+    const js = await getJs()
+    expect(js).toContain('setRenderMode')
+    expect(js).toContain('typeof manager.setRenderMode')
   })
 
   it('includes :host CSS for display:block', async () => {

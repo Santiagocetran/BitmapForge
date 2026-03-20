@@ -6,17 +6,48 @@ import { loadProjectFile } from '../../utils/projectFile.js'
 import { BTN } from '../../styles/buttonStyles.js'
 
 const FORMAT_OPTIONS = [
-  { value: 'apng', label: 'APNG', description: 'Best for web — full color, transparency' },
-  { value: 'gif', label: 'GIF', description: 'Max compatibility' },
-  { value: 'webm', label: 'Video', description: 'WebM — best quality' },
-  { value: 'spritesheet', label: 'Sprite Sheet', description: 'PNG grid for CSS/JS' },
-  { value: 'html', label: 'Single HTML', description: 'Self-contained embed file' },
-  { value: 'zip', label: 'Code ZIP', description: 'Vite project with full engine' },
-  { value: 'react', label: 'React', description: 'Drop-in component — works with Vite & webpack 5' },
-  { value: 'webcomponent', label: 'Web Comp', description: 'Custom element — works in any framework or plain HTML' },
-  { value: 'css', label: 'CSS Anim', description: 'Pure CSS keyframe animation + sprite sheet — no JS required' },
-  { value: 'lottie', label: 'Lottie', description: 'Lottie (raster) — works with lottie-web, lottie-react, Framer' },
-  { value: 'embed', label: 'Embed', description: 'Live animation — upload ZIP to any web host' }
+  {
+    value: 'apng',
+    label: 'APNG',
+    description:
+      'Animated PNG. Full color, transparent background supported. Best for embedding in websites or sharing.'
+  },
+  {
+    value: 'gif',
+    label: 'GIF',
+    description: 'Classic animated GIF. Universal compatibility. 256-color limit, no partial transparency.'
+  },
+  {
+    value: 'webm',
+    label: 'Video',
+    description: 'MP4 (WebM fallback). Best quality for presentations or social media.'
+  },
+  {
+    value: 'spritesheet',
+    label: 'Sprite Sheet',
+    description: 'PNG grid of all frames. For game engines (Phaser, Unity) or custom code.'
+  },
+  {
+    value: 'css',
+    label: 'CSS Anim',
+    description: 'Pure CSS + sprite sheet. Drop into any website — no JavaScript needed.'
+  },
+  {
+    value: 'react',
+    label: 'React',
+    description: 'React component with the live animation engine. Drop into any React/Vite project.'
+  },
+  {
+    value: 'webcomponent',
+    label: 'Web Comp',
+    description: '<bitmap-animation> custom element. Works in any framework or plain HTML.'
+  },
+  { value: 'embed', label: 'Embed', description: 'Static site ready to deploy. Upload to any web host.' },
+  {
+    value: 'zip',
+    label: 'Code ZIP',
+    description: 'Full engine source code. For developers who want to build their own integration.'
+  }
 ]
 
 function ExportPanel() {
@@ -26,12 +57,10 @@ function ExportPanel() {
     exportGif,
     exportApng,
     exportVideo,
-    exportSingleHtml,
     exportCodeZip,
     exportReactComponent,
     exportWebComponent,
     exportCssAnimation,
-    exportLottie,
     exportEmbed,
     saveProject
   } = useExport(sceneManagerRef)
@@ -49,12 +78,10 @@ function ExportPanel() {
       gif: () => exportGif(),
       webm: () => exportVideo(),
       spritesheet: () => exportSpriteSheet(),
-      html: () => exportSingleHtml(),
       zip: () => exportCodeZip(),
       react: () => exportReactComponent(),
       webcomponent: () => exportWebComponent(),
       css: () => exportCssAnimation(),
-      lottie: () => exportLottie(),
       embed: () => exportEmbed()
     }
     await map[selectedFormat]?.()

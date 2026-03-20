@@ -8,7 +8,8 @@
  * All tests run in jsdom — no real canvas rendering, no Three.js, no network.
  * Frame data is provided as mock ImageData-like objects.
  */
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import UPNG from 'upng-js'
 import JSZip from 'jszip'
 import { hasPngSignature, getChunkTypes } from '../helpers/pngChunks.js'
 
@@ -77,10 +78,41 @@ vi.mock('../../src/app/utils/framesProvider.js', () => ({
   captureFrames: vi.fn(async () => MOCK_FRAMES)
 }))
 
+// Worker mock for apngExport — runs UPNG synchronously so PNG structure is preserved
+function makeWorkerMock() {
+  return vi.fn().mockImplementation(function WorkerMock() {
+    this.terminate = vi.fn()
+    this.onerror = null
+    this.onmessage = null
+    this.postMessage = (data) => {
+      queueMicrotask(() => {
+        try {
+          const delays = data.frames.map(() => data.delayMs)
+          const bufs = data.frames.map((f) =>
+            f.byteOffset === 0 && f.byteLength === f.buffer.byteLength
+              ? f.buffer
+              : f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength)
+          )
+          const arrayBuffer = UPNG.encode(bufs, data.width, data.height, 0, delays)
+          this.onmessage?.({ data: { ok: true, arrayBuffer } })
+        } catch (err) {
+          this.onmessage?.({ data: { ok: false, error: err.message } })
+        }
+      })
+    }
+  })
+}
+
+beforeEach(() => {
+  vi.stubGlobal('Worker', makeWorkerMock())
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 // ─── Top-level imports (vi.mock is hoisted before these) ──────────────────────
 import { buildApng } from '../../src/app/utils/apngExport.js'
-import { buildSingleHtml } from '../../src/app/utils/singleHtmlExport.js'
-import { buildLottieJson, LOTTIE_MAX_PX } from '../../src/app/utils/lottieExport.js'
 import { buildReactComponent } from '../../src/app/utils/reactComponentExport.js'
 import { buildWebComponent } from '../../src/app/utils/webComponentExport.js'
 import { buildCssAnimation } from '../../src/app/utils/cssExport.js'
@@ -90,110 +122,35 @@ import { buildSpriteSheet } from '../../src/app/utils/spriteSheetExport.js'
 // ─── 1. APNG ──────────────────────────────────────────────────────────────────
 
 describe('APNG conformance', () => {
-  it('produces a non-empty Blob', () => {
-    const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+  it('produces a non-empty Blob', async () => {
+    const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
     expect(blob).toBeInstanceOf(Blob)
     expect(blob.size).toBeGreaterThan(0)
   })
 
   it('output has valid PNG signature', async () => {
-    const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+    const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
     expect(hasPngSignature(await blob.arrayBuffer())).toBe(true)
   })
 
   it('output is animated (acTL + fcTL chunks present)', async () => {
-    const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+    const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
     const types = getChunkTypes(await blob.arrayBuffer())
     expect(types).toContain('acTL')
     expect(types.some((t) => t === 'fcTL')).toBe(true)
   })
 })
 
-// ─── 2. Single HTML ───────────────────────────────────────────────────────────
+// ─── 2. React ZIP ─────────────────────────────────────────────────────────────
 
-describe('Single HTML conformance', () => {
-  it('produces a Blob with text/html type', async () => {
-    const blob = await buildSingleHtml(MOCK_FRAMES, FPS, CANONICAL_STATE.backgroundColor)
-    expect(blob.type).toBe('text/html')
-  })
-
-  it('HTML is a complete self-contained document', async () => {
-    const blob = await buildSingleHtml(MOCK_FRAMES, FPS, CANONICAL_STATE.backgroundColor)
-    const text = await blob.text()
-    expect(text.toLowerCase()).toContain('<!doctype html>')
-    expect(text).toContain('<canvas')
-    expect(text).toContain('requestAnimationFrame')
-  })
-
-  it('contains no external network URLs', async () => {
-    const blob = await buildSingleHtml(MOCK_FRAMES, FPS)
-    const text = await blob.text()
-    expect(text).not.toMatch(/https?:\/\//)
-  })
-
-  it('embeds exactly FRAME_COUNT data URIs', async () => {
-    const blob = await buildSingleHtml(MOCK_FRAMES, FPS)
-    const text = await blob.text()
-    const matches = text.match(/data:image\/png;base64,/g) ?? []
-    expect(matches.length).toBe(FRAME_COUNT)
-  })
-
-  it('fps matches the argument', async () => {
-    const blob = await buildSingleHtml(MOCK_FRAMES, 20)
-    const text = await blob.text()
-    expect(text).toContain('fps = 20')
+describe('React component ZIP conformance — renderMode', () => {
+  it('config.js contains renderMode in effectOptions', async () => {
+    const blob = await buildReactComponent(CANONICAL_STATE)
+    const zip = await (await import('jszip')).default.loadAsync(blob)
+    const config = await zip.files['MyAnimation/config.js'].async('string')
+    expect(config).toContain('"renderMode"')
   })
 })
-
-// ─── 3. Lottie JSON ───────────────────────────────────────────────────────────
-
-describe('Lottie JSON conformance', () => {
-  async function getLottie(managerOverride) {
-    const blob = await buildLottieJson(managerOverride ?? makeMockManager(), CANONICAL_STATE, 'test-anim', FPS)
-    return JSON.parse(await blob.text())
-  }
-
-  it('output is valid JSON', async () => {
-    const manager = makeMockManager()
-    const blob = await buildLottieJson(manager, CANONICAL_STATE, 'test-anim', FPS)
-    await expect(blob.text().then(JSON.parse)).resolves.toBeTruthy()
-  })
-
-  it('has required Lottie v5 root fields', async () => {
-    const lottie = await getLottie()
-    expect(lottie.v).toBeDefined()
-    expect(typeof lottie.fr).toBe('number')
-    expect(lottie.ip).toBe(0)
-    expect(Array.isArray(lottie.assets)).toBe(true)
-    expect(Array.isArray(lottie.layers)).toBe(true)
-  })
-
-  it('fr equals the fps argument', async () => {
-    const lottie = await getLottie()
-    expect(lottie.fr).toBe(FPS)
-  })
-
-  it('op equals FRAME_COUNT', async () => {
-    const lottie = await getLottie()
-    expect(lottie.op).toBe(FRAME_COUNT)
-  })
-
-  it('assets and layers have one entry per frame', async () => {
-    const lottie = await getLottie()
-    expect(lottie.assets).toHaveLength(FRAME_COUNT)
-    expect(lottie.layers).toHaveLength(FRAME_COUNT)
-  })
-
-  it('dimensions respect LOTTIE_MAX_PX cap for oversized frames', async () => {
-    const { captureFrames } = await import('../../src/app/utils/framesProvider.js')
-    captureFrames.mockResolvedValueOnce([makeMockFrame(0, 512, 512)])
-    const lottie = await getLottie(makeMockManager())
-    expect(lottie.w).toBeLessThanOrEqual(LOTTIE_MAX_PX)
-    expect(lottie.h).toBeLessThanOrEqual(LOTTIE_MAX_PX)
-  })
-})
-
-// ─── 4. React ZIP ─────────────────────────────────────────────────────────────
 
 describe('React component ZIP conformance', () => {
   async function getZip() {
@@ -369,21 +326,15 @@ describe.each([
   })
 })
 
-// ─── 10. APNG + Single HTML — render-mode agnostic sweep ─────────────────────
+// ─── 9. APNG — render-mode agnostic sweep ────────────────────────────────────
 
 describe.each([['bitmap'], ['pixelArt'], ['ascii'], ['halftone'], ['ledMatrix'], ['stipple']])(
-  'APNG + Single HTML — renderMode=%s',
-  (renderMode) => {
-    it('buildApng produces a valid Blob regardless of renderMode', () => {
-      const blob = buildApng(MOCK_FRAMES, DELAY_MS)
+  'APNG — renderMode=%s',
+  () => {
+    it('buildApng produces a valid Blob regardless of renderMode', async () => {
+      const blob = await buildApng(MOCK_FRAMES, DELAY_MS)
       expect(blob).toBeInstanceOf(Blob)
       expect(blob.size).toBeGreaterThan(0)
-    })
-
-    it('buildSingleHtml produces a valid HTML Blob regardless of renderMode', async () => {
-      const state = { ...CANONICAL_STATE, renderMode }
-      const blob = await buildSingleHtml(MOCK_FRAMES, FPS, state.backgroundColor)
-      expect(blob.type).toBe('text/html')
     })
   }
 )
