@@ -7,19 +7,16 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.js'),
-      name: 'BitmapForge',
+      entry: resolve(__dirname, 'src/headless-entry.js'),
       formats: ['es'],
-      fileName: (fmt) => `bitmap-forge.${fmt}.js`
+      fileName: () => 'headless.js'
     },
     rollupOptions: {
-      external: ['three'],
-      output: { globals: { three: 'THREE' } }
+      external: ['three']
     }
   },
   resolve: {
     alias: {
-      // Build-time only — must not leak into dist
       '@engine': resolve(__dirname, '../../src/engine')
     }
   }

@@ -57,14 +57,13 @@ describe('buildEmbedZip — return value', () => {
 })
 
 describe('buildEmbedZip — ZIP contents', () => {
-  it('contains exactly 4 expected files', async () => {
+  it('contains exactly 3 expected files', async () => {
     const zip = await getEmbedZip()
     const files = Object.keys(zip.files).filter((f) => !zip.files[f].dir)
-    expect(files).toHaveLength(4)
+    expect(files).toHaveLength(3)
     expect(files).toContain('my-animation/bitmap-forge.es.js')
     expect(files).toContain('my-animation/animation.bforge')
     expect(files).toContain('my-animation/index.html')
-    expect(files).toContain('my-animation/index-iife.html')
   })
 
   it('bitmap-forge.es.js contains the SDK content', async () => {
@@ -127,27 +126,6 @@ describe('buildEmbedZip — index.html (ESM)', () => {
     const zip = await getEmbedZip()
     const html = await zip.file('my-animation/index.html').async('string')
     expect(html).not.toContain('three.min.js')
-  })
-})
-
-describe('buildEmbedZip — index-iife.html (IIFE)', () => {
-  it('contains three.min.js script tag', async () => {
-    const zip = await getEmbedZip()
-    const html = await zip.file('my-animation/index-iife.html').async('string')
-    expect(html).toContain('three.min.js')
-  })
-
-  it('does not contain importmap', async () => {
-    const zip = await getEmbedZip()
-    const html = await zip.file('my-animation/index-iife.html').async('string')
-    expect(html).not.toContain('importmap')
-  })
-
-  it('contains <bitmap-forge and animation.bforge', async () => {
-    const zip = await getEmbedZip()
-    const html = await zip.file('my-animation/index-iife.html').async('string')
-    expect(html).toContain('<bitmap-forge')
-    expect(html).toContain('animation.bforge')
   })
 })
 

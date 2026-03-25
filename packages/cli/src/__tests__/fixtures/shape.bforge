@@ -1,0 +1,1 @@
+{"version":2,"inputType":"shape","shapeType":"box","shapeParams":{"width":1,"height":1,"depth":1},"colors":["#000000","#ffffff"],"pixelSize":8,"ditherType":"bayer4","fps":4,"frameCount":4,"renderMode":"bitmap","animationEffects":{"spinY":true},"seed":42}
