@@ -10,11 +10,14 @@ const PKG_ROOT = resolve(__dirname, '..')
 const REPO_ROOT = resolve(PKG_ROOT, '../..')
 
 const ASSETS = {
-  '/headless.js':     { file: resolve(PKG_ROOT, 'dist/headless.js'),                          type: 'application/javascript' },
-  '/three.module.js': { file: resolve(REPO_ROOT, 'node_modules/three/build/three.module.js'), type: 'application/javascript' },
-  '/upng.js':         { file: resolve(REPO_ROOT, 'node_modules/upng-js/upng.js'),             type: 'application/javascript' },
-  '/harness.html':    { file: resolve(PKG_ROOT, 'src/harness.html'),                          type: 'text/html' },
-  '/harness.js':      { file: resolve(PKG_ROOT, 'src/harness.js'),                            type: 'application/javascript' },
+  '/headless.js': { file: resolve(PKG_ROOT, 'dist/headless.js'), type: 'application/javascript' },
+  '/three.module.js': {
+    file: resolve(REPO_ROOT, 'node_modules/three/build/three.module.js'),
+    type: 'application/javascript'
+  },
+  '/upng.js': { file: resolve(REPO_ROOT, 'node_modules/upng-js/upng.js'), type: 'application/javascript' },
+  '/harness.html': { file: resolve(PKG_ROOT, 'src/harness.html'), type: 'text/html' },
+  '/harness.js': { file: resolve(PKG_ROOT, 'src/harness.js'), type: 'application/javascript' }
 }
 
 // Only verify built/external assets that must exist at startup.
@@ -58,7 +61,7 @@ export async function start() {
       resolve({
         port,
         url: `http://127.0.0.1:${port}`,
-        close: () => new Promise((res) => server.close(res)),
+        close: () => new Promise((res) => server.close(res))
       })
     })
   })

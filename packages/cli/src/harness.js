@@ -31,7 +31,7 @@ async function captureFrames(manager, frameCount) {
       frames.push(imageData)
 
       // yield every 4 frames (matches framesProvider.js)
-      if (i % 4 === 3) await new Promise(r => setTimeout(r, 0))
+      if (i % 4 === 3) await new Promise((r) => setTimeout(r, 0))
     }
   } finally {
     manager.resumeLoop()
@@ -47,7 +47,7 @@ async function encodeApng(frames, delayMs) {
   // which the browser may mark non-transferable (canvas store). That causes a
   // silent transfer failure → worker receives zeroed buffers → all-white output.
   // new Uint8Array(f.data) uses the TypedArray copy constructor → own buffer.
-  const buffers = frames.map(f => new Uint8Array(f.data).buffer)
+  const buffers = frames.map((f) => new Uint8Array(f.data).buffer)
   const delays = frames.map(() => delayMs)
   const encoded = UPNG.encode(buffers, width, height, 0, delays)
   return btoa(String.fromCharCode(...new Uint8Array(encoded)))
@@ -70,7 +70,9 @@ async function encodeWebm(manager, frameCount, fps) {
   const chunks = []
   const stream = offscreen.captureStream(fps)
   const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
-  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
+  recorder.ondataavailable = (e) => {
+    if (e.data.size > 0) chunks.push(e.data)
+  }
 
   const loopMs = manager.getLoopDurationMs()
   const frameDuration = loopMs / frameCount
@@ -81,21 +83,23 @@ async function encodeWebm(manager, frameCount, fps) {
     for (let i = 0; i < frameCount; i++) {
       manager.renderAtTime((i / frameCount) * loopMs)
       ctx.drawImage(sourceCanvas, 0, 0, width, height)
-      await new Promise(r => setTimeout(r, frameDuration))
+      await new Promise((r) => setTimeout(r, frameDuration))
     }
   } finally {
     manager.resumeLoop()
   }
 
   recorder.stop()
-  await new Promise(r => { recorder.onstop = r })
+  await new Promise((r) => {
+    recorder.onstop = r
+  })
 
   const blob = new Blob(chunks, { type: 'video/webm' })
   const buf = await blob.arrayBuffer()
   return { base64: btoa(String.fromCharCode(...new Uint8Array(buf))), mimeType: 'video/webm' }
 }
 
-window.__bitmapForgeRender = async function(opts) {
+window.__bitmapForgeRender = async function (opts) {
   try {
     const { projectJson, format, fps = 12, width, height } = opts
     const { settings, modelData, inputType } = parseProjectData(projectJson)
