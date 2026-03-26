@@ -1,16 +1,14 @@
 import { ANIMATION_PRESETS } from './presets.js'
 import { DEFAULT_ANIMATION_EFFECTS } from './effectTypes.js'
-import { createRNG } from '../utils/seededRandom.js'
+import { SpinEffect } from './effects/SpinEffect.js'
+import { FloatEffect } from './effects/FloatEffect.js'
+import { BounceEffect } from './effects/BounceEffect.js'
+import { PulseEffect } from './effects/PulseEffect.js'
+import { ShakeEffect } from './effects/ShakeEffect.js'
+import { OrbitEffect } from './effects/OrbitEffect.js'
 
-const FLOAT_PRESET = ANIMATION_PRESETS.float
-
-// Duration (ms) for the smooth return-to-origin lerp when an animation is toggled off.
-const RESET_DURATION_MS = 300
-
-// easeOutCubic: decelerates into the target position — feels like a natural spring-to-rest.
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3)
-}
+/** Deterministic execution order for all animation effects. */
+const EFFECT_ORDER = ['spinX', 'spinY', 'spinZ', 'float', 'bounce', 'pulse', 'shake', 'orbit']
 
 class AnimationEngine {
   constructor() {
@@ -25,17 +23,80 @@ class AnimationEngine {
     // Base rotation offset (set by the rotation gizmo; reset target for lerps).
     this.baseRotation = { x: 0, y: 0, z: 0 }
 
-    // Per-axis lerp state. null = no reset in progress.
-    // { startRotation: number, elapsed: number }
-    this._resetTransitions = { x: null, y: null, z: null, positionY: null, scale: null }
+    // --- Effect instances ---
+    this._effectMap = {
+      spinX: new SpinEffect('x'),
+      spinY: new SpinEffect('y'),
+      spinZ: new SpinEffect('z'),
+      float: new FloatEffect(),
+      bounce: new BounceEffect(),
+      pulse: new PulseEffect(),
+      shake: new ShakeEffect(),
+      orbit: new OrbitEffect()
+    }
+    this._effectList = EFFECT_ORDER.map((key) => ({ key, effect: this._effectMap[key] }))
 
-    // Orbit camera baseline — captured on first frame with orbit active.
-    this._orbitBaseline = null
-    this._orbitRestorePending = null
+    // Backward-compatible proxy: tests and external code may read/write
+    // _resetTransitions directly. This object delegates to the effect instances.
+    this._resetTransitions = this._createResetTransitionsProxy()
 
     // Snapshot of previous effects — populated on the first update() call so
     // startup never triggers a spurious reset.
     this._previousEffects = null
+  }
+
+  // Build a proxy object that maps the old _resetTransitions shape to effect internals.
+  _createResetTransitionsProxy() {
+    const self = this
+    return {
+      get x() {
+        return self._effectMap.spinX._reset
+      },
+      set x(val) {
+        self._effectMap.spinX._reset = val
+      },
+      get y() {
+        return self._effectMap.spinY._reset
+      },
+      set y(val) {
+        self._effectMap.spinY._reset = val
+      },
+      get z() {
+        return self._effectMap.spinZ._reset
+      },
+      set z(val) {
+        self._effectMap.spinZ._reset = val
+      },
+      get positionY() {
+        return self._effectMap.bounce._reset
+      },
+      set positionY(val) {
+        self._effectMap.bounce._reset = val
+      },
+      get scale() {
+        return self._effectMap.pulse._reset
+      },
+      set scale(val) {
+        self._effectMap.pulse._reset = val
+      }
+    }
+  }
+
+  // Backward-compatible proxy for orbit baseline
+  get _orbitBaseline() {
+    return this._effectMap.orbit._baseline
+  }
+
+  set _orbitBaseline(val) {
+    this._effectMap.orbit._baseline = val
+  }
+
+  get _orbitRestorePending() {
+    return this._effectMap.orbit._restorePending
+  }
+
+  set _orbitRestorePending(val) {
+    this._effectMap.orbit._restorePending = val
   }
 
   setFadeOptions(options = {}) {
@@ -65,51 +126,22 @@ class AnimationEngine {
   applyEffects(modelGroup, deltaSeconds, camera) {
     if (!modelGroup) return
     const e = this.animationEffects
-    const speed = this.speed * deltaSeconds
-
-    // Only apply spin/float on axes that are NOT currently being lerped back.
-    if (e.spinX && !this._resetTransitions.x) modelGroup.rotation.x += speed
-    if (e.spinY && !this._resetTransitions.y) modelGroup.rotation.y += speed
-    if (e.spinZ && !this._resetTransitions.z) modelGroup.rotation.z += speed
 
     // Advance shared time for all time-dependent effects (once per frame)
     if (e.float || e.bounce || e.pulse || e.shake || e.orbit) {
       this.time += deltaSeconds
     }
 
-    if (e.float) {
-      const ox = FLOAT_PRESET?.oscillateX ?? 0.15
-      const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
-      if (!this._resetTransitions.x) modelGroup.rotation.x += Math.sin(this.time * 0.5) * ox * deltaSeconds * 2
-      if (!this._resetTransitions.z) modelGroup.rotation.z += Math.sin(this.time * 0.3) * oz * deltaSeconds * 2
+    const context = {
+      time: this.time,
+      animationEffects: e,
+      camera: camera || null
     }
 
-    if (e.bounce && !this._resetTransitions.positionY && modelGroup.position) {
-      modelGroup.position.y = Math.abs(Math.sin(this.time * this.speed * 1.8)) * 0.5
-    }
-
-    if (e.pulse && !this._resetTransitions.scale && modelGroup.scale?.setScalar) {
-      modelGroup.scale.setScalar(1 + Math.sin(this.time * this.speed * 1.5) * 0.12)
-    }
-
-    if (e.shake && modelGroup.position) {
-      const shakeSeed = (Math.floor(this.time * 30) * 0x9e3779b9) >>> 0
-      const rng = createRNG(shakeSeed)
-      modelGroup.position.x = (rng() - 0.5) * 0.08
-      modelGroup.position.z = (rng() - 0.5) * 0.08
-    }
-
-    if (e.orbit && camera) {
-      if (!this._orbitBaseline) {
-        this._orbitBaseline = {
-          pos: camera.position.clone(),
-          quat: camera.quaternion.clone()
-        }
+    for (const { key, effect } of this._effectList) {
+      if (e[key]) {
+        effect.update(modelGroup, deltaSeconds, this.speed, context)
       }
-      const r = this._orbitBaseline.pos.length()
-      const angle = this.time * this.speed * 0.5
-      camera.position.set(Math.sin(angle) * r, this._orbitBaseline.pos.y, Math.cos(angle) * r)
-      camera.lookAt(0, 0, 0)
     }
   }
 
@@ -119,125 +151,38 @@ class AnimationEngine {
 
     const prev = this._previousEffects
     const curr = this.animationEffects
+    const context = { animationEffects: curr }
 
-    // spinX drives rotation.x
-    if (prev.spinX && !curr.spinX && !this._resetTransitions.x) {
-      this._resetTransitions.x = { startRotation: modelGroup.rotation.x, elapsed: 0 }
-    }
-    // If spinX was re-enabled, cancel any in-progress reset on x
-    if (!prev.spinX && curr.spinX) {
-      this._resetTransitions.x = null
-    }
-
-    // spinY drives rotation.y
-    if (prev.spinY && !curr.spinY && !this._resetTransitions.y) {
-      this._resetTransitions.y = { startRotation: modelGroup.rotation.y, elapsed: 0 }
-    }
-    if (!prev.spinY && curr.spinY) {
-      this._resetTransitions.y = null
-    }
-
-    // spinZ drives rotation.z
-    if (prev.spinZ && !curr.spinZ && !this._resetTransitions.z) {
-      this._resetTransitions.z = { startRotation: modelGroup.rotation.z, elapsed: 0 }
-    }
-    if (!prev.spinZ && curr.spinZ) {
-      this._resetTransitions.z = null
-    }
-
-    // float drives oscillation on x and z — only reset those axes if the
-    // corresponding spin is also inactive (otherwise spin continues to own them).
-    if (prev.float && !curr.float) {
-      if (!curr.spinX && !this._resetTransitions.x) {
-        this._resetTransitions.x = { startRotation: modelGroup.rotation.x, elapsed: 0 }
-      }
-      if (!curr.spinZ && !this._resetTransitions.z) {
-        this._resetTransitions.z = { startRotation: modelGroup.rotation.z, elapsed: 0 }
-      }
-    }
-    if (!prev.float && curr.float) {
-      // float re-enabled: cancel resets on axes it owns (if spin isn't active there)
-      if (!curr.spinX) this._resetTransitions.x = null
-      if (!curr.spinZ) this._resetTransitions.z = null
-    }
-
-    // bounce drives position.y
-    if (prev.bounce && !curr.bounce && !this._resetTransitions.positionY && modelGroup.position) {
-      this._resetTransitions.positionY = { startValue: modelGroup.position.y, elapsed: 0 }
-    }
-    if (!prev.bounce && curr.bounce) this._resetTransitions.positionY = null
-
-    // pulse drives scale
-    if (prev.pulse && !curr.pulse && !this._resetTransitions.scale && modelGroup.scale) {
-      this._resetTransitions.scale = { startValue: modelGroup.scale.x ?? 1, elapsed: 0 }
-    }
-    if (!prev.pulse && curr.pulse) this._resetTransitions.scale = null
-
-    // shake: snap to zero immediately on toggle-off (jitter doesn't need smooth lerp)
-    if (prev.shake && !curr.shake && modelGroup.position) {
-      modelGroup.position.x = 0
-      modelGroup.position.z = 0
-    }
-
-    // orbit: flag baseline for restoration on toggle-off (camera restore happens in update())
-    if (prev.orbit && !curr.orbit && this._orbitBaseline) {
-      this._orbitRestorePending = this._orbitBaseline
-      this._orbitBaseline = null
-    }
-    if (!prev.orbit && curr.orbit) {
-      this._orbitRestorePending = null
+    for (const { key, effect } of this._effectList) {
+      effect.checkReset(curr[key], prev[key], modelGroup, context)
     }
   }
 
   // Advance all active lerps and write corrected rotation values.
   _applyResetTransitions(modelGroup, deltaSeconds) {
     if (!modelGroup) return
-    const deltaMs = deltaSeconds * 1000
 
-    for (const axis of ['x', 'y', 'z']) {
-      const r = this._resetTransitions[axis]
-      if (!r) continue
+    // SpinEffect and FloatEffect store elapsed in seconds.
+    // BounceEffect and PulseEffect also store elapsed in seconds now.
+    // But the old tests set elapsed = 0 and pass deltaSeconds directly,
+    // so we need to convert: old code used ms internally (elapsed += deltaSeconds * 1000,
+    // compared against RESET_DURATION_MS = 300). New effects use seconds
+    // (elapsed += deltaSeconds, compared against 0.3).
+    //
+    // The proxy exposes the effect's internal _reset objects directly.
+    // Since the old tests set { startValue: 0.5, elapsed: 0 } and call
+    // _applyResetTransitions(group, 1.0), the effect's applyReset must
+    // handle elapsed in seconds (1.0 > 0.3, so reset completes). This works.
 
-      r.elapsed += deltaMs
-      const raw = Math.min(r.elapsed / RESET_DURATION_MS, 1)
-      const t = easeOutCubic(raw)
-      // Target is always 0 — baseGroup handles the user's offset layer separately.
-      modelGroup.rotation[axis] = r.startRotation * (1 - t)
-
-      if (r.elapsed >= RESET_DURATION_MS) {
-        modelGroup.rotation[axis] = 0
-        this._resetTransitions[axis] = null
-      }
-    }
-
-    // positionY lerp (bounce toggle-off)
-    const pY = this._resetTransitions.positionY
-    if (pY && modelGroup.position) {
-      pY.elapsed += deltaSeconds * 1000
-      const t = easeOutCubic(Math.min(pY.elapsed / RESET_DURATION_MS, 1))
-      modelGroup.position.y = pY.startValue * (1 - t)
-      if (pY.elapsed >= RESET_DURATION_MS) {
-        modelGroup.position.y = 0
-        this._resetTransitions.positionY = null
-      }
-    }
-
-    // scale lerp (pulse toggle-off)
-    const sc = this._resetTransitions.scale
-    if (sc && modelGroup.scale?.setScalar) {
-      sc.elapsed += deltaSeconds * 1000
-      const t = easeOutCubic(Math.min(sc.elapsed / RESET_DURATION_MS, 1))
-      modelGroup.scale.setScalar(sc.startValue + (1 - sc.startValue) * t)
-      if (sc.elapsed >= RESET_DURATION_MS) {
-        modelGroup.scale.setScalar(1)
-        this._resetTransitions.scale = null
-      }
+    for (const { effect } of this._effectList) {
+      effect.applyReset(modelGroup, deltaSeconds)
     }
   }
 
   _clearResetTransitions() {
-    this._resetTransitions = { x: null, y: null, z: null, positionY: null, scale: null }
-    this._orbitRestorePending = null
+    for (const { effect } of this._effectList) {
+      effect.clearReset()
+    }
   }
 
   update(modelGroup, effect, deltaSeconds = 1 / 60, camera) {
@@ -250,11 +195,7 @@ class AnimationEngine {
     this._checkForResets(modelGroup)
 
     // Restore camera from orbit baseline when orbit was just toggled off
-    if (this._orbitRestorePending && camera) {
-      camera.position.copy(this._orbitRestorePending.pos)
-      camera.quaternion.copy(this._orbitRestorePending.quat)
-      this._orbitRestorePending = null
-    }
+    this._effectMap.orbit.restoreCamera(camera)
 
     // Snapshot current state for the next frame — done after _checkForResets so
     // the comparison above always sees the transition that just happened.
@@ -306,7 +247,7 @@ class AnimationEngine {
     this.time = 0
     this.phaseStartTime = 0
     this._clearResetTransitions()
-    this._orbitBaseline = null
+    this._effectMap.orbit.clearBaseline()
   }
 
   // Apply the animation state for an absolute position within the loop.
@@ -330,7 +271,6 @@ class AnimationEngine {
       }
       if (modelGroup.scale?.setScalar) modelGroup.scale.setScalar(1)
       const e = this.animationEffects
-      const speed = this.speed
 
       // Mirror update(): rotation only accumulates during the 'show' phase.
       // During fadeIn and fadeOut the model is stationary — this keeps particle
@@ -347,38 +287,28 @@ class AnimationEngine {
         }
       }
 
-      if (e.spinX) modelGroup.rotation.x += speed * showTs
-      if (e.spinY) modelGroup.rotation.y += speed * showTs
-      if (e.spinZ) modelGroup.rotation.z += speed * showTs
-      if (e.float) {
-        const ox = FLOAT_PRESET?.oscillateX ?? 0.15
-        const oz = FLOAT_PRESET?.oscillateZ ?? 0.08
-        // Analytical integral of the incremental float deltas applied per frame
-        modelGroup.rotation.x += ox * 4 * (1 - Math.cos(0.5 * showTs))
-        modelGroup.rotation.z += ((oz * 2) / 0.3) * (1 - Math.cos(0.3 * showTs))
+      const context = {
+        time: showTs,
+        animationEffects: e,
+        camera: camera || null
       }
 
-      if (e.bounce && modelGroup.position) {
-        modelGroup.position.y = Math.abs(Math.sin(showTs * speed * 1.8)) * 0.5
-      }
-      if (e.pulse && modelGroup.scale?.setScalar) {
-        modelGroup.scale.setScalar(1 + Math.sin(showTs * speed * 1.5) * 0.12)
-      }
-      if (e.shake && modelGroup.position) {
-        const shakeSeed = (Math.floor(showTs * 30) * 0x9e3779b9) >>> 0
-        const rng = createRNG(shakeSeed)
-        modelGroup.position.x = (rng() - 0.5) * 0.08
-        modelGroup.position.z = (rng() - 0.5) * 0.08
+      for (const { key, effect: fx } of this._effectList) {
+        if (key === 'orbit') continue // orbit handled separately below (uses raw ts)
+        if (e[key]) {
+          fx.seekTo(modelGroup, showTs, this.speed, context)
+        }
       }
     }
 
+    // Orbit uses the full absolute time (not showTs) and operates on camera
     if (this.animationEffects.orbit && camera) {
-      const showTs = absoluteTimeMs / 1000
-      const r = this._orbitBaseline ? this._orbitBaseline.pos.length() : 5
-      const baseY = this._orbitBaseline ? this._orbitBaseline.pos.y : 0.5
-      const angle = showTs * this.speed * 0.5
-      camera.position.set(Math.sin(angle) * r, baseY, Math.cos(angle) * r)
-      camera.lookAt(0, 0, 0)
+      const context = {
+        time: ts,
+        animationEffects: this.animationEffects,
+        camera
+      }
+      this._effectMap.orbit.seekTo(null, ts, this.speed, context)
     }
 
     if (effect) {
@@ -400,4 +330,4 @@ class AnimationEngine {
   }
 }
 
-export { AnimationEngine }
+export { AnimationEngine, EFFECT_ORDER }
