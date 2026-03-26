@@ -52,18 +52,7 @@ const FORMAT_OPTIONS = [
 
 function ExportPanel() {
   const sceneManagerRef = useSceneManager()
-  const {
-    exportSpriteSheet,
-    exportGif,
-    exportApng,
-    exportVideo,
-    exportCodeZip,
-    exportReactComponent,
-    exportWebComponent,
-    exportCssAnimation,
-    exportEmbed,
-    saveProject
-  } = useExport(sceneManagerRef)
+  const { exportAs, saveProject } = useExport(sceneManagerRef)
   const status = useProjectStore((state) => state.status)
   const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
@@ -73,18 +62,7 @@ function ExportPanel() {
 
   async function onExport() {
     setStatus({ error: '', message: '' })
-    const map = {
-      apng: () => exportApng(),
-      gif: () => exportGif(),
-      webm: () => exportVideo(),
-      spritesheet: () => exportSpriteSheet(),
-      zip: () => exportCodeZip(),
-      react: () => exportReactComponent(),
-      webcomponent: () => exportWebComponent(),
-      css: () => exportCssAnimation(),
-      embed: () => exportEmbed()
-    }
-    await map[selectedFormat]?.()
+    await exportAs(selectedFormat)
   }
 
   async function onLoadProject(event) {
