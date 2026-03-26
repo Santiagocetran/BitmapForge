@@ -60,10 +60,10 @@ describe('buildReactComponent — ZIP structure', () => {
     expect(zip.files['MyAnimation/engine/SceneManager.js']).toBeDefined()
   })
 
-  it('ZIP contains 14 engine source files', async () => {
+  it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(28)
+    expect(engineFiles).toHaveLength(35)
   })
 
   it('uses custom component name for folder', async () => {

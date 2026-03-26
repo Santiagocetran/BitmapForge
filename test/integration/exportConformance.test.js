@@ -173,10 +173,10 @@ describe('React component ZIP conformance', () => {
     expect(zip.files['MyAnimation/README.md']).toBeDefined()
   })
 
-  it('ZIP contains 14 engine source files', async () => {
+  it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(28)
+    expect(engineFiles).toHaveLength(35)
   })
 })
 
@@ -209,10 +209,10 @@ describe('Web Component ZIP conformance', () => {
     expect(js).toContain('customElements.get(')
   })
 
-  it('ZIP contains 14 engine source files', async () => {
+  it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(28)
+    expect(engineFiles).toHaveLength(35)
   })
 })
 
@@ -279,10 +279,10 @@ describe('Code ZIP conformance', () => {
     expect(src).toContain('new File(')
   })
 
-  it('ZIP contains 14 engine source files', async () => {
+  it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(28)
+    expect(engineFiles).toHaveLength(35)
   })
 })
 
