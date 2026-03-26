@@ -1,31 +1,5 @@
 import JSZip from 'jszip'
-
-// Config shape identical to reactComponentExport — same state fields
-function createComponentConfig(state) {
-  const config = {
-    modelFileName: state.model?.name ?? null,
-    effectOptions: {
-      colors: state.colors,
-      pixelSize: state.pixelSize,
-      ditherType: state.ditherType,
-      invert: state.invert,
-      minBrightness: state.minBrightness,
-      backgroundColor: state.backgroundColor,
-      animationDuration: state.animationDuration,
-      fadeVariant: state.fadeVariant,
-      renderMode: state.renderMode ?? 'bitmap'
-    },
-    useFadeInOut: state.useFadeInOut,
-    animationEffects: state.animationEffects,
-    animationSpeed: state.animationSpeed,
-    showPhaseDuration: state.showPhaseDuration,
-    lightDirection: state.lightDirection,
-    baseRotation: state.baseRotation,
-    rotateOnShow: state.rotateOnShow,
-    showPreset: state.showPreset
-  }
-  return `export const config = ${JSON.stringify(config, null, 2)}\n`
-}
+import { buildExportConfig } from './exportConfig.js'
 
 function generateWebComponentJs(elementName, modelFileName) {
   // Static URL literal required for Vite/webpack asset handling.
@@ -160,7 +134,7 @@ async function buildWebComponent(state, elementName = 'bitmap-animation') {
   const modelFileName = state.model?.name ?? null
 
   root.file(`${elementName}.js`, generateWebComponentJs(elementName, modelFileName))
-  root.file('config.js', createComponentConfig(state))
+  root.file('config.js', `export const config = ${JSON.stringify(buildExportConfig(state), null, 2)}\n`)
   root.file('README.md', generateWebComponentReadme(elementName))
 
   for (const { path, content } of ENGINE_SOURCES) {
