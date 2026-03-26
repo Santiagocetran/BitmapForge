@@ -9,15 +9,7 @@ vi.mock('../../context/SceneManagerContext.jsx', () => ({
 }))
 
 const mockExportFns = {
-  exportApng: vi.fn(async () => {}),
-  exportGif: vi.fn(async () => {}),
-  exportVideo: vi.fn(async () => {}),
-  exportSpriteSheet: vi.fn(async () => {}),
-  exportCodeZip: vi.fn(async () => {}),
-  exportReactComponent: vi.fn(async () => {}),
-  exportWebComponent: vi.fn(async () => {}),
-  exportCssAnimation: vi.fn(async () => {}),
-  exportEmbed: vi.fn(async () => {}),
+  exportAs: vi.fn(async () => {}),
   saveProject: vi.fn(async () => {}),
   cancelExport: vi.fn()
 }
@@ -80,15 +72,15 @@ describe('ExportPanel — default state', () => {
 // ─── Format routing ───────────────────────────────────────────────────────────
 
 const FORMAT_ROUTING = [
-  { label: 'APNG', fn: 'exportApng' },
-  { label: 'GIF', fn: 'exportGif' },
-  { label: 'Video', fn: 'exportVideo' },
-  { label: 'Sprite Sheet', fn: 'exportSpriteSheet' },
-  { label: 'Code ZIP', fn: 'exportCodeZip' },
-  { label: 'React', fn: 'exportReactComponent' },
-  { label: 'Web Comp', fn: 'exportWebComponent' },
-  { label: 'CSS Anim', fn: 'exportCssAnimation' },
-  { label: 'Embed', fn: 'exportEmbed' }
+  { label: 'APNG', formatId: 'apng' },
+  { label: 'GIF', formatId: 'gif' },
+  { label: 'Video', formatId: 'webm' },
+  { label: 'Sprite Sheet', formatId: 'spritesheet' },
+  { label: 'Code ZIP', formatId: 'zip' },
+  { label: 'React', formatId: 'react' },
+  { label: 'Web Comp', formatId: 'webcomponent' },
+  { label: 'CSS Anim', formatId: 'css' },
+  { label: 'Embed', formatId: 'embed' }
 ]
 
 describe('ExportPanel — format routing', () => {
@@ -96,13 +88,13 @@ describe('ExportPanel — format routing', () => {
     renderPanel()
   })
 
-  for (const { label, fn } of FORMAT_ROUTING) {
-    it(`clicking "${label}" then Export calls ${fn}()`, async () => {
+  for (const { label, formatId } of FORMAT_ROUTING) {
+    it(`clicking "${label}" then Export calls exportAs('${formatId}')`, async () => {
       fireEvent.click(screen.getByRole('button', { name: label }))
       clickExportButton()
       // Settle async microtasks from the onClick handler
       await new Promise((r) => setTimeout(r, 0))
-      expect(mockExportFns[fn]).toHaveBeenCalledTimes(1)
+      expect(mockExportFns.exportAs).toHaveBeenCalledWith(formatId)
     })
   }
 })

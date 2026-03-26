@@ -96,14 +96,14 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-// ─── exportApng ───────────────────────────────────────────────────────────────
+// ─── exportAs('apng') ─────────────────────────────────────────────────────────
 
-describe('useExport — exportApng', () => {
+describe('useExport — exportAs(apng)', () => {
   it('sets exporting=false on success', async () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportApng()
+      await result.current.exportAs('apng')
     })
     expect(getStatus().exporting).toBe(false)
     expect(getStatus().error).toBeFalsy()
@@ -117,7 +117,7 @@ describe('useExport — exportApng', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportApng()
+      await result.current.exportAs('apng')
     })
     expect(getStatus().exporting).toBe(false)
     expect(getStatus().error).toContain('encode error')
@@ -127,21 +127,21 @@ describe('useExport — exportApng', () => {
     const ref = makeMockSceneManagerRef({ withCanvas: false })
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportApng()
+      await result.current.exportAs('apng')
     })
     // Should not update status at all since it returns early
     expect(getStatus().exporting).toBe(false)
   })
 })
 
-// ─── exportCodeZip ────────────────────────────────────────────────────────────
+// ─── exportAs('zip') ──────────────────────────────────────────────────────────
 
-describe('useExport — exportCodeZip', () => {
+describe('useExport — exportAs(zip)', () => {
   it('sets exporting=false on success', async () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportCodeZip()
+      await result.current.exportAs('zip')
     })
     expect(getStatus().exporting).toBe(false)
     expect(getStatus().error).toBeFalsy()
@@ -155,34 +155,34 @@ describe('useExport — exportCodeZip', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportCodeZip()
+      await result.current.exportAs('zip')
     })
     expect(getStatus().error).toContain('zip failed')
   })
 })
 
-// ─── exportReactComponent ─────────────────────────────────────────────────────
+// ─── exportAs('react') ────────────────────────────────────────────────────────
 
-describe('useExport — exportReactComponent', () => {
+describe('useExport — exportAs(react)', () => {
   it('sets exporting=false on success', async () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportReactComponent()
+      await result.current.exportAs('react')
     })
     expect(getStatus().exporting).toBe(false)
     expect(getStatus().error).toBeFalsy()
   })
 })
 
-// ─── exportVideo (legacy fallback — MediaRecorder not available in jsdom) ─────
+// ─── exportAs('webm') — legacy fallback (MediaRecorder not available in jsdom)
 
-describe('useExport — exportVideo (legacy fallback)', () => {
+describe('useExport — exportAs(webm) legacy fallback', () => {
   it('returns early when no manager is available', async () => {
     const ref = makeMockSceneManagerRef({ withCanvas: false })
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportVideo()
+      await result.current.exportAs('webm')
     })
     // Returns early (no manager), so status is unchanged
     expect(getStatus().exporting).toBe(false)
@@ -193,16 +193,16 @@ describe('useExport — exportVideo (legacy fallback)', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportVideo()
+      await result.current.exportAs('webm')
     })
     expect(getStatus().exporting).toBe(false)
     expect(typeof getStatus().error).toBe('string')
   })
 })
 
-// ─── exportVideo (WebCodecs path) ────────────────────────────────────────────
+// ─── exportAs('webm') — WebCodecs path ───────────────────────────────────────
 
-describe('useExport — exportVideo (WebCodecs)', () => {
+describe('useExport — exportAs(webm) WebCodecs', () => {
   let MockVideoEncoder, MockVideoFrame, mockEncode
 
   beforeEach(() => {
@@ -231,7 +231,7 @@ describe('useExport — exportVideo (WebCodecs)', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportVideo()
+      await result.current.exportAs('webm')
     })
     expect(getStatus().exporting).toBe(false)
     expect(getStatus().error).toBeFalsy()
@@ -241,7 +241,7 @@ describe('useExport — exportVideo (WebCodecs)', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportVideo()
+      await result.current.exportAs('webm')
     })
     // getFrameCount mock returns 4
     expect(mockEncode).toHaveBeenCalledTimes(4)
@@ -252,7 +252,7 @@ describe('useExport — exportVideo (WebCodecs)', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportVideo(fps)
+      await result.current.exportAs('webm', { fps })
     })
     // Frame 0: timestamp=0, Frame 1: timestamp=Math.round(1/30 * 1_000_000)
     expect(MockVideoFrame.mock.calls[0][1].timestamp).toBe(0)
@@ -263,7 +263,7 @@ describe('useExport — exportVideo (WebCodecs)', () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
     await act(async () => {
-      await result.current.exportVideo()
+      await result.current.exportAs('webm')
     })
     for (const instance of MockVideoFrame.mock.instances) {
       expect(instance.close).toHaveBeenCalledOnce()
