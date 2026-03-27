@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { shallow } from 'zustand/shallow'
+import { useShallow } from 'zustand/react/shallow'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { selectEffectOptions, selectAnimationOptions, selectInputSource } from '../../store/selectors.js'
@@ -95,7 +95,7 @@ function PreviewCanvas() {
 
   const { model, inputType, shapeType, shapeParams, textContent, fontSize,
           extrudeDepth, bevelEnabled, fontFamily, imageSource } =
-    useProjectStore(selectInputSource, shallow)
+    useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
 
   useEffect(() => {

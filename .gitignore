@@ -25,5 +25,5 @@ dist-ssr
 *.sw?
 .lattice/
 .worktrees/
-.claude/worktrees/
-.gitnexus
+.claude/
+.gitnexus/
