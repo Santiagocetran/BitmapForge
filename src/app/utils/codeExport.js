@@ -1,29 +1,5 @@
 import JSZip from 'jszip'
-
-function createAnimationConfig(state) {
-  return `export const config = ${JSON.stringify(
-    {
-      effectOptions: {
-        colors: state.colors,
-        pixelSize: state.pixelSize,
-        ditherType: state.ditherType,
-        invert: state.invert,
-        minBrightness: state.minBrightness,
-        backgroundColor: state.backgroundColor,
-        animationDuration: state.animationDuration,
-        renderMode: state.renderMode
-      },
-      animationPreset: state.animationPreset,
-      animationSpeed: state.animationSpeed,
-      showPhaseDuration: state.showPhaseDuration,
-      rotateOnShow: state.rotateOnShow,
-      showPreset: state.showPreset,
-      lightDirection: state.lightDirection
-    },
-    null,
-    2
-  )}\n`
-}
+import { buildExportConfig } from './exportConfig.js'
 
 async function buildCodeZip(state) {
   const { ENGINE_SOURCES } = await import('./engineSources.js')
@@ -62,7 +38,7 @@ fetch('./models/${modelName}')
 `
   )
 
-  root.file('config.js', createAnimationConfig(state))
+  root.file('config.js', `export const config = ${JSON.stringify(buildExportConfig(state), null, 2)}\n`)
 
   // Engine source files at their correct paths
   for (const { path, content } of ENGINE_SOURCES) {
@@ -96,4 +72,4 @@ fetch('./models/${modelName}')
   return zip.generateAsync({ type: 'blob' })
 }
 
-export { buildCodeZip, createAnimationConfig }
+export { buildCodeZip }

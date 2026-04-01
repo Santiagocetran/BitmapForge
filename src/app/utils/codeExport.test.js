@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import JSZip from 'jszip'
-import { createAnimationConfig, buildCodeZip } from './codeExport.js'
+import { buildCodeZip } from './codeExport.js'
+import { buildExportConfig } from './exportConfig.js'
 
-describe('createAnimationConfig', () => {
+describe('buildExportConfig', () => {
   const mockState = {
     colors: ['#000', '#fff'],
     pixelSize: 3,
@@ -16,20 +17,22 @@ describe('createAnimationConfig', () => {
     showPhaseDuration: 20000,
     rotateOnShow: false,
     showPreset: 'spinY',
-    lightDirection: { x: 3, y: 4, z: 5 }
+    lightDirection: { x: 3, y: 4, z: 5 },
+    model: null
   }
 
-  it('returns string containing export const config', () => {
-    const result = createAnimationConfig(mockState)
-    expect(result).toContain('export const config')
+  it('returns a plain object with effectOptions', () => {
+    const result = buildExportConfig(mockState)
+    expect(result).toHaveProperty('effectOptions')
+    expect(result.effectOptions.pixelSize).toBe(3)
   })
 
-  it('output contains expected keys from state', () => {
-    const result = createAnimationConfig(mockState)
-    expect(result).toContain('pixelSize')
-    expect(result).toContain('animationSpeed')
-    expect(result).toContain('lightDirection')
-    expect(result).toContain('ditherType')
+  it('config contains expected keys from state', () => {
+    const result = buildExportConfig(mockState)
+    expect(result.effectOptions).toHaveProperty('pixelSize')
+    expect(result).toHaveProperty('animationSpeed')
+    expect(result).toHaveProperty('lightDirection')
+    expect(result.effectOptions).toHaveProperty('ditherType')
   })
 })
 
@@ -97,10 +100,10 @@ describe('buildCodeZip — scaffold files', () => {
 })
 
 describe('buildCodeZip — engine sources', () => {
-  it('ZIP contains 14 engine source files', async () => {
+  it('ZIP contains 35 engine source files', async () => {
     const zip = await getCodeZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(28)
+    expect(engineFiles).toHaveLength(35)
   })
 
   it('ZIP contains engine/SceneManager.js', async () => {

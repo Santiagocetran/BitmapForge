@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { shallow } from 'zustand/shallow'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { selectEffectOptions, selectAnimationOptions, selectInputSource } from '../../store/selectors.js'
 import { useSceneManager } from '../../context/SceneManagerContext.jsx'
 
 function PreviewCanvas() {
@@ -28,16 +30,7 @@ function PreviewCanvas() {
     // Subscriptions only fire on *changes*, so without this initial push the
     // engine would use its own defaults until the user moves a control.
     const s = useProjectStore.getState()
-    manager.updateAnimationOptions({
-      useFadeInOut: s.useFadeInOut,
-      animationEffects: s.animationEffects,
-      animationSpeed: s.animationSpeed,
-      showPhaseDuration: s.showPhaseDuration,
-      animationDuration: s.animationDuration,
-      animationPreset: s.animationPreset,
-      rotateOnShow: s.rotateOnShow,
-      showPreset: s.showPreset
-    })
+    manager.updateAnimationOptions(selectAnimationOptions(s))
     manager.setLightDirection(s.lightDirection.x, s.lightDirection.y, s.lightDirection.z)
     manager.setBaseRotation(s.baseRotation.x, s.baseRotation.y, s.baseRotation.z)
     manager.setModelScale(s.modelScale)
@@ -57,52 +50,12 @@ function PreviewCanvas() {
     resizeObserver.observe(container)
 
     // Finding 4: targeted subscriptions to avoid unnecessary updates
-    const unsubEffect = useProjectStore.subscribe(
-      (state) => ({
-        pixelSize: state.pixelSize,
-        ditherType: state.ditherType,
-        colors: state.colors,
-        invert: state.invert,
-        minBrightness: state.minBrightness,
-        backgroundColor: state.backgroundColor,
-        animationDuration: state.animationDuration,
-        fadeVariant: state.fadeVariant,
-        seed: state.seed,
-        charRamp: state.charRamp,
-        asciiColored: state.asciiColored,
-        halftoneDotShape: state.halftoneDotShape,
-        halftoneAngle: state.halftoneAngle,
-        ledGap: state.ledGap,
-        ledShape: state.ledShape,
-        stippleDotSize: state.stippleDotSize,
-        stippleDensity: state.stippleDensity,
-        crtEnabled: state.crtEnabled,
-        scanlineGap: state.scanlineGap,
-        scanlineOpacity: state.scanlineOpacity,
-        chromaticAberration: state.chromaticAberration,
-        crtVignette: state.crtVignette,
-        noiseEnabled: state.noiseEnabled,
-        noiseAmount: state.noiseAmount,
-        noiseMonochrome: state.noiseMonochrome,
-        colorShiftEnabled: state.colorShiftEnabled,
-        colorShiftHue: state.colorShiftHue,
-        colorShiftSaturation: state.colorShiftSaturation
-      }),
-      (slice) => manager.updateEffectOptions(slice),
-      { equalityFn: shallow }
-    )
+    const unsubEffect = useProjectStore.subscribe(selectEffectOptions, (slice) => manager.updateEffectOptions(slice), {
+      equalityFn: shallow
+    })
 
     const unsubAnim = useProjectStore.subscribe(
-      (state) => ({
-        useFadeInOut: state.useFadeInOut,
-        animationEffects: state.animationEffects,
-        animationSpeed: state.animationSpeed,
-        showPhaseDuration: state.showPhaseDuration,
-        animationDuration: state.animationDuration,
-        animationPreset: state.animationPreset,
-        rotateOnShow: state.rotateOnShow,
-        showPreset: state.showPreset
-      }),
+      selectAnimationOptions,
       (slice) => manager.updateAnimationOptions(slice),
       { equalityFn: shallow }
     )
@@ -145,117 +98,105 @@ function PreviewCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const model = useProjectStore((state) => state.model)
-  const inputType = useProjectStore((state) => state.inputType)
-  const shapeType = useProjectStore((state) => state.shapeType)
-  const shapeParams = useProjectStore((state) => state.shapeParams)
-  const textContent = useProjectStore((state) => state.textContent)
-  const fontSize = useProjectStore((state) => state.fontSize)
-  const extrudeDepth = useProjectStore((state) => state.extrudeDepth)
-  const bevelEnabled = useProjectStore((state) => state.bevelEnabled)
-  const fontFamily = useProjectStore((state) => state.fontFamily)
-  const imageSource = useProjectStore((state) => state.imageSource)
+  const {
+    model,
+    inputType,
+    shapeType,
+    shapeParams,
+    textContent,
+    fontSize,
+    extrudeDepth,
+    bevelEnabled,
+    fontFamily,
+    imageSource
+  } = useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
 
-  // Load 3D model files (existing behaviour)
   useEffect(() => {
-    if (inputType !== 'model') return
     const manager = sceneManagerRef.current
     if (!manager) return
-
-    if (!model?.file) {
-      manager.disposeModel()
-      return
-    }
-
     let cancelled = false
-    useProjectStore.getState().setStatus({ loading: true, error: '' })
-    manager
-      .loadModel(model.file)
-      .then(() => {
-        if (!cancelled && sceneManagerRef.current === manager) {
-          useProjectStore.getState().setStatus({ loading: false, message: 'Model loaded.' })
-        }
-      })
-      .catch((error) => {
-        if (!cancelled && sceneManagerRef.current === manager) {
-          useProjectStore.getState().setStatus({ loading: false, error: error.message })
-        }
-      })
 
-    return () => {
-      cancelled = true
+    switch (inputType) {
+      case 'model': {
+        if (!model?.file) {
+          manager.disposeModel()
+          return
+        }
+        useProjectStore.getState().setStatus({ loading: true, error: '' })
+        manager
+          .loadModel(model.file)
+          .then(() => {
+            if (!cancelled && sceneManagerRef.current === manager) {
+              useProjectStore.getState().setStatus({ loading: false, message: 'Model loaded.' })
+            }
+          })
+          .catch((error) => {
+            if (!cancelled && sceneManagerRef.current === manager) {
+              useProjectStore.getState().setStatus({ loading: false, error: error.message })
+            }
+          })
+        return () => {
+          cancelled = true
+        }
+      }
+      case 'shape':
+        manager.loadShape(shapeType, shapeParams)
+        break
+      case 'text': {
+        useProjectStore.getState().setStatus({ loading: true, error: '' })
+        manager
+          .loadText(textContent, { fontFamily, fontSize, extrudeDepth, bevelEnabled })
+          .then(() => {
+            if (!cancelled && sceneManagerRef.current === manager) {
+              useProjectStore.getState().setStatus({ loading: false, message: '' })
+            }
+          })
+          .catch((error) => {
+            if (!cancelled && sceneManagerRef.current === manager) {
+              useProjectStore.getState().setStatus({ loading: false, error: error.message })
+            }
+          })
+        return () => {
+          cancelled = true
+        }
+      }
+      case 'image': {
+        if (!imageSource) {
+          manager.disposeModel()
+          return
+        }
+        useProjectStore.getState().setStatus({ loading: true, error: '' })
+        manager
+          .loadImage(imageSource)
+          .then(() => {
+            if (!cancelled && sceneManagerRef.current === manager) {
+              useProjectStore.getState().setStatus({ loading: false, message: 'Image loaded.' })
+            }
+          })
+          .catch((error) => {
+            if (!cancelled && sceneManagerRef.current === manager) {
+              useProjectStore.getState().setStatus({ loading: false, error: error.message })
+            }
+          })
+        return () => {
+          cancelled = true
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, inputType])
-
-  // Load shape primitives
-  useEffect(() => {
-    if (inputType !== 'shape') return
-    const manager = sceneManagerRef.current
-    if (!manager) return
-    manager.loadShape(shapeType, shapeParams)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputType, shapeType, shapeParams])
-
-  // Load 3D extruded text
-  useEffect(() => {
-    if (inputType !== 'text') return
-    const manager = sceneManagerRef.current
-    if (!manager) return
-
-    let cancelled = false
-    useProjectStore.getState().setStatus({ loading: true, error: '' })
-    manager
-      .loadText(textContent, { fontFamily, fontSize, extrudeDepth, bevelEnabled })
-      .then(() => {
-        if (!cancelled && sceneManagerRef.current === manager) {
-          useProjectStore.getState().setStatus({ loading: false, message: '' })
-        }
-      })
-      .catch((error) => {
-        if (!cancelled && sceneManagerRef.current === manager) {
-          useProjectStore.getState().setStatus({ loading: false, error: error.message })
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputType, textContent, fontFamily, fontSize, extrudeDepth, bevelEnabled])
-
-  // Load image/SVG as textured plane
-  useEffect(() => {
-    if (inputType !== 'image') return
-    const manager = sceneManagerRef.current
-    if (!manager) return
-
-    if (!imageSource) {
-      manager.disposeModel()
-      return
-    }
-
-    let cancelled = false
-    useProjectStore.getState().setStatus({ loading: true, error: '' })
-    manager
-      .loadImage(imageSource)
-      .then(() => {
-        if (!cancelled && sceneManagerRef.current === manager) {
-          useProjectStore.getState().setStatus({ loading: false, message: 'Image loaded.' })
-        }
-      })
-      .catch((error) => {
-        if (!cancelled && sceneManagerRef.current === manager) {
-          useProjectStore.getState().setStatus({ loading: false, error: error.message })
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputType, imageSource])
+  }, [
+    inputType,
+    model,
+    shapeType,
+    shapeParams,
+    textContent,
+    fontFamily,
+    fontSize,
+    extrudeDepth,
+    bevelEnabled,
+    imageSource
+  ])
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">

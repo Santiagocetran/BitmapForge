@@ -1,30 +1,5 @@
 import JSZip from 'jszip'
-
-function createComponentConfig(state) {
-  const config = {
-    modelFileName: state.model?.name ?? null,
-    effectOptions: {
-      colors: state.colors,
-      pixelSize: state.pixelSize,
-      ditherType: state.ditherType,
-      invert: state.invert,
-      minBrightness: state.minBrightness,
-      backgroundColor: state.backgroundColor,
-      animationDuration: state.animationDuration,
-      fadeVariant: state.fadeVariant,
-      renderMode: state.renderMode ?? 'bitmap'
-    },
-    useFadeInOut: state.useFadeInOut,
-    animationEffects: state.animationEffects,
-    animationSpeed: state.animationSpeed,
-    showPhaseDuration: state.showPhaseDuration,
-    lightDirection: state.lightDirection,
-    baseRotation: state.baseRotation,
-    rotateOnShow: state.rotateOnShow,
-    showPreset: state.showPreset
-  }
-  return `export const config = ${JSON.stringify(config, null, 2)}\n`
-}
+import { buildExportConfig } from './exportConfig.js'
 
 function generateIndexJsx(componentName, modelFileName) {
   // Model load block: new URL path must be a static string literal (not a template variable)
@@ -134,7 +109,7 @@ async function buildReactComponent(state, componentName = 'MyAnimation') {
   const modelFileName = state.model?.name ?? null
 
   root.file('index.jsx', generateIndexJsx(componentName, modelFileName))
-  root.file('config.js', createComponentConfig(state))
+  root.file('config.js', `export const config = ${JSON.stringify(buildExportConfig(state), null, 2)}\n`)
   root.file('README.md', generateReactReadme(componentName))
 
   for (const { path, content } of ENGINE_SOURCES) {

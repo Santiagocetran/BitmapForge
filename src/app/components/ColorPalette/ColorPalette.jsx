@@ -3,7 +3,7 @@ import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove 
 import { CSS } from '@dnd-kit/utilities'
 import { HexColorPicker } from 'react-colorful'
 import { useState, useRef, useEffect } from 'react'
-import { useShallow } from 'zustand/shallow'
+import { useShallow } from 'zustand/react/shallow'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 import { InfoTooltip } from '../ui/InfoTooltip.jsx'

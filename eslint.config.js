@@ -5,7 +5,17 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 import globals from 'globals'
 
 export default [
-  { ignores: ['dist/', 'node_modules/', 'public/embed/', 'packages/cli/dist/'] },
+  {
+    ignores: [
+      'dist/',
+      'node_modules/',
+      'public/embed/',
+      'packages/cli/dist/',
+      'packages/embed/dist/',
+      '.claude/',
+      '.worktrees/'
+    ]
+  },
   js.configs.recommended,
   reactPlugin.configs.flat.recommended,
   reactPlugin.configs.flat['jsx-runtime'],
