@@ -4,14 +4,14 @@ Governance directory for multi-agent coordination (IAxP).
 
 ## Files
 
-| File | Purpose | Rule |
-|---|---|---|
-| `DIALOGUE.md` | Agent-to-agent conversation | Append-only; rotate at ~200 lines to `archive/` |
-| `TASK_BOARD.md` | File-scope ownership | Claim before editing; one owner per active task |
-| `DECISIONS.md` | Closed decisions | Immutable; new DEC to override |
-| `HANDOFFS.md` | Context transfers | Mandatory at task completion |
-| `CONFLICTS.md` | Conflict registry | Both agents pause on affected paths until resolved |
-| `STATUS.md` | Agent state snapshot | Update at end of each turn; max 5 lines/agent |
+| File            | Purpose                     | Rule                                               |
+| --------------- | --------------------------- | -------------------------------------------------- |
+| `DIALOGUE.md`   | Agent-to-agent conversation | Append-only; rotate at ~200 lines to `archive/`    |
+| `TASK_BOARD.md` | File-scope ownership        | Claim before editing; one owner per active task    |
+| `DECISIONS.md`  | Closed decisions            | Immutable; new DEC to override                     |
+| `HANDOFFS.md`   | Context transfers           | Mandatory at task completion                       |
+| `CONFLICTS.md`  | Conflict registry           | Both agents pause on affected paths until resolved |
+| `STATUS.md`     | Agent state snapshot        | Update at end of each turn; max 5 lines/agent      |
 
 ## Rules
 

@@ -22,7 +22,7 @@ When in doubt, create the task. A small task costs nothing. Lost visibility cost
 
 ### Descriptions Carry Context
 
-Descriptions tell *what* and *why*. Plan files tell *how*.
+Descriptions tell _what_ and _why_. Plan files tell _how_.
 
 - **Fully specified** (bug located, fix named, files identified): still go through `in_planning`, but the plan can be a single line (e.g., "Fix the typo on line 77"). Mark `complexity: low`.
 - **Clear goal, open implementation**: go through `in_planning`. The agent figures out the approach and writes a substantive plan.
@@ -43,6 +43,7 @@ backlog → in_planning → planned → in_progress → review → done
 ```
 
 **Transition discipline:**
+
 - `in_planning` — before you open the first file to read. Then write the plan.
 - `planned` — only after the plan file has real content.
 - `in_progress` — before you write the first line of code.
@@ -54,17 +55,18 @@ backlog → in_planning → planned → in_progress → review → done
 
 Each lifecycle stage gets its own sub-agent with fresh context. This is the default execution pattern — not a suggestion, not complexity-gated. Every task, every time.
 
-**Why this matters:** When a planning agent writes a plan and a separate implementation agent reads it, the plan *must* be clear and complete — there's no shared context to fall back on. This forces better plans. When a review agent reads the diff cold, it catches things the implementer's context-polluted mind would miss. The plan file and git diff are the handoff artifacts.
+**Why this matters:** When a planning agent writes a plan and a separate implementation agent reads it, the plan _must_ be clear and complete — there's no shared context to fall back on. This forces better plans. When a review agent reads the diff cold, it catches things the implementer's context-polluted mind would miss. The plan file and git diff are the handoff artifacts.
 
 **The three sub-agents:**
 
-| Stage | Sub-agent does | Reads | Produces |
-|-------|---------------|-------|----------|
-| **Plan** | Explore codebase, write plan, move to `planned` | Task description | Plan file |
-| **Implement** | Read plan, build it, test, commit, move to `review` | Plan file | Committed code |
-| **Review** | Read diff cold, review against acceptance criteria, record findings | Git diff + plan | Review comment (`--role review`), move to `done` |
+| Stage         | Sub-agent does                                                      | Reads            | Produces                                         |
+| ------------- | ------------------------------------------------------------------- | ---------------- | ------------------------------------------------ |
+| **Plan**      | Explore codebase, write plan, move to `planned`                     | Task description | Plan file                                        |
+| **Implement** | Read plan, build it, test, commit, move to `review`                 | Plan file        | Committed code                                   |
+| **Review**    | Read diff cold, review against acceptance criteria, record findings | Git diff + plan  | Review comment (`--role review`), move to `done` |
 
 **The parent orchestrator** (the main agent session) manages the lifecycle:
+
 1. Move the task to `in_planning` before spawning the planning sub-agent.
 2. After the planner finishes, move to `in_progress` and spawn the implementation sub-agent.
 3. After the implementer finishes, the review sub-agent runs independently.
@@ -76,6 +78,7 @@ Each sub-agent should use a distinct actor ID (e.g., `agent:claude-opus-4-planne
 The plan file lives at `.lattice/plans/<task_id>.md` — scaffolded on creation, empty until you fill it.
 
 This is the **planning sub-agent's** job. Spawn a sub-agent whose sole purpose is to explore the codebase, understand the problem, and write the plan. It should:
+
 1. Read the task description and any linked context.
 2. Explore the relevant source files — understand existing patterns and constraints.
 3. Write the plan to `.lattice/plans/<task_id>.md` — scope, approach, key files, acceptance criteria. For trivial tasks, a single sentence is fine. For substantial work, be thorough.
@@ -88,6 +91,7 @@ This is the **planning sub-agent's** job. Spawn a sub-agent whose sole purpose i
 Moving to `review` is a commitment to actually review the work.
 
 This is the **review sub-agent's** job. Spawn a sub-agent with fresh context — it did NOT write the code and comes in cold. It should:
+
 1. Read the plan file to understand what was supposed to be built.
 2. Read the git diff to see what was actually built.
 3. Run tests and linting to verify nothing is broken.
@@ -110,12 +114,12 @@ When a review agent evaluates work, it produces one of three outcomes:
 
 **Who decides what:**
 
-| Decision | Who | How |
-|----------|-----|-----|
-| Fix inline vs send back | Review agent | Vibes-based judgment, recorded in review comment |
-| Implementation-level vs plan-level | Review agent | Explicitly stated in review comment |
-| Route to in_progress vs in_planning | Orchestrator | Follows review agent's recommendation |
-| Whether to spawn fresh sub-agent | Orchestrator | Encouraged by convention, not enforced |
+| Decision                            | Who          | How                                              |
+| ----------------------------------- | ------------ | ------------------------------------------------ |
+| Fix inline vs send back             | Review agent | Vibes-based judgment, recorded in review comment |
+| Implementation-level vs plan-level  | Review agent | Explicitly stated in review comment              |
+| Route to in_progress vs in_planning | Orchestrator | Follows review agent's recommendation            |
+| Whether to spawn fresh sub-agent    | Orchestrator | Encouraged by convention, not enforced           |
 
 **3-cycle safety valve:** After 3 review-to-rework transitions (any combination of `review -> in_progress` and `review -> in_planning`), the CLI blocks the 4th attempt. The error message instructs the agent to move the task to `needs_human` with a comment explaining the situation. The limit is configurable via `review_cycle_limit` in the workflow config (default: 3). Override with `--force --reason` for genuinely exceptional cases.
 
@@ -142,7 +146,7 @@ Use for: design decisions requiring human judgment, missing access/credentials, 
 
 ### Actor Attribution
 
-Every operation requires `--actor`. Attribution follows authorship of the *decision*, not the keystroke.
+Every operation requires `--actor`. Attribution follows authorship of the _decision_, not the keystroke.
 
 - Agent decided autonomously → `agent:<id>`
 - Human typed it directly → `human:<id>`
@@ -163,6 +167,7 @@ You are not the last mind that will touch this work. Use `lattice comment` for w
 Multiple agents may work in the same repository concurrently on different tasks. The `git status` snapshot from your session start goes stale the moment another agent commits.
 
 **When you encounter unfamiliar changes** (unexpected files, diffs you didn't make, new commits on HEAD):
+
 1. **Investigate first.** Check `git log` and `lattice list` to see if another task/agent is responsible.
 2. **Ask "who made this?" before "this shouldn't be here."** The change is almost certainly another agent's legitimate work.
 3. **Never revert, reset, or delete changes you can't attribute.** If you're unsure, leave them alone and ask the human.
@@ -188,6 +193,7 @@ lattice list
 ```
 
 **Useful flags:**
+
 - `--quiet` — prints only the task ID (scripting: `TASK=$(lattice create "..." --quiet)`)
 - `--json` — structured output: `{"ok": true, "data": ...}` or `{"ok": false, "error": ...}`
 - `lattice list --status in_progress` / `--assigned agent:<id>` / `--tag <tag>` — filters

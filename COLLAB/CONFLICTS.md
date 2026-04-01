@@ -4,7 +4,7 @@ Conflict registry — active and resolved.
 
 ---
 
-<!-- 
+<!--
 Entry format:
 
 ## CNF-NNN

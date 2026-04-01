@@ -41,36 +41,43 @@ Zustand's [slice pattern](https://docs.pmnd.rs/zustand/guides/slices-pattern) co
 ### Slice Definitions
 
 **File: `src/app/store/slices/renderingSlice.js`**
+
 - **State (12 fields):** `colors`, `pixelSize`, `ditherType`, `invert`, `minBrightness`, `backgroundColor`, `renderMode`, `seed`, `charRamp`, `asciiColored`, `halftoneDotShape`, `halftoneAngle`, `ledGap`, `ledShape`, `stippleDotSize`, `stippleDensity`
 - **Actions (18):** `setColors`, `reorderColors`, `addColor`, `removeColor`, `setColorAt`, `setPixelSize`, `setDitherType`, `setInvert`, `setMinBrightness`, `setBackgroundColor`, `setRenderMode` (with ASCII pixelSize bump), `setSeed`, `randomizeSeed`, `setCharRamp`, `setAsciiColored`, `setHalftoneDotShape`, `setHalftoneAngle`, `setLedGap`, `setLedShape`, `setStippleDotSize`, `setStippleDensity`
 - **Rationale:** All fields that flow to `BitmapEffect.updateOptions()` and renderers. Grouped because they share one PreviewCanvas subscription. Includes renderer-specific fields because they're consumed through the same `updateEffectOptions` path.
 
 **File: `src/app/store/slices/animationSlice.js`**
+
 - **State (8 fields):** `useFadeInOut`, `fadeVariant`, `animationEffects`, `animationSpeed`, `showPhaseDuration`, `animationDuration`, `animationPreset` (legacy), `rotateOnShow` (legacy), `showPreset` (legacy)
 - **Actions (8):** `setUseFadeInOut`, `setFadeVariant`, `setAnimationEffect`, `setAnimationPreset`, `setAnimationSpeed`, `setShowPhaseDuration`, `setAnimationDuration`, `setRotateOnShow`, `setShowPreset`
 - **Rationale:** All fields that flow to `AnimationEngine.setFadeOptions()`. Matches PreviewCanvas subscription 2.
 
 **File: `src/app/store/slices/postEffectsSlice.js`**
+
 - **State (11 fields):** `crtEnabled`, `scanlineGap`, `scanlineOpacity`, `chromaticAberration`, `crtVignette`, `noiseEnabled`, `noiseAmount`, `noiseMonochrome`, `colorShiftEnabled`, `colorShiftHue`, `colorShiftSaturation`
 - **Actions (11):** One setter per field with clamping
 - **Rationale:** Post-processing fields are consumed by `PostProcessingChain` through `updateEffectOptions`. They're independent of renderers and animation. Separating them makes the QualitySettings "Post Effects" section self-contained.
 
 **File: `src/app/store/slices/inputSlice.js`**
+
 - **State (10 fields):** `model`, `inputType`, `shapeType`, `shapeParams`, `textContent`, `fontSize`, `extrudeDepth`, `bevelEnabled`, `fontFamily`, `imageSource`
 - **Actions (10):** `setModel`, `setInputType`, `setShapeType`, `setShapeParam`, `setTextContent`, `setFontSize`, `setExtrudeDepth`, `setBevelEnabled`, `setFontFamily`, `setImageSource`
 - **Rationale:** Input source configuration. Used by `InputSource`, `ShapeSelector`, `TextInput`, `ImageInput`, `ModelUploader`, and PreviewCanvas model-loading effects.
 
 **File: `src/app/store/slices/transformSlice.js`**
+
 - **State (3 fields):** `lightDirection`, `baseRotation`, `modelScale`
 - **Actions (4):** `setLightDirection`, `setBaseRotation`, `resetBaseRotation`, `setModelScale`
 - **Rationale:** Scene pose/positioning. Each has its own PreviewCanvas subscription.
 
 **File: `src/app/store/slices/statusSlice.js`**
+
 - **State (2 fields):** `status`, `pluginParams`
 - **Actions (2):** `setStatus`, `setPluginParam`
 - **Rationale:** Transient state excluded from undo. Isolated to prevent polluting domain slices.
 
 **Root store file: `src/app/store/useProjectStore.js`**
+
 - Imports all 6 slices
 - Composes via: `create(temporal(subscribeWithSelector((...a) => ({ ...renderingSlice(...a), ...animationSlice(...a), ...postEffectsSlice(...a), ...inputSlice(...a), ...transformSlice(...a), ...statusSlice(...a), resetToDefaults: () => set((state) => ({ ...state, ...DEFAULT_STATE })) })), { partialize, limit: 50 }))`
 - `DEFAULT_STATE` assembled from slice defaults — **must contain only serializable fields** (no `model`, `imageSource`, functions). This ensures `resetToDefaults` merges without clobbering transient/binary fields.
@@ -78,10 +85,12 @@ Zustand's [slice pattern](https://docs.pmnd.rs/zustand/guides/slices-pattern) co
 - **Middleware order:** Must match current stack exactly: `create(temporal(subscribeWithSelector(...)))` — verify during implementation.
 
 ### Existing Pattern Reference
+
 - Zustand slice pattern: standard Zustand docs pattern
 - Current `subscribeWithSelector` + `temporal` middleware stack (lines 86-206 of current `useProjectStore.js`) is preserved exactly
 
 ### Risks
+
 - **Cross-slice side effects:** `setRenderMode` bumps `pixelSize` (rendering slice) when switching to ASCII. Solution: slice creators receive `(set, get)` — the rendering slice's `setRenderMode` reads current `pixelSize` via `get()` and sets both fields atomically.
 - **Undo coherence:** All slices merge into one store, so `temporal` sees a single flat state. No risk.
 
@@ -112,7 +121,9 @@ class BaseAnimationEffect {
   checkReset(active, previouslyActive, target, context) {}
 
   /** Apply in-progress reset transitions. deltaSeconds (not ms!) */
-  applyReset(target, deltaSeconds) { return false /* true = still resetting */ }
+  applyReset(target, deltaSeconds) {
+    return false /* true = still resetting */
+  }
 
   /** Clear any reset state */
   clearReset() {}
@@ -124,14 +135,14 @@ class BaseAnimationEffect {
 
 ### Effect Classes
 
-| File | Effect | update() | seekTo() | Reset |
-|------|--------|----------|----------|-------|
-| `SpinEffect.js` | spinX/spinY/spinZ | `rotation[axis] += speed * dt` | `rotation[axis] += speed * t` | Lerp rotation to nearest `2π` multiple over 300ms |
-| `FloatEffect.js` | float | Oscillation on x/z via `Math.sin` | Integral: `4*(1-cos(0.5*t))` | Lerp x/z to 0 (only if corresponding spin inactive) |
-| `BounceEffect.js` | bounce | `position.y = abs(sin(t*speed*1.8))*0.5` | Same formula with absolute time | Lerp position.y to 0 |
-| `PulseEffect.js` | pulse | `scale = 1 + sin(t*speed*1.5)*0.12` | Same formula | Lerp scale to 1 |
-| `ShakeEffect.js` | shake | Seeded random x/z offset | Same with time-based seed | Snap to 0 (immediate) |
-| `OrbitEffect.js` | orbit | Camera circular path | Same formula | Restore baseline camera pose |
+| File              | Effect            | update()                                 | seekTo()                        | Reset                                               |
+| ----------------- | ----------------- | ---------------------------------------- | ------------------------------- | --------------------------------------------------- |
+| `SpinEffect.js`   | spinX/spinY/spinZ | `rotation[axis] += speed * dt`           | `rotation[axis] += speed * t`   | Lerp rotation to nearest `2π` multiple over 300ms   |
+| `FloatEffect.js`  | float             | Oscillation on x/z via `Math.sin`        | Integral: `4*(1-cos(0.5*t))`    | Lerp x/z to 0 (only if corresponding spin inactive) |
+| `BounceEffect.js` | bounce            | `position.y = abs(sin(t*speed*1.8))*0.5` | Same formula with absolute time | Lerp position.y to 0                                |
+| `PulseEffect.js`  | pulse             | `scale = 1 + sin(t*speed*1.5)*0.12`      | Same formula                    | Lerp scale to 1                                     |
+| `ShakeEffect.js`  | shake             | Seeded random x/z offset                 | Same with time-based seed       | Snap to 0 (immediate)                               |
+| `OrbitEffect.js`  | orbit             | Camera circular path                     | Same formula                    | Restore baseline camera pose                        |
 
 **SpinEffect** handles all 3 axes via constructor parameter (`new SpinEffect('x')`), producing 3 instances.
 
@@ -160,7 +171,7 @@ class AnimationEngine {
       orbit: new OrbitEffect()
     }
     // Ordered array for deterministic iteration
-    this._effectList = EFFECT_ORDER.map(key => ({ key, effect: this._effectMap[key] }))
+    this._effectList = EFFECT_ORDER.map((key) => ({ key, effect: this._effectMap[key] }))
   }
 
   applyEffects(modelGroup, deltaSeconds, camera) {
@@ -186,10 +197,12 @@ class AnimationEngine {
 ```
 
 ### Existing Pattern Reference
+
 - `BaseRenderer` interface pattern (`src/engine/renderers/BaseRenderer.js:1-109`) — same approach: base class with method stubs, subclasses implement specifics
 - `createRNG` usage in current `applyEffects()` (`AnimationEngine.js:96-98`)
 
 ### Risks
+
 - **Seek-update parity:** Each effect must produce identical results from `update()` accumulation and `seekTo()` analytical calculation. Existing tests verify this — they'll catch regressions.
 - **Float-spin interaction:** Float resets only when corresponding spin is inactive. Solution: `FloatEffect.checkReset()` receives `context.animationEffects` to inspect spin states.
 - **Shared time counter:** Effects that depend on `this.time` (float, bounce, pulse, shake) receive it via `context.time`. The `AnimationEngine` still owns the time counter and advances it once per frame.
@@ -238,7 +251,7 @@ export function buildExportConfig(state) {
       noiseMonochrome: state.noiseMonochrome,
       colorShiftEnabled: state.colorShiftEnabled,
       colorShiftHue: state.colorShiftHue,
-      colorShiftSaturation: state.colorShiftSaturation,
+      colorShiftSaturation: state.colorShiftSaturation
     },
     useFadeInOut: state.useFadeInOut,
     animationEffects: state.animationEffects,
@@ -247,17 +260,19 @@ export function buildExportConfig(state) {
     lightDirection: state.lightDirection,
     baseRotation: state.baseRotation,
     rotateOnShow: state.rotateOnShow,
-    showPreset: state.showPreset,
+    showPreset: state.showPreset
   }
 }
 ```
 
 This replaces:
+
 - `reactComponentExport.js:createComponentConfig()` (lines 3-27)
 - `webComponentExport.js:createComponentConfig()` (lines 4-28) — **identical** to react version
 - `codeExport.js:createAnimationConfig()` (lines 3-26) — **subset**, now uses full config
 
 ### Existing Pattern Reference
+
 - Current `reactComponentExport.js:3-27` is the most complete version — the shared builder is based on it with additions for renderer-specific and post-effect fields
 
 ---
@@ -275,38 +290,65 @@ import { shallow } from 'zustand/shallow'
 
 /** Fields consumed by BitmapEffect.updateOptions() */
 export const selectEffectOptions = (s) => ({
-  pixelSize: s.pixelSize, ditherType: s.ditherType, colors: s.colors,
-  invert: s.invert, minBrightness: s.minBrightness, backgroundColor: s.backgroundColor,
-  animationDuration: s.animationDuration, fadeVariant: s.fadeVariant, seed: s.seed,
-  charRamp: s.charRamp, asciiColored: s.asciiColored,
-  halftoneDotShape: s.halftoneDotShape, halftoneAngle: s.halftoneAngle,
-  ledGap: s.ledGap, ledShape: s.ledShape,
-  stippleDotSize: s.stippleDotSize, stippleDensity: s.stippleDensity,
-  crtEnabled: s.crtEnabled, scanlineGap: s.scanlineGap, scanlineOpacity: s.scanlineOpacity,
-  chromaticAberration: s.chromaticAberration, crtVignette: s.crtVignette,
-  noiseEnabled: s.noiseEnabled, noiseAmount: s.noiseAmount, noiseMonochrome: s.noiseMonochrome,
-  colorShiftEnabled: s.colorShiftEnabled, colorShiftHue: s.colorShiftHue,
-  colorShiftSaturation: s.colorShiftSaturation,
+  pixelSize: s.pixelSize,
+  ditherType: s.ditherType,
+  colors: s.colors,
+  invert: s.invert,
+  minBrightness: s.minBrightness,
+  backgroundColor: s.backgroundColor,
+  animationDuration: s.animationDuration,
+  fadeVariant: s.fadeVariant,
+  seed: s.seed,
+  charRamp: s.charRamp,
+  asciiColored: s.asciiColored,
+  halftoneDotShape: s.halftoneDotShape,
+  halftoneAngle: s.halftoneAngle,
+  ledGap: s.ledGap,
+  ledShape: s.ledShape,
+  stippleDotSize: s.stippleDotSize,
+  stippleDensity: s.stippleDensity,
+  crtEnabled: s.crtEnabled,
+  scanlineGap: s.scanlineGap,
+  scanlineOpacity: s.scanlineOpacity,
+  chromaticAberration: s.chromaticAberration,
+  crtVignette: s.crtVignette,
+  noiseEnabled: s.noiseEnabled,
+  noiseAmount: s.noiseAmount,
+  noiseMonochrome: s.noiseMonochrome,
+  colorShiftEnabled: s.colorShiftEnabled,
+  colorShiftHue: s.colorShiftHue,
+  colorShiftSaturation: s.colorShiftSaturation
 })
 
 /** Fields consumed by AnimationEngine.setFadeOptions() */
 export const selectAnimationOptions = (s) => ({
-  useFadeInOut: s.useFadeInOut, animationEffects: s.animationEffects,
-  animationSpeed: s.animationSpeed, showPhaseDuration: s.showPhaseDuration,
-  animationDuration: s.animationDuration, animationPreset: s.animationPreset,
-  rotateOnShow: s.rotateOnShow, showPreset: s.showPreset,
+  useFadeInOut: s.useFadeInOut,
+  animationEffects: s.animationEffects,
+  animationSpeed: s.animationSpeed,
+  showPhaseDuration: s.showPhaseDuration,
+  animationDuration: s.animationDuration,
+  animationPreset: s.animationPreset,
+  rotateOnShow: s.rotateOnShow,
+  showPreset: s.showPreset
 })
 
 /** Fields for model/input loading */
 export const selectInputSource = (s) => ({
-  model: s.model, inputType: s.inputType, shapeType: s.shapeType,
-  shapeParams: s.shapeParams, textContent: s.textContent, fontSize: s.fontSize,
-  extrudeDepth: s.extrudeDepth, bevelEnabled: s.bevelEnabled,
-  fontFamily: s.fontFamily, imageSource: s.imageSource,
+  model: s.model,
+  inputType: s.inputType,
+  shapeType: s.shapeType,
+  shapeParams: s.shapeParams,
+  textContent: s.textContent,
+  fontSize: s.fontSize,
+  extrudeDepth: s.extrudeDepth,
+  bevelEnabled: s.bevelEnabled,
+  fontFamily: s.fontFamily,
+  imageSource: s.imageSource
 })
 ```
 
 **PreviewCanvas changes:**
+
 ```javascript
 // Before (inline, 26 fields):
 const unsubEffect = useProjectStore.subscribe(
@@ -345,9 +387,11 @@ useEffect(() => {
 ```
 
 ### Existing Pattern Reference
+
 - Current subscription pattern (`PreviewCanvas.jsx:60-93`) — selectors extract the same fields, just moved to a shared module
 
 ### Risks
+
 - **Equality semantics:** `shallow` comparison on the selector output must still prevent unnecessary re-renders. Since the selectors return the same shape as current inline selectors, behavior is identical.
 - **Input loading consolidation:** Must handle the case where only `shapeParams` changes (within the same `inputType`). The subscription fires for any field in `selectInputSource`, which is correct — it matches current behavior where each `useEffect` has its own dependency list.
 
@@ -370,7 +414,7 @@ const FORMAT_HANDLERS = {
   webComponent: { label: 'Web Component', needsState: true, handler: handleWebComponentExport },
   cssAnimation: { label: 'CSS', needsFrames: true, needsState: true, handler: handleCssExport },
   embed: { label: 'Embed', needsState: true, handler: handleEmbedExport },
-  singleHtml: { label: 'HTML', needsFrames: true, handler: handleSingleHtmlExport },
+  singleHtml: { label: 'HTML', needsFrames: true, handler: handleSingleHtmlExport }
 }
 
 async function executeExport(formatId, { manager, fps, frameCount, columns, signal, onProgress }) {
@@ -389,13 +433,22 @@ async function executeExport(formatId, { manager, fps, frameCount, columns, sign
 Each format handler is a **pure function** that receives its dependencies and returns a `Blob` or triggers a download. The shared orchestration (abort, status updates, error handling, download) lives in the hook's `exportAs(formatId)` method.
 
 **The hook's public API becomes:**
+
 ```javascript
 function useExport(managerRef) {
   return {
-    exportAs: (formatId, options) => { /* shared orchestration */ },
-    cancelExport: () => { /* abort */ },
-    saveProject: () => { /* unchanged */ },
-    loadProject: (file) => { /* unchanged */ },
+    exportAs: (formatId, options) => {
+      /* shared orchestration */
+    },
+    cancelExport: () => {
+      /* abort */
+    },
+    saveProject: () => {
+      /* unchanged */
+    },
+    loadProject: (file) => {
+      /* unchanged */
+    }
   }
 }
 ```
@@ -403,9 +456,11 @@ function useExport(managerRef) {
 **ExportPanel** calls `exportAs('apng', { fps: 30 })` instead of `exportApng(30)`.
 
 ### Existing Pattern Reference
+
 - Current `exportApng()` (`useExport.js:123-149`) — the handler is the format-specific body of this function
 
 ### Risks
+
 - **ExportPanel API change:** Components that call specific export functions (`exportApng`, `exportGif`) must switch to `exportAs('apng')`. This is a straightforward search-replace.
 - **Video format complexity:** `exportVideo` has two paths (WebCodecs + legacy MediaRecorder). Both are kept inside `handleVideoExport`, which is a valid deep module.
 - **Abort isolation (audit fix):** Each `exportAs()` call creates its own `AbortController`. The hook tracks the active controller for `cancelExport()` but never shares controllers across concurrent calls.
@@ -430,46 +485,48 @@ Tests follow the same structural changes:
 5. **Export config test**: New test for `buildExportConfig()` — verifies all fields are included and match the store's rendering + animation state.
 
 ### Test Count Target
+
 Current: 517+ tests. Target: >= 517 (restructured, not reduced).
 
 ---
 
 ## File Change Manifest
 
-| File | Action | REQ | Notes |
-|------|--------|-----|-------|
-| `src/app/store/slices/renderingSlice.js` | CREATE | REQ-001 | 16 state fields, 20 actions |
-| `src/app/store/slices/animationSlice.js` | CREATE | REQ-001 | 9 state fields, 9 actions |
-| `src/app/store/slices/postEffectsSlice.js` | CREATE | REQ-001 | 11 state fields, 11 actions |
-| `src/app/store/slices/inputSlice.js` | CREATE | REQ-001 | 10 state fields, 10 actions |
-| `src/app/store/slices/transformSlice.js` | CREATE | REQ-001 | 3 state fields, 4 actions |
-| `src/app/store/slices/statusSlice.js` | CREATE | REQ-001 | 2 state fields, 2 actions |
-| `src/app/store/useProjectStore.js` | MODIFY | REQ-001 | Compose slices, keep temporal/partialize |
-| `src/app/store/selectors.js` | CREATE | REQ-004 | Named selectors for engine subscriptions |
-| `src/engine/animation/effects/BaseAnimationEffect.js` | CREATE | REQ-002 | Base class interface |
-| `src/engine/animation/effects/SpinEffect.js` | CREATE | REQ-002 | Handles x/y/z via axis param |
-| `src/engine/animation/effects/FloatEffect.js` | CREATE | REQ-002 | |
-| `src/engine/animation/effects/BounceEffect.js` | CREATE | REQ-002 | |
-| `src/engine/animation/effects/PulseEffect.js` | CREATE | REQ-002 | |
-| `src/engine/animation/effects/ShakeEffect.js` | CREATE | REQ-002 | |
-| `src/engine/animation/effects/OrbitEffect.js` | CREATE | REQ-002 | |
-| `src/engine/animation/AnimationEngine.js` | MODIFY | REQ-002 | Use effect registry, remove inline logic |
-| `src/app/utils/exportConfig.js` | CREATE | REQ-005 | `buildExportConfig(state)` |
-| `src/app/utils/codeExport.js` | MODIFY | REQ-005 | Import shared config builder |
-| `src/app/utils/reactComponentExport.js` | MODIFY | REQ-005 | Import shared config builder, delete local `createComponentConfig` |
-| `src/app/utils/webComponentExport.js` | MODIFY | REQ-005 | Import shared config builder, delete local `createComponentConfig` |
-| `src/app/components/PreviewCanvas/PreviewCanvas.jsx` | MODIFY | REQ-004 | Use selector imports, consolidate input loading |
-| `src/app/hooks/useExport.js` | MODIFY | REQ-003 | Format registry + `executeExport()` |
-| `src/app/components/ExportPanel/ExportPanel.jsx` | MODIFY | REQ-003 | Call `exportAs(formatId)` |
-| `src/app/store/useProjectStore.test.js` | MODIFY | REQ-006 | Restructure for slice-based tests |
-| `src/engine/animation/AnimationEngine.test.js` | MODIFY | REQ-006 | Restructure for per-effect tests |
-| `src/app/hooks/useExport.test.js` | MODIFY | REQ-006 | Test shared orchestration + per-format handlers |
-| `src/app/utils/exportConfig.test.js` | CREATE | REQ-006 | Test shared config builder |
-| `src/app/utils/engineSources.js` | MODIFY | REQ-002 | Add effect class files to manifest (7 new entries: BaseAnimationEffect + 6 effects) |
+| File                                                  | Action | REQ     | Notes                                                                               |
+| ----------------------------------------------------- | ------ | ------- | ----------------------------------------------------------------------------------- |
+| `src/app/store/slices/renderingSlice.js`              | CREATE | REQ-001 | 16 state fields, 20 actions                                                         |
+| `src/app/store/slices/animationSlice.js`              | CREATE | REQ-001 | 9 state fields, 9 actions                                                           |
+| `src/app/store/slices/postEffectsSlice.js`            | CREATE | REQ-001 | 11 state fields, 11 actions                                                         |
+| `src/app/store/slices/inputSlice.js`                  | CREATE | REQ-001 | 10 state fields, 10 actions                                                         |
+| `src/app/store/slices/transformSlice.js`              | CREATE | REQ-001 | 3 state fields, 4 actions                                                           |
+| `src/app/store/slices/statusSlice.js`                 | CREATE | REQ-001 | 2 state fields, 2 actions                                                           |
+| `src/app/store/useProjectStore.js`                    | MODIFY | REQ-001 | Compose slices, keep temporal/partialize                                            |
+| `src/app/store/selectors.js`                          | CREATE | REQ-004 | Named selectors for engine subscriptions                                            |
+| `src/engine/animation/effects/BaseAnimationEffect.js` | CREATE | REQ-002 | Base class interface                                                                |
+| `src/engine/animation/effects/SpinEffect.js`          | CREATE | REQ-002 | Handles x/y/z via axis param                                                        |
+| `src/engine/animation/effects/FloatEffect.js`         | CREATE | REQ-002 |                                                                                     |
+| `src/engine/animation/effects/BounceEffect.js`        | CREATE | REQ-002 |                                                                                     |
+| `src/engine/animation/effects/PulseEffect.js`         | CREATE | REQ-002 |                                                                                     |
+| `src/engine/animation/effects/ShakeEffect.js`         | CREATE | REQ-002 |                                                                                     |
+| `src/engine/animation/effects/OrbitEffect.js`         | CREATE | REQ-002 |                                                                                     |
+| `src/engine/animation/AnimationEngine.js`             | MODIFY | REQ-002 | Use effect registry, remove inline logic                                            |
+| `src/app/utils/exportConfig.js`                       | CREATE | REQ-005 | `buildExportConfig(state)`                                                          |
+| `src/app/utils/codeExport.js`                         | MODIFY | REQ-005 | Import shared config builder                                                        |
+| `src/app/utils/reactComponentExport.js`               | MODIFY | REQ-005 | Import shared config builder, delete local `createComponentConfig`                  |
+| `src/app/utils/webComponentExport.js`                 | MODIFY | REQ-005 | Import shared config builder, delete local `createComponentConfig`                  |
+| `src/app/components/PreviewCanvas/PreviewCanvas.jsx`  | MODIFY | REQ-004 | Use selector imports, consolidate input loading                                     |
+| `src/app/hooks/useExport.js`                          | MODIFY | REQ-003 | Format registry + `executeExport()`                                                 |
+| `src/app/components/ExportPanel/ExportPanel.jsx`      | MODIFY | REQ-003 | Call `exportAs(formatId)`                                                           |
+| `src/app/store/useProjectStore.test.js`               | MODIFY | REQ-006 | Restructure for slice-based tests                                                   |
+| `src/engine/animation/AnimationEngine.test.js`        | MODIFY | REQ-006 | Restructure for per-effect tests                                                    |
+| `src/app/hooks/useExport.test.js`                     | MODIFY | REQ-006 | Test shared orchestration + per-format handlers                                     |
+| `src/app/utils/exportConfig.test.js`                  | CREATE | REQ-006 | Test shared config builder                                                          |
+| `src/app/utils/engineSources.js`                      | MODIFY | REQ-002 | Add effect class files to manifest (7 new entries: BaseAnimationEffect + 6 effects) |
 
 ## Rollback Procedure
 
 Each wave is independently revertable:
+
 - **Wave 1:** `git revert` the store slice commits OR the animation effect commits
 - **Wave 2:** `git revert` preview/export commits (store slices remain valid standalone)
 
@@ -477,13 +534,13 @@ No database migrations, no external service changes, no breaking API changes.
 
 ## Failure Modes
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| Undo breaks after slicing | Low | `temporal` sees flat merged state; `partialize` unchanged |
-| Seek-update parity regresses | Medium | Existing parity tests in `AnimationEngine.test.js` catch immediately |
-| Export format output changes | Low | `exportConformance.test.js` validates all 7 format structures |
-| PreviewCanvas re-render storm | Low | Selectors return same-shaped objects with `shallow` equality |
-| Cross-slice action atomicity | Low | Zustand `set()` is synchronous; multi-field updates in one `set()` call |
+| Risk                          | Likelihood | Mitigation                                                              |
+| ----------------------------- | ---------- | ----------------------------------------------------------------------- |
+| Undo breaks after slicing     | Low        | `temporal` sees flat merged state; `partialize` unchanged               |
+| Seek-update parity regresses  | Medium     | Existing parity tests in `AnimationEngine.test.js` catch immediately    |
+| Export format output changes  | Low        | `exportConformance.test.js` validates all 7 format structures           |
+| PreviewCanvas re-render storm | Low        | Selectors return same-shaped objects with `shallow` equality            |
+| Cross-slice action atomicity  | Low        | Zustand `set()` is synchronous; multi-field updates in one `set()` call |
 
 ## Observability
 
@@ -500,6 +557,7 @@ No database migrations, no external service changes, no breaking API changes.
 **Full report:** [20260326-124241-BitmapForge-codex-second-opinion.md](./20260326-124241-BitmapForge-codex-second-opinion.md)
 
 **Changes applied from audit:**
+
 1. Standardized effect API to use seconds everywhere (was ms in `applyReset`)
 2. Added `animationEffects` map to `context` parameter for cross-effect queries
 3. Changed effect iteration from object to explicit `EFFECT_ORDER` array for deterministic execution

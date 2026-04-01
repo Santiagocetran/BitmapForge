@@ -1,7 +1,9 @@
 ## TL;DR
+
 Solid direction overall, but there are a few contract and ordering gaps that could cause regressions: the animation effect interface is inconsistent (units and parameters), execution order isn’t guaranteed, and the export registry may inadvertently bundle every format and conflate abort scopes. Also add an explicit dependency from the export work to the new effect classes and tighten the store slice reset semantics.
 
 **Findings-By-Severity**
+
 - High
   - Animation effect API inconsistencies: `applyReset(target, deltaMs)` uses ms while `update/seekTo` use seconds; `FloatEffect.checkReset()` claims it receives the effects map but the signature only has `(active, previouslyActive, target)`. This threatens seek–update parity and reset correctness.
   - Effect execution order not specified: switching from inline branches to iterating a `Map`/object can change transform composition order, altering visuals and breaking seek parity.
@@ -16,6 +18,7 @@ Solid direction overall, but there are a few contract and ordering gaps that cou
   - Middleware order: confirm `create(temporal(subscribeWithSelector(...)))` matches current order so undo/redo and targeted subscriptions behave identically.
 
 **Plan-Max-6**
+
 - Unify effect interfaces (seconds everywhere) and pass a single `context` that includes the effects map and timing.
 - Lock effect execution order with an explicit, tested priority list.
 - Make REQ‑003 depend on REQ‑002; stage `engineSources.js` entries with the classes.
@@ -24,6 +27,7 @@ Solid direction overall, but there are a few contract and ordering gaps that cou
 - Gate each wave with parity and export conformance tests before proceeding.
 
 **Edits+Paths**
+
 - Animation interfaces and engine
   - Define a single interface and units: `update(target, dtSeconds, speed, context)`, `seekTo(target, tSeconds, speed, context)`, `checkReset(active, previouslyActive, target, context)`, `applyReset(target, dtSeconds): boolean`, `clearReset()`. Add `EffectOrder = string[]`.
     - `src/engine/animation/types.ts`
@@ -58,6 +62,7 @@ Solid direction overall, but there are a few contract and ordering gaps that cou
     - `src/app/export/codeExport.js`
 
 **Verify-Commands**
+
 - Check effect API consistency and usage sites
   - `rg "applyReset\\(" src/engine -n`
   - `rg "seekTo\\(|update\\(" src/engine -n`
@@ -74,13 +79,16 @@ Solid direction overall, but there are a few contract and ordering gaps that cou
   - If supported: `npm test -- animation` and `npm test -- export`
 
 **Alternative+Tradeoff**
+
 - Keep animation logic centralized without classes (tagged union with pure functions). Pros: fewer allocations, simpler serialization/testing. Cons: weaker information hiding, harder to extend per‑effect state.
 - Use per‑slice “feature modules” but retain a single store file. Pros: minimal rewire, avoids slice collision risk. Cons: less ownership clarity and weaker boundaries.
 - Export registry via plugin interface + dynamic import keys. Pros: code‑split by format; Cons: slightly more boilerplate and async error paths.
 
 **Confidence+Unknowns**
+
 - Confidence: medium. The plan is clear, but exact file structure, runner, and bundler config aren’t shown.
 - Unknowns: whether TypeScript is enforced; how `engineSources.js` is consumed by exports; existing effect order semantics; available test filters/commands.
 
 **Rationale**
+
 - This tightens module boundaries and contracts (deep modules, clear APIs), avoids hidden coupling (explicit dependencies and deterministic order), and reduces surface area for change amplification (single export config and stable selectors) — directly addressing Ousterhout’s red flags on obscurity, leakage, and unnecessary complexity.

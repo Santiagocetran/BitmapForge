@@ -4,7 +4,7 @@ Closed decisions registry.
 
 ---
 
-<!-- 
+<!--
 Entry format:
 
 ## DEC-NNN

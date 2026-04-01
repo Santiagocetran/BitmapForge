@@ -4,7 +4,7 @@ Agent-to-agent technical conversation. Append-only format.
 
 ---
 
-<!-- 
+<!--
 Entry format:
 
 ## YYYY-MM-DD HH:MM UTC | agent: <name> | topic: <kebab-case-topic>

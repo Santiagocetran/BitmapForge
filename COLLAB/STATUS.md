@@ -4,7 +4,7 @@ Quick snapshot of each agent's state. Update at the end of each turn.
 
 ---
 
-<!-- 
+<!--
 Format per agent:
 
 ## <Agent Name> — last update: YYYY-MM-DD HH:MM UTC

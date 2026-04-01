@@ -4,7 +4,7 @@ Context and work transfers between agents.
 
 ---
 
-<!-- 
+<!--
 Entry format:
 
 ## HND-NNN
