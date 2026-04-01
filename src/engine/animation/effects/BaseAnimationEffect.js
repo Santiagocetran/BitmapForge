@@ -45,7 +45,9 @@ class BaseAnimationEffect {
    * @param {number} deltaSeconds - time since last frame in seconds
    * @returns {boolean} true if a reset is still in progress
    */
-  applyReset(target, deltaSeconds) { return false } // eslint-disable-line no-unused-vars
+  applyReset(_target, _deltaSeconds) {
+    return false
+  }
 
   /** Cancel any in-progress reset. */
   clearReset() {}

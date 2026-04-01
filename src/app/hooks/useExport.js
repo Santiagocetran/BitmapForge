@@ -29,7 +29,7 @@ const FORMAT_HANDLERS = {
   apng: {
     startMessage: 'Encoding APNG…',
     successMessage: 'APNG exported.',
-    async execute({ manager, state, signal, fps = 16, onProgress }) {
+    async execute({ manager, _state, signal, fps = 16, onProgress }) {
       const { buildApng } = await import('../utils/apngExport.js')
       const loopMs = manager.getLoopDurationMs()
       const frameCount = getFrameCount(manager, fps)
@@ -42,7 +42,7 @@ const FORMAT_HANDLERS = {
   gif: {
     startMessage: 'Encoding GIF…',
     successMessage: 'GIF exported.',
-    async execute({ manager, state, signal, fps = 16, onProgress }) {
+    async execute({ manager, _state, signal, fps = 16, onProgress }) {
       const [{ default: GIF }, { default: gifWorkerUrl }] = await Promise.all([
         import('gif.js'),
         import('gif.js/dist/gif.worker.js?url')
@@ -87,9 +87,7 @@ const FORMAT_HANDLERS = {
       if (!window.VideoEncoder) {
         const loopMs = manager.getLoopDurationMs()
         const solidBg =
-          !state.backgroundColor || state.backgroundColor === 'transparent'
-            ? '#000000'
-            : state.backgroundColor
+          !state.backgroundColor || state.backgroundColor === 'transparent' ? '#000000' : state.backgroundColor
         const minDim = 720
         const scale = Math.max(1, Math.ceil(minDim / Math.max(canvas.width, canvas.height)))
         const candidates = [
@@ -120,8 +118,7 @@ const FORMAT_HANDLERS = {
         }
         const result = new Promise((resolve, reject) => {
           recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }))
-          recorder.onerror = (event) =>
-            reject(new Error(`MediaRecorder error: ${event.error?.message ?? 'unknown'}`))
+          recorder.onerror = (event) => reject(new Error(`MediaRecorder error: ${event.error?.message ?? 'unknown'}`))
         })
         try {
           recorder.start()
@@ -176,10 +173,7 @@ const FORMAT_HANDLERS = {
         if (needsPad) {
           const padded = new Uint8Array(evenWidth * evenHeight * 4)
           for (let y = 0; y < frame.height; y++) {
-            padded.set(
-              new Uint8Array(frame.data.buffer, y * frame.width * 4, frame.width * 4),
-              y * evenWidth * 4
-            )
+            padded.set(new Uint8Array(frame.data.buffer, y * frame.width * 4, frame.width * 4), y * evenWidth * 4)
           }
           frameBuffer = padded.buffer
         }
@@ -204,7 +198,7 @@ const FORMAT_HANDLERS = {
   spritesheet: {
     startMessage: 'Generating sprite sheet…',
     successMessage: 'Sprite sheet exported.',
-    async execute({ manager, state, signal, fps = 16, onProgress }) {
+    async execute({ manager, _state, signal, _fps = 16, onProgress }) {
       const { buildSpriteSheet } = await import('../utils/spriteSheetExport.js')
       const sourceCanvas = manager.getCanvas()
       if (!sourceCanvas) throw new Error('No preview canvas available')
@@ -228,7 +222,7 @@ const FORMAT_HANDLERS = {
   zip: {
     startMessage: 'Generating code ZIP…',
     successMessage: 'Code ZIP exported.',
-    async execute({ manager, state, signal }) {
+    async execute({ _manager, state, _signal }) {
       const { buildCodeZip } = await import('../utils/codeExport.js')
       const blob = await buildCodeZip(state)
       return { blob, filename: `bitmapforge-export-${Date.now()}.zip` }
@@ -237,7 +231,7 @@ const FORMAT_HANDLERS = {
   react: {
     startMessage: 'Building React component…',
     successMessage: 'React component exported. Drop the MyAnimation/ folder into your project.',
-    async execute({ manager, state, signal }) {
+    async execute({ _manager, state, _signal }) {
       const { buildReactComponent } = await import('../utils/reactComponentExport.js')
       const blob = await buildReactComponent(state)
       return { blob, filename: 'MyAnimation.zip' }
@@ -246,7 +240,7 @@ const FORMAT_HANDLERS = {
   webcomponent: {
     startMessage: 'Building Web Component…',
     successMessage: 'Web Component exported. See README.md inside the ZIP for usage.',
-    async execute({ manager, state, signal }) {
+    async execute({ _manager, state, _signal }) {
       const { buildWebComponent } = await import('../utils/webComponentExport.js')
       const blob = await buildWebComponent(state)
       return { blob, filename: 'bitmap-animation.zip' }
@@ -255,7 +249,7 @@ const FORMAT_HANDLERS = {
   embed: {
     startMessage: 'Building Embed ZIP…',
     successMessage: 'Embed ZIP exported. Upload the folder to any web host.',
-    async execute({ manager, state, signal }) {
+    async execute({ _manager, state, _signal }) {
       const { buildEmbedZip } = await import('../utils/embedExport.js')
       const blob = await buildEmbedZip(state)
       return { blob, filename: 'my-animation-embed.zip' }

@@ -5,12 +5,25 @@ function makeCamera(x = 0, y = 0.5, z = 5) {
   const pos = { x, y, z }
   pos.clone = () => ({ ...pos, clone: pos.clone })
   pos.length = () => Math.sqrt(pos.x ** 2 + pos.y ** 2 + pos.z ** 2)
-  pos.set = (nx, ny, nz) => { pos.x = nx; pos.y = ny; pos.z = nz }
-  pos.copy = (src) => { pos.x = src.x; pos.y = src.y; pos.z = src.z }
+  pos.set = (nx, ny, nz) => {
+    pos.x = nx
+    pos.y = ny
+    pos.z = nz
+  }
+  pos.copy = (src) => {
+    pos.x = src.x
+    pos.y = src.y
+    pos.z = src.z
+  }
 
   const quat = { x: 0, y: 0, z: 0, w: 1 }
   quat.clone = () => ({ ...quat, clone: quat.clone })
-  quat.copy = (src) => { quat.x = src.x; quat.y = src.y; quat.z = src.z; quat.w = src.w }
+  quat.copy = (src) => {
+    quat.x = src.x
+    quat.y = src.y
+    quat.z = src.z
+    quat.w = src.w
+  }
 
   return { position: pos, quaternion: quat, lookAt: () => {} }
 }
@@ -51,7 +64,7 @@ describe('OrbitEffect', () => {
 
   it('restoreCamera() restores camera position and quaternion', () => {
     effect.update(null, 0, 1, { time: 0, camera })
-    const originalX = camera.position.x
+    const _originalX = camera.position.x
     // Orbit to a different position
     effect.update(null, 0, 1, { time: 2, camera })
     // Toggle off

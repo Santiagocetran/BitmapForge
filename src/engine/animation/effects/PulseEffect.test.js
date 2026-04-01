@@ -5,8 +5,12 @@ function makeTarget(scaleValue = 1) {
   let _s = scaleValue
   return {
     scale: {
-      get x() { return _s },
-      setScalar(v) { _s = v }
+      get x() {
+        return _s
+      },
+      setScalar(v) {
+        _s = v
+      }
     }
   }
 }

@@ -58,13 +58,34 @@ describe('selectEffectOptions', () => {
   it('returns object with all 28 rendering effect fields', () => {
     const result = selectEffectOptions(makeState())
     const keys = [
-      'pixelSize', 'ditherType', 'colors', 'invert', 'minBrightness', 'backgroundColor',
-      'animationDuration', 'fadeVariant', 'seed', 'charRamp', 'asciiColored',
-      'halftoneDotShape', 'halftoneAngle', 'ledGap', 'ledShape',
-      'stippleDotSize', 'stippleDensity',
-      'crtEnabled', 'scanlineGap', 'scanlineOpacity', 'chromaticAberration', 'crtVignette',
-      'noiseEnabled', 'noiseAmount', 'noiseMonochrome',
-      'colorShiftEnabled', 'colorShiftHue', 'colorShiftSaturation'
+      'pixelSize',
+      'ditherType',
+      'colors',
+      'invert',
+      'minBrightness',
+      'backgroundColor',
+      'animationDuration',
+      'fadeVariant',
+      'seed',
+      'charRamp',
+      'asciiColored',
+      'halftoneDotShape',
+      'halftoneAngle',
+      'ledGap',
+      'ledShape',
+      'stippleDotSize',
+      'stippleDensity',
+      'crtEnabled',
+      'scanlineGap',
+      'scanlineOpacity',
+      'chromaticAberration',
+      'crtVignette',
+      'noiseEnabled',
+      'noiseAmount',
+      'noiseMonochrome',
+      'colorShiftEnabled',
+      'colorShiftHue',
+      'colorShiftSaturation'
     ]
     for (const key of keys) {
       expect(result).toHaveProperty(key)
@@ -84,8 +105,14 @@ describe('selectAnimationOptions', () => {
   it('returns object with all 8 animation fields', () => {
     const result = selectAnimationOptions(makeState())
     const keys = [
-      'useFadeInOut', 'animationEffects', 'animationSpeed', 'showPhaseDuration',
-      'animationDuration', 'animationPreset', 'rotateOnShow', 'showPreset'
+      'useFadeInOut',
+      'animationEffects',
+      'animationSpeed',
+      'showPhaseDuration',
+      'animationDuration',
+      'animationPreset',
+      'rotateOnShow',
+      'showPreset'
     ]
     for (const key of keys) {
       expect(result).toHaveProperty(key)
@@ -104,8 +131,16 @@ describe('selectInputSource', () => {
   it('returns object with all 10 input source fields', () => {
     const result = selectInputSource(makeState())
     const keys = [
-      'inputType', 'model', 'shapeType', 'shapeParams', 'textContent',
-      'fontSize', 'extrudeDepth', 'bevelEnabled', 'fontFamily', 'imageSource'
+      'inputType',
+      'model',
+      'shapeType',
+      'shapeParams',
+      'textContent',
+      'fontSize',
+      'extrudeDepth',
+      'bevelEnabled',
+      'fontFamily',
+      'imageSource'
     ]
     for (const key of keys) {
       expect(result).toHaveProperty(key)

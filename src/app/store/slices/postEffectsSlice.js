@@ -29,6 +29,5 @@ export const createPostEffectsSlice = (set) => ({
   setNoiseMonochrome: (noiseMonochrome) => set({ noiseMonochrome }),
   setColorShiftEnabled: (colorShiftEnabled) => set({ colorShiftEnabled }),
   setColorShiftHue: (colorShiftHue) => set({ colorShiftHue: clamp(colorShiftHue, 0, 360) }),
-  setColorShiftSaturation: (colorShiftSaturation) =>
-    set({ colorShiftSaturation: clamp(colorShiftSaturation, 0, 2) })
+  setColorShiftSaturation: (colorShiftSaturation) => set({ colorShiftSaturation: clamp(colorShiftSaturation, 0, 2) })
 })

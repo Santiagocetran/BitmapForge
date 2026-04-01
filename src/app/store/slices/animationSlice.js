@@ -12,7 +12,7 @@ export const ANIMATION_DEFAULTS = {
   showPreset: 'spinY'
 }
 
-export const createAnimationSlice = (set, get) => ({
+export const createAnimationSlice = (set, _get) => ({
   ...ANIMATION_DEFAULTS,
 
   setUseFadeInOut: (useFadeInOut) => set({ useFadeInOut }),

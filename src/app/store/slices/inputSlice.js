@@ -11,7 +11,7 @@ export const INPUT_DEFAULTS = {
   imageSource: null
 }
 
-export const createInputSlice = (set, get) => ({
+export const createInputSlice = (set, _get) => ({
   ...INPUT_DEFAULTS,
 
   setModel: (file) => {

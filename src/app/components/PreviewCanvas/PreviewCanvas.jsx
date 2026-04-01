@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import { shallow } from 'zustand/shallow'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { selectEffectOptions, selectAnimationOptions, selectInputSource } from '../../store/selectors.js'
@@ -49,11 +50,15 @@ function PreviewCanvas() {
     resizeObserver.observe(container)
 
     // Finding 4: targeted subscriptions to avoid unnecessary updates
-    const unsubEffect = useProjectStore.subscribe(selectEffectOptions,
-      (slice) => manager.updateEffectOptions(slice), { equalityFn: shallow })
+    const unsubEffect = useProjectStore.subscribe(selectEffectOptions, (slice) => manager.updateEffectOptions(slice), {
+      equalityFn: shallow
+    })
 
-    const unsubAnim = useProjectStore.subscribe(selectAnimationOptions,
-      (slice) => manager.updateAnimationOptions(slice), { equalityFn: shallow })
+    const unsubAnim = useProjectStore.subscribe(
+      selectAnimationOptions,
+      (slice) => manager.updateAnimationOptions(slice),
+      { equalityFn: shallow }
+    )
 
     const unsubLight = useProjectStore.subscribe(
       (state) => state.lightDirection,
@@ -93,9 +98,18 @@ function PreviewCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { model, inputType, shapeType, shapeParams, textContent, fontSize,
-          extrudeDepth, bevelEnabled, fontFamily, imageSource } =
-    useProjectStore(useShallow(selectInputSource))
+  const {
+    model,
+    inputType,
+    shapeType,
+    shapeParams,
+    textContent,
+    fontSize,
+    extrudeDepth,
+    bevelEnabled,
+    fontFamily,
+    imageSource
+  } = useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
 
   useEffect(() => {
@@ -171,7 +185,18 @@ function PreviewCanvas() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputType, model, shapeType, shapeParams, textContent, fontFamily, fontSize, extrudeDepth, bevelEnabled, imageSource])
+  }, [
+    inputType,
+    model,
+    shapeType,
+    shapeParams,
+    textContent,
+    fontFamily,
+    fontSize,
+    extrudeDepth,
+    bevelEnabled,
+    imageSource
+  ])
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">
