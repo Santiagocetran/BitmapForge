@@ -14,9 +14,10 @@ export function analyzeScreenshot(pngBuffer) {
     : pngBuffer
 
   const img = UPNG.decode(buf)
-  // toRGBA8 is safe here — screenshots are always single-frame PNGs
+  // toRGBA8 is safe here — screenshots are always single-frame PNGs.
+  // Returns ArrayBuffer objects, not Uint8Arrays — must wrap.
   const frames = UPNG.toRGBA8(img)
-  const rgba = frames[0]
+  const rgba = new Uint8Array(frames[0])
   const pixels = rgba.length / 4
 
   const uniqueColors = new Set()

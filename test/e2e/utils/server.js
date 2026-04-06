@@ -16,11 +16,25 @@ const MIME = {
   '.stl': 'model/stl'
 }
 
-export function startStaticServer(dir) {
+/**
+ * @param {string} dir - primary root directory
+ * @param {Record<string, string>} [extraRoots] - URL prefix → directory mappings
+ */
+export function startStaticServer(dir, extraRoots = {}) {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const urlPath = req.url === '/' ? '/index.html' : req.url
-      const file = path.join(dir, urlPath.split('?')[0])
+      const cleanPath = urlPath.split('?')[0]
+
+      // Check extra roots first (longest-prefix match)
+      let file = null
+      for (const [prefix, root] of Object.entries(extraRoots)) {
+        if (cleanPath.startsWith(prefix)) {
+          file = path.join(root, cleanPath.slice(prefix.length))
+          break
+        }
+      }
+      if (!file) file = path.join(dir, cleanPath)
       try {
         const data = fs.readFileSync(file)
         const mime = MIME[path.extname(file)] ?? 'application/octet-stream'
