@@ -202,16 +202,12 @@ test.describe.serial('Export visual verification', () => {
       fs.writeFileSync(dest, await entry.async('nodebuffer'))
     }
 
-    // Patch index.html to add an import map so bare `import from 'three'` resolves
-    // without a bundler. three.module.js re-exports from three.core.js, so both are needed.
+    // Patch index.html with import map for bare `three` and `three/addons/` specifiers.
+    // three.module.js re-exports from three.core.js, so both are needed.
+    // Addons are served from node_modules via an extra root in the static server.
     const threeDir = path.resolve('node_modules/three/build')
     fs.copyFileSync(path.join(threeDir, 'three.core.js'), path.join(extractDir, 'three.core.js'))
     fs.copyFileSync(path.join(threeDir, 'three.module.js'), path.join(extractDir, 'three.module.js'))
-
-    // Patch index.html with import map for bare `three` and `three/addons/` specifiers.
-    // Both are served by the static server: three.* from the root, addons under /three-addons/.
-    fs.copyFileSync(path.resolve('node_modules/three/build/three.core.js'), path.join(extractDir, 'three.core.js'))
-    fs.copyFileSync(path.resolve('node_modules/three/build/three.module.js'), path.join(extractDir, 'three.module.js'))
 
     const indexPath = path.join(extractDir, 'BitmapForge-export/index.html')
     const origHtml = fs.readFileSync(indexPath, 'utf8')
