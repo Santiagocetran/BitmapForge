@@ -27,3 +27,9 @@ dist-ssr
 .worktrees/
 .claude/
 .gitnexus/
+.cursor/
+
+# Dev workflow dirs (recreated at runtime by agents/tools)
+COLLAB/
+SDD/
+docs/plans/
