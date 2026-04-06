@@ -37,7 +37,12 @@ const REQUIRED_PATHS = [
   'engine/postprocessing/PostProcessingChain.js',
   'engine/postprocessing/effects/CrtEffect.js',
   'engine/postprocessing/effects/NoiseEffect.js',
-  'engine/postprocessing/effects/ColorShiftEffect.js'
+  'engine/postprocessing/effects/ColorShiftEffect.js',
+  'engine/loaders/shapeGenerator.js',
+  'engine/loaders/textGenerator.js',
+  'engine/loaders/imageLoader.js',
+  'engine/plugins/PluginRegistry.js',
+  'engine/plugins/builtinPlugins.js'
 ]
 
 describe('ENGINE_SOURCES', () => {

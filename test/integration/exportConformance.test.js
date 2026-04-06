@@ -176,7 +176,7 @@ describe('React component ZIP conformance', () => {
   it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(35)
+    expect(engineFiles).toHaveLength(40)
   })
 })
 
@@ -212,7 +212,7 @@ describe('Web Component ZIP conformance', () => {
   it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(35)
+    expect(engineFiles).toHaveLength(40)
   })
 })
 
@@ -282,7 +282,7 @@ describe('Code ZIP conformance', () => {
   it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(35)
+    expect(engineFiles).toHaveLength(40)
   })
 })
 

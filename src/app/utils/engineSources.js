@@ -35,15 +35,21 @@ import PostProcessingChainSrc from '../../engine/postprocessing/PostProcessingCh
 import CrtEffectSrc from '../../engine/postprocessing/effects/CrtEffect.js?raw'
 import NoiseEffectSrc from '../../engine/postprocessing/effects/NoiseEffect.js?raw'
 import ColorShiftEffectSrc from '../../engine/postprocessing/effects/ColorShiftEffect.js?raw'
+import shapeGeneratorSrc from '../../engine/loaders/shapeGenerator.js?raw'
+import textGeneratorSrc from '../../engine/loaders/textGenerator.js?raw'
+import imageLoaderSrc from '../../engine/loaders/imageLoader.js?raw'
+import PluginRegistrySrc from '../../engine/plugins/PluginRegistry.js?raw'
+import builtinPluginsSrc from '../../engine/plugins/builtinPlugins.js?raw'
 
 // Each entry: { path, content }
 // path is relative to whatever root folder the consumer creates (e.g. 'engine/SceneManager.js')
 // Required entries (checked by engineSources.test.js):
 //   engine/index.js, engine/SceneManager.js, engine/effects/BaseEffect.js,
 //   engine/effects/BitmapEffect.js, engine/effects/ditherStrategies.js,
-//   engine/effects/fadeVariants/*, engine/renderers/*, engine/loaders/modelLoader.js,
+//   engine/effects/fadeVariants/*, engine/renderers/*, engine/loaders/*,
 //   engine/animation/*, engine/utils/seededRandom.js,
-//   engine/postprocessing/PostProcessingChain.js, engine/postprocessing/effects/*
+//   engine/postprocessing/PostProcessingChain.js, engine/postprocessing/effects/*,
+//   engine/plugins/*
 const ENGINE_SOURCES = [
   { path: 'engine/index.js', content: engineIndexSrc },
   { path: 'engine/SceneManager.js', content: SceneManagerSrc },
@@ -65,6 +71,9 @@ const ENGINE_SOURCES = [
   { path: 'engine/renderers/StippleRenderer.js', content: StippleRendererSrc },
   { path: 'engine/renderers/index.js', content: renderersIndexSrc },
   { path: 'engine/loaders/modelLoader.js', content: modelLoaderSrc },
+  { path: 'engine/loaders/shapeGenerator.js', content: shapeGeneratorSrc },
+  { path: 'engine/loaders/textGenerator.js', content: textGeneratorSrc },
+  { path: 'engine/loaders/imageLoader.js', content: imageLoaderSrc },
   { path: 'engine/animation/AnimationEngine.js', content: AnimationEngineSrc },
   { path: 'engine/animation/presets.js', content: presetsSrc },
   { path: 'engine/animation/effectTypes.js', content: effectTypesSrc },
@@ -79,7 +88,9 @@ const ENGINE_SOURCES = [
   { path: 'engine/postprocessing/PostProcessingChain.js', content: PostProcessingChainSrc },
   { path: 'engine/postprocessing/effects/CrtEffect.js', content: CrtEffectSrc },
   { path: 'engine/postprocessing/effects/NoiseEffect.js', content: NoiseEffectSrc },
-  { path: 'engine/postprocessing/effects/ColorShiftEffect.js', content: ColorShiftEffectSrc }
+  { path: 'engine/postprocessing/effects/ColorShiftEffect.js', content: ColorShiftEffectSrc },
+  { path: 'engine/plugins/PluginRegistry.js', content: PluginRegistrySrc },
+  { path: 'engine/plugins/builtinPlugins.js', content: builtinPluginsSrc }
 ]
 
 export { ENGINE_SOURCES }
