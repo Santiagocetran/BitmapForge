@@ -33,3 +33,6 @@ dist-ssr
 COLLAB/
 SDD/
 docs/plans/
+
+# On-demand export test artifacts (written by test:export and test:e2e)
+test/fixtures/outputs/

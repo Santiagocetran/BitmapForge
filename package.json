@@ -25,6 +25,9 @@
     "test:unit": "vitest run src",
     "test:integration": "vitest run test/integration",
     "test:exports": "vitest run src test/integration",
+    "test:export": "vitest run --config vitest.export.config.js",
+    "test:e2e": "playwright test",
+    "test:export:all": "npm run test:export && npm run test:e2e",
     "coverage": "vitest run --coverage",
     "prepare": "husky"
   },
