@@ -25,6 +25,9 @@
     "test:unit": "vitest run src",
     "test:integration": "vitest run test/integration",
     "test:exports": "vitest run src test/integration",
+    "test:export": "vitest run --config vitest.export.config.js",
+    "test:e2e": "playwright test",
+    "test:export:all": "npm run test:export && npm run test:e2e",
     "coverage": "vitest run --coverage",
     "prepare": "husky"
   },
@@ -64,6 +67,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/vite": "^4.1.13",
     "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^5.0.2",
