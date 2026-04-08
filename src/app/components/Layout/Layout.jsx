@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from 'zustand'
-import { Undo2, Redo2, ChevronDown } from 'lucide-react'
+import { Undo2, Redo2, ChevronDown, X } from 'lucide-react'
 import { InputSource } from '../InputSource/InputSource.jsx'
 import { PreviewCanvas } from '../PreviewCanvas/PreviewCanvas.jsx'
 import { ColorPalette } from '../ColorPalette/ColorPalette.jsx'
@@ -72,6 +72,7 @@ function UndoRedoBar() {
 
 function Layout() {
   const status = useProjectStore((state) => state.status)
+  const setStatus = useProjectStore((state) => state.setStatus)
 
   const hasError = Boolean(status.error) // Finding 20: remove useMemo
 
@@ -134,6 +135,14 @@ function Layout() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <span>{status.error}</span>
+            <button
+              type="button"
+              onClick={() => setStatus({ error: '' })}
+              aria-label="Dismiss error"
+              className="ml-auto shrink-0 rounded p-0.5 text-red-400 hover:text-red-200"
+            >
+              <X size={14} />
+            </button>
           </div>
         )}
         {status.loading && (
