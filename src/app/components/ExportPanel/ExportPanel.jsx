@@ -93,7 +93,7 @@ function ExportPanel() {
             key={value}
             type="button"
             onClick={() => setSelectedFormat(value)}
-            className={`${BTN.base} px-2 py-1 ${
+            className={`${BTN.base} px-1.5 py-1 ${
               selectedFormat === value ? 'bg-emerald-600 text-black' : 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600'
             }`}
           >

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from 'zustand'
-import { Undo2, Redo2, ChevronDown, X } from 'lucide-react'
+import { Undo2, Redo2, ChevronDown, X, Menu } from 'lucide-react'
 import { InputSource } from '../InputSource/InputSource.jsx'
 import { PreviewCanvas } from '../PreviewCanvas/PreviewCanvas.jsx'
 import { ColorPalette } from '../ColorPalette/ColorPalette.jsx'
@@ -76,9 +76,57 @@ function Layout() {
 
   const hasError = Boolean(status.error) // Finding 20: remove useMemo
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [sidebarOpen])
+
+  useEffect(() => {
+    if (!sidebarOpen) return
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setSidebarOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [sidebarOpen])
+
   return (
-    <main className="grid min-h-screen grid-cols-1 gap-3 p-2 lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <aside className="order-2 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto lg:order-1 lg:max-h-full">
+    <main className="relative flex min-h-screen flex-col p-2 lg:grid lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+      {/* Hamburger FAB — mobile only, hidden when drawer is open */}
+      {!sidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open settings"
+          aria-expanded={sidebarOpen}
+          aria-controls="mobile-sidebar"
+          className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-zinc-200 shadow-lg lg:hidden"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
+      <aside
+        id="mobile-sidebar"
+        aria-label="Settings panel"
+        className={`fixed inset-y-0 left-0 z-40 flex w-[300px] flex-col gap-3 overflow-y-auto bg-zinc-950 p-3 transition-transform duration-300 lg:static lg:inset-auto lg:z-auto lg:w-auto lg:translate-x-0 lg:bg-transparent lg:p-0 lg:order-1 lg:max-h-full ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        {/* Close button — mobile only */}
+        <div className="flex items-center justify-between lg:hidden">
+          <span className="text-sm font-semibold text-zinc-300">Settings</span>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close settings"
+            className="rounded p-1.5 text-zinc-400 hover:text-zinc-200"
+          >
+            <X size={16} />
+          </button>
+        </div>
         <UndoRedoBar />
         <Section title="Input">
           <InputSource />
@@ -109,7 +157,16 @@ function Layout() {
         </Section>
       </aside>
 
-      <section className="order-1 flex min-h-[300px] flex-col gap-2 sm:min-h-[360px] lg:order-2 lg:min-h-0">
+      {/* Backdrop — closes drawer on click, mobile only */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <section className="flex min-h-screen flex-col gap-2 lg:order-2 lg:min-h-0">
         {/* Finding 14: ARIA roles on status messages */}
         {status.message && (
           <div role="status" className="rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">
@@ -154,8 +211,7 @@ function Layout() {
             Loading model...
           </div>
         )}
-        {/* Finding 24: replace fixed h-[70vh] with min-h-[360px] flex-1 */}
-        <div className="min-h-[360px] flex-1 lg:min-h-0">
+        <div className="flex-1 lg:min-h-0">
           <PreviewCanvas />
         </div>
       </section>
