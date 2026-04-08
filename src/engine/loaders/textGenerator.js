@@ -7,11 +7,6 @@ const FONT_LOADERS = {
   helvetikerBold: () => import('three/examples/fonts/helvetiker_bold.typeface.json'),
   optimer: () => import('three/examples/fonts/optimer_regular.typeface.json'),
   optimerBold: () => import('three/examples/fonts/optimer_bold.typeface.json'),
-  gentilis: () => import('three/examples/fonts/gentilis_regular.typeface.json'),
-  gentilisBold: () => import('three/examples/fonts/gentilis_bold.typeface.json'),
-  droidSans: () => import('three/examples/fonts/droid/droid_sans_regular.typeface.json'),
-  droidSansBold: () => import('three/examples/fonts/droid/droid_sans_bold.typeface.json'),
-  droidSerif: () => import('three/examples/fonts/droid/droid_serif_regular.typeface.json'),
   droidMono: () => import('three/examples/fonts/droid/droid_sans_mono_regular.typeface.json')
 }
 
@@ -25,11 +20,6 @@ const FONT_LABELS = {
   helvetikerBold: 'Helvetiker Bold',
   optimer: 'Optimer',
   optimerBold: 'Optimer Bold',
-  gentilis: 'Gentilis',
-  gentilisBold: 'Gentilis Bold',
-  droidSans: 'Droid Sans',
-  droidSansBold: 'Droid Sans Bold',
-  droidSerif: 'Droid Serif',
   droidMono: 'Droid Mono'
 }
 

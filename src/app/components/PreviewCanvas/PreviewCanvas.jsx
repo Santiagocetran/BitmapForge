@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { shallow } from 'zustand/shallow'
 import { SceneManager } from '../../../engine/SceneManager.js'
@@ -111,6 +111,14 @@ function PreviewCanvas() {
     imageSource
   } = useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
+  const setModel = useProjectStore((state) => state.setModel)
+
+  const handleLoadDemo = useCallback(async () => {
+    const res = await fetch('/models/david_head.glb')
+    const blob = await res.blob()
+    const file = new File([blob], 'david_head.glb', { type: 'model/gltf-binary' })
+    setModel(file)
+  }, [setModel])
 
   useEffect(() => {
     const manager = sceneManagerRef.current
@@ -208,22 +216,31 @@ function PreviewCanvas() {
         </div>
       )}
       {inputType === 'model' && !model && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-600">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-10 w-10"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+          <div className="pointer-events-none flex flex-col items-center gap-2 text-zinc-600">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-10 w-10"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+              />
+            </svg>
+            <p className="text-sm">Upload a model to get started</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLoadDemo}
+            className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-            />
-          </svg>
-          <p className="text-sm">Upload a model to preview it here</p>
+            Try demo model
+          </button>
         </div>
       )}
     </div>
