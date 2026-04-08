@@ -111,7 +111,19 @@ function PreviewCanvas() {
     imageSource
   } = useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
+  const statusError = useProjectStore((state) => state.status.error)
+  const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
+
+  const handleDismissError = useCallback(() => {
+    if (inputType === 'model') {
+      setModel(null)
+    }
+    setStatus({ error: '' })
+  }, [inputType, setModel, setStatus])
+
+  const errorCtaLabel =
+    inputType === 'model' ? 'Upload different file' : inputType === 'image' ? 'Upload different image' : 'Dismiss'
 
   const handleLoadDemo = useCallback(async () => {
     const res = await fetch('/models/david_head.glb')
@@ -215,7 +227,31 @@ function PreviewCanvas() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-emerald-400" />
         </div>
       )}
-      {inputType === 'model' && !model && !isLoading && (
+      {statusError && !isLoading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950/85 px-6">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-8 w-8 shrink-0 text-red-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <p className="text-center text-sm text-red-300">{statusError}</p>
+          <button
+            type="button"
+            onClick={handleDismissError}
+            className="rounded-md bg-zinc-800 px-4 py-1.5 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
+          >
+            {errorCtaLabel}
+          </button>
+        </div>
+      )}
+      {inputType === 'model' && !model && !isLoading && !statusError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
           <div className="pointer-events-none flex flex-col items-center gap-2 text-zinc-600">
             <svg

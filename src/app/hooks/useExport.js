@@ -288,6 +288,7 @@ function useExport(sceneManagerRef) {
       downloadBlob(blob, filename)
       setStatus({ exporting: false, message: handler.successMessage })
     } catch (error) {
+      console.error('[BitmapForge] Export error:', error)
       setStatus({ exporting: false, error: friendlyExportError(error) })
     }
   }
@@ -302,6 +303,7 @@ function useExport(sceneManagerRef) {
       await saveProjectFile(getState())
       setStatus({ message: 'Project saved as .bitmapforge file.' })
     } catch (error) {
+      console.error('[BitmapForge] Save error:', error)
       setStatus({ error: friendlyExportError(error) })
     }
   }
