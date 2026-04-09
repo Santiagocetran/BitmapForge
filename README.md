@@ -1,6 +1,6 @@
 <div align="center">
 
-<video src="./public/BitmapForge-demo.webm" autoplay loop muted playsinline width="100%"></video>
+![BitmapForge Demo](./docs/demo.gif)
 
 # BitmapForge
 
