@@ -1,6 +1,6 @@
 <div align="center">
 
-![BitmapForge Demo](./docs/demo.gif)
+<video src="./public/BitmapForge-demo.webm" autoplay loop muted playsinline width="100%"></video>
 
 # BitmapForge
 
@@ -153,7 +153,7 @@ Open the local URL printed by Vite — that's it.
 npm run build         # Production build → dist/ (also builds embed SDK first)
 npm run build:embed   # Build embed SDK → copies to public/embed/
 npm run preview       # Preview production build locally
-npm test              # Run all tests (469 tests across 27 files)
+npm test              # Run all tests (540 tests across 37 files)
 ```
 
 ---
@@ -232,8 +232,8 @@ Look for issues tagged [`good first issue`](https://github.com/Santiagocetran/Bi
 A few things on the horizon:
 
 - [ ] Per-layer color palettes and animation controls
-- [ ] Plugin/extension API for custom renderers
-- [ ] Playwright E2E test suite
+- [x] Plugin/extension API for custom renderers
+- [x] Playwright E2E test suite
 - [ ] More export targets (SVG animation, Three.js scene)
 - [ ] Mobile-optimized UI
 
