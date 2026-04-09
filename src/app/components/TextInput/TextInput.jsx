@@ -105,10 +105,7 @@ function TextInput() {
           />
           Bevel
         </label>
-        <button
-          onClick={resetTextConfig}
-          className="text-xs text-zinc-500 hover:text-zinc-300"
-        >
+        <button onClick={resetTextConfig} className="text-xs text-zinc-500 hover:text-zinc-300">
           Reset defaults
         </button>
       </div>

@@ -153,7 +153,10 @@ function PalettePresets({ onApply }) {
           </button>
           <button
             type="button"
-            onClick={() => { setShowSaveInput(false); setSaveName('') }}
+            onClick={() => {
+              setShowSaveInput(false)
+              setSaveName('')
+            }}
             className={`${BTN.base} ${BTN.secondary} text-xs`}
           >
             Cancel
@@ -201,52 +204,52 @@ function ColorPalette() {
       <PalettePresets onApply={setColors} />
 
       <div className="border-t border-zinc-800 pt-3">
-      {/* Finding 26: clearer label with tooltip */}
-      <div className="mb-2 flex items-center justify-between text-xs tracking-wide text-zinc-400">
-        <span>Dark (shadows)</span>
-        <span className="flex items-center gap-1">
-          Bright (highlights)
-          <InfoTooltip content="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder. Double-click a swatch to edit its color." />
-        </span>
-      </div>
+        {/* Finding 26: clearer label with tooltip */}
+        <div className="mb-2 flex items-center justify-between text-xs tracking-wide text-zinc-400">
+          <span>Dark (shadows)</span>
+          <span className="flex items-center gap-1">
+            Bright (highlights)
+            <InfoTooltip content="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder. Double-click a swatch to edit its color." />
+          </span>
+        </div>
 
-      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-2">
-            {colors.map((color, index) => (
-              <SortableColor
-                key={ids[index]}
-                id={ids[index]}
-                color={color}
-                isOpen={openPickerId === ids[index]}
-                onOpen={() => setOpenPickerId(ids[index])}
-                onClose={() => setOpenPickerId(null)}
-                onColorChange={(nextColor) => setColorAt(index, nextColor)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
+            <div className="flex gap-2">
+              {colors.map((color, index) => (
+                <SortableColor
+                  key={ids[index]}
+                  id={ids[index]}
+                  color={color}
+                  isOpen={openPickerId === ids[index]}
+                  onOpen={() => setOpenPickerId(ids[index])}
+                  onClose={() => setOpenPickerId(null)}
+                  onColorChange={(nextColor) => setColorAt(index, nextColor)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
-      {/* Finding 22: standardized button styles */}
-      <div className="mt-2 flex gap-2">
-        <button
-          type="button"
-          className={`${BTN.base} ${BTN.secondary}`}
-          onClick={() => addColor()}
-          disabled={colors.length >= 6}
-        >
-          Add
-        </button>
-        <button
-          type="button"
-          className={`${BTN.base} ${BTN.secondary}`}
-          onClick={() => removeColor(colors.length - 1)}
-          disabled={colors.length <= 2}
-        >
-          Remove
-        </button>
-      </div>
+        {/* Finding 22: standardized button styles */}
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            className={`${BTN.base} ${BTN.secondary}`}
+            onClick={() => addColor()}
+            disabled={colors.length >= 6}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            className={`${BTN.base} ${BTN.secondary}`}
+            onClick={() => removeColor(colors.length - 1)}
+            disabled={colors.length <= 2}
+          >
+            Remove
+          </button>
+        </div>
       </div>
     </section>
   )
