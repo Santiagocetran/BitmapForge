@@ -13,7 +13,8 @@ export default [
       'packages/cli/dist/',
       'packages/embed/dist/',
       '.claude/',
-      '.worktrees/'
+      '.worktrees/',
+      'test/fixtures/outputs/'
     ]
   },
   js.configs.recommended,
