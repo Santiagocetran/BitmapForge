@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest a new feature or improvement for BitmapForge
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? We'd love to hear it. Please describe the problem you're trying to solve.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the workflow or limitation that motivates this request.
+      placeholder: I'm a pixel artist and I often need to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see added or changed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Are there other ways to achieve this? Why is your proposal better?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Who is this for?
+      description: Which type of user would benefit most?
+      options:
+        - Pixel artist
+        - Indie game developer
+        - Web developer / embedder
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, mockups, links to similar tools, or any other useful context.
+    validations:
+      required: false

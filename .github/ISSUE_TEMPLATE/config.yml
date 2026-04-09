@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or share feedback
+    url: https://github.com/Santiagocetran/BitmapForge/discussions
+    about: Use GitHub Discussions for questions, ideas, and general feedback.
