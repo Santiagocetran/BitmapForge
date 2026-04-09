@@ -108,6 +108,7 @@ function PreviewCanvas() {
     extrudeDepth,
     bevelEnabled,
     fontFamily,
+    letterSpacing,
     imageSource
   } = useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
@@ -166,7 +167,7 @@ function PreviewCanvas() {
       case 'text': {
         useProjectStore.getState().setStatus({ loading: true, error: '' })
         manager
-          .loadText(textContent, { fontFamily, fontSize, extrudeDepth, bevelEnabled })
+          .loadText(textContent, { fontFamily, fontSize, extrudeDepth, bevelEnabled, letterSpacing })
           .then(() => {
             if (!cancelled && sceneManagerRef.current === manager) {
               useProjectStore.getState().setStatus({ loading: false, message: '' })
@@ -215,6 +216,7 @@ function PreviewCanvas() {
     fontSize,
     extrudeDepth,
     bevelEnabled,
+    letterSpacing,
     imageSource
   ])
 

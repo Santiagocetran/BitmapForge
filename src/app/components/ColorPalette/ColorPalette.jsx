@@ -5,6 +5,8 @@ import { HexColorPicker } from 'react-colorful'
 import { useState, useRef, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useProjectStore } from '../../store/useProjectStore.js'
+import { usePresetStore } from '../../store/usePresetStore.js'
+import { BUILT_IN_PRESETS } from '../../data/builtInPresets.js'
 import { BTN } from '../../styles/buttonStyles.js'
 import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
@@ -89,6 +91,90 @@ function SortableColor({ color, id, isOpen, onOpen, onClose, onColorChange }) {
   )
 }
 
+function PalettePresets({ onApply }) {
+  const { customPresets, saveCurrentPreset, deletePreset } = usePresetStore()
+  const [saveName, setSaveName] = useState('')
+  const [showSaveInput, setShowSaveInput] = useState(false)
+
+  function onSave() {
+    const name = saveName.trim()
+    if (!name) return
+    saveCurrentPreset(name)
+    setSaveName('')
+    setShowSaveInput(false)
+  }
+
+  const allPresets = [...BUILT_IN_PRESETS, ...customPresets]
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1">
+        {allPresets.map((preset) => (
+          <div key={preset.id} className="group relative">
+            <button
+              type="button"
+              onClick={() => onApply(preset.settings.colors)}
+              className="flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 hover:border-zinc-500 focus:border-emerald-500 focus:outline-none"
+            >
+              <div className="flex gap-0.5">
+                {preset.settings.colors.slice(0, 4).map((c, i) => (
+                  <div key={i} className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: c }} />
+                ))}
+              </div>
+              <span className="text-xs text-zinc-300">{preset.name}</span>
+            </button>
+            {preset.category === 'custom' && (
+              <button
+                type="button"
+                onClick={() => deletePreset(preset.id)}
+                className="absolute -right-1 -top-1 hidden h-3.5 w-3.5 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 hover:text-red-400 group-hover:flex"
+                aria-label={`Delete preset ${preset.name}`}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {showSaveInput ? (
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onSave()}
+            placeholder="Preset name…"
+            autoFocus
+            className="min-w-0 flex-1 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+          <button type="button" onClick={onSave} className={`${BTN.base} ${BTN.primary} text-xs`}>
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSaveInput(false)
+              setSaveName('')
+            }}
+            className={`${BTN.base} ${BTN.secondary} text-xs`}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowSaveInput(true)}
+          className={`w-full ${BTN.base} ${BTN.secondary} text-xs`}
+        >
+          + Save current as preset
+        </button>
+      )}
+    </div>
+  )
+}
+
 function ColorPalette() {
   // Finding 19: combine selectors with useShallow
   const { colors, setColors, addColor, removeColor, setColorAt } = useProjectStore(
@@ -114,52 +200,56 @@ function ColorPalette() {
   }
 
   return (
-    <section className="space-y-2">
-      {/* Finding 26: clearer label with tooltip */}
-      <div className="flex items-center justify-between text-xs tracking-wide text-zinc-400">
-        <span>Dark (shadows)</span>
-        <span className="flex items-center gap-1">
-          Bright (highlights)
-          <InfoTooltip content="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder. Double-click a swatch to edit its color." />
-        </span>
-      </div>
+    <section className="space-y-3">
+      <PalettePresets onApply={setColors} />
 
-      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-2">
-            {colors.map((color, index) => (
-              <SortableColor
-                key={ids[index]}
-                id={ids[index]}
-                color={color}
-                isOpen={openPickerId === ids[index]}
-                onOpen={() => setOpenPickerId(ids[index])}
-                onClose={() => setOpenPickerId(null)}
-                onColorChange={(nextColor) => setColorAt(index, nextColor)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="border-t border-zinc-800 pt-3">
+        {/* Finding 26: clearer label with tooltip */}
+        <div className="mb-2 flex items-center justify-between text-xs tracking-wide text-zinc-400">
+          <span>Dark (shadows)</span>
+          <span className="flex items-center gap-1">
+            Bright (highlights)
+            <InfoTooltip content="Colors are mapped by brightness: leftmost = darkest areas, rightmost = brightest areas. Drag to reorder. Double-click a swatch to edit its color." />
+          </span>
+        </div>
 
-      {/* Finding 22: standardized button styles */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className={`${BTN.base} ${BTN.secondary}`}
-          onClick={() => addColor()}
-          disabled={colors.length >= 6}
-        >
-          Add
-        </button>
-        <button
-          type="button"
-          className={`${BTN.base} ${BTN.secondary}`}
-          onClick={() => removeColor(colors.length - 1)}
-          disabled={colors.length <= 2}
-        >
-          Remove
-        </button>
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
+            <div className="flex gap-2">
+              {colors.map((color, index) => (
+                <SortableColor
+                  key={ids[index]}
+                  id={ids[index]}
+                  color={color}
+                  isOpen={openPickerId === ids[index]}
+                  onOpen={() => setOpenPickerId(ids[index])}
+                  onClose={() => setOpenPickerId(null)}
+                  onColorChange={(nextColor) => setColorAt(index, nextColor)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        {/* Finding 22: standardized button styles */}
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            className={`${BTN.base} ${BTN.secondary}`}
+            onClick={() => addColor()}
+            disabled={colors.length >= 6}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            className={`${BTN.base} ${BTN.secondary}`}
+            onClick={() => removeColor(colors.length - 1)}
+            disabled={colors.length <= 2}
+          >
+            Remove
+          </button>
+        </div>
       </div>
     </section>
   )

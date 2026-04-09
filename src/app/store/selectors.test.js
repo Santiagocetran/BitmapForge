@@ -50,6 +50,7 @@ function makeState() {
     extrudeDepth: 0.2,
     bevelEnabled: false,
     fontFamily: 'helvetiker',
+    letterSpacing: 0,
     imageSource: null
   }
 }
@@ -128,7 +129,7 @@ describe('selectAnimationOptions', () => {
 })
 
 describe('selectInputSource', () => {
-  it('returns object with all 10 input source fields', () => {
+  it('returns object with all 11 input source fields', () => {
     const result = selectInputSource(makeState())
     const keys = [
       'inputType',
@@ -140,6 +141,7 @@ describe('selectInputSource', () => {
       'extrudeDepth',
       'bevelEnabled',
       'fontFamily',
+      'letterSpacing',
       'imageSource'
     ]
     for (const key of keys) {
