@@ -25,23 +25,23 @@ Upload a GLB, OBJ, or STL — pick a dither style, color palette, and animation 
 
 ### Input
 
-| Type         | Description                                               |
-| ------------ | --------------------------------------------------------- |
+| Type         | Description                                              |
+| ------------ | -------------------------------------------------------- |
 | **3D Model** | Upload STL, OBJ, GLTF, or GLB                            |
-| **Shape**    | Built-in primitives: cube, sphere, torus, cone, and more  |
-| **Text**     | Extruded 3D text with 10 font families                    |
-| **Image**    | PNG/JPG/SVG rendered as a flat plane                      |
+| **Shape**    | Built-in primitives: cube, sphere, torus, cone, and more |
+| **Text**     | Extruded 3D text with 10 font families                   |
+| **Image**    | PNG/JPG/SVG rendered as a flat plane                     |
 
 ### Render Styles
 
-| Renderer       | Description                                          |
-| -------------- | ---------------------------------------------------- |
-| **Bitmap**     | Classic Bayer dithering (4×4 / 8×8) or variable dot  |
-| **Pixel Art**  | Clean flat squares, no dithering                     |
-| **Halftone**   | Circular/diamond dot grid, CMYK mode included        |
-| **LED Matrix** | Glowing LED sign board look                          |
-| **Stipple**    | Pointillist/stipple art style                        |
-| **ASCII**      | Text-based rendering with custom character sets      |
+| Renderer       | Description                                         |
+| -------------- | --------------------------------------------------- |
+| **Bitmap**     | Classic Bayer dithering (4×4 / 8×8) or variable dot |
+| **Pixel Art**  | Clean flat squares, no dithering                    |
+| **Halftone**   | Circular/diamond dot grid, CMYK mode included       |
+| **LED Matrix** | Glowing LED sign board look                         |
+| **Stipple**    | Pointillist/stipple art style                       |
+| **ASCII**      | Text-based rendering with custom character sets     |
 
 ### Animation
 
@@ -56,19 +56,19 @@ Upload a GLB, OBJ, or STL — pick a dither style, color palette, and animation 
 
 ### Export
 
-| Format              | Use Case                                                                 |
-| ------------------- | ------------------------------------------------------------------------ |
-| **APNG**            | Full-color + alpha, web-ready _(default)_                                |
-| **GIF**             | Universal compatibility                                                  |
-| **WebM**            | Game engines, video editors                                              |
-| **Sprite Sheet**    | Tilemap workflows, game frameworks                                       |
-| **Standalone HTML** | Drop one file anywhere, it just works                                    |
-| **Embed ZIP**       | Embed with one `<bitmap-forge>` tag — no npm needed                      |
-| **React Component** | Drop into any React project                                              |
-| **Web Component**   | Framework-agnostic custom element                                        |
-| **CSS Keyframes**   | Pure CSS animation, no JS required                                       |
-| **Lottie JSON**     | Motion design pipelines                                                  |
-| **Code ZIP**        | Full Vite project with engine source to self-host                        |
+| Format              | Use Case                                            |
+| ------------------- | --------------------------------------------------- |
+| **APNG**            | Full-color + alpha, web-ready _(default)_           |
+| **GIF**             | Universal compatibility                             |
+| **WebM**            | Game engines, video editors                         |
+| **Sprite Sheet**    | Tilemap workflows, game frameworks                  |
+| **Standalone HTML** | Drop one file anywhere, it just works               |
+| **Embed ZIP**       | Embed with one `<bitmap-forge>` tag — no npm needed |
+| **React Component** | Drop into any React project                         |
+| **Web Component**   | Framework-agnostic custom element                   |
+| **CSS Keyframes**   | Pure CSS animation, no JS required                  |
+| **Lottie JSON**     | Motion design pipelines                             |
+| **Code ZIP**        | Full Vite project with engine source to self-host   |
 
 ---
 
@@ -90,16 +90,16 @@ npm test         # Run all tests (540 across 37 files)
 
 ## Tech Stack
 
-| Layer         | Tech                    |
-| ------------- | ----------------------- |
-| 3D Rendering  | Three.js                |
-| Framework     | React 19 + Vite 7       |
-| Styling       | Tailwind CSS 4          |
-| State         | Zustand                 |
-| UI Primitives | Radix UI                |
-| GIF Export    | gif.js                  |
-| APNG Export   | upng-js                 |
-| ZIP Export    | JSZip                   |
+| Layer         | Tech              |
+| ------------- | ----------------- |
+| 3D Rendering  | Three.js          |
+| Framework     | React 19 + Vite 7 |
+| Styling       | Tailwind CSS 4    |
+| State         | Zustand           |
+| UI Primitives | Radix UI          |
+| GIF Export    | gif.js            |
+| APNG Export   | upng-js           |
+| ZIP Export    | JSZip             |
 
 ---
 
