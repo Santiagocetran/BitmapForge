@@ -3,4 +3,5 @@ public/embed/
 packages/embed/dist/
 node_modules/
 LICENSE
+CODE_OF_CONDUCT.md
 test/fixtures/outputs/
