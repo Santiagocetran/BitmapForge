@@ -10,7 +10,6 @@ import { LightDirection } from '../LightDirection/LightDirection.jsx'
 import { RotationGizmoPanel } from '../RotationGizmo/RotationGizmoPanel.jsx'
 import { ExportPanel } from '../ExportPanel/ExportPanel.jsx'
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary.jsx'
-import { PresetGallery } from '../PresetGallery/PresetGallery.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
 
 function Section({ title, children, defaultOpen = true }) {
@@ -131,10 +130,7 @@ function Layout() {
         <Section title="Input">
           <InputSource />
         </Section>
-        <Section title="Presets">
-          <PresetGallery />
-        </Section>
-        <Section title="Color Strip">
+        <Section title="Color Palette">
           <ColorPalette />
         </Section>
         <Section title="Quality">
