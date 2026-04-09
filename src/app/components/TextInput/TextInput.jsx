@@ -14,6 +14,7 @@ function TextInput() {
   const setBevelEnabled = useProjectStore((state) => state.setBevelEnabled)
   const setFontFamily = useProjectStore((state) => state.setFontFamily)
   const setLetterSpacing = useProjectStore((state) => state.setLetterSpacing)
+  const resetTextConfig = useProjectStore((state) => state.resetTextConfig)
 
   return (
     <div className="space-y-3">
@@ -94,15 +95,23 @@ function TextInput() {
         />
       </div>
 
-      <label className="flex items-center gap-2 text-xs text-zinc-400">
-        <input
-          type="checkbox"
-          checked={bevelEnabled}
-          onChange={(e) => setBevelEnabled(e.target.checked)}
-          className="accent-emerald-500"
-        />
-        Bevel
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-xs text-zinc-400">
+          <input
+            type="checkbox"
+            checked={bevelEnabled}
+            onChange={(e) => setBevelEnabled(e.target.checked)}
+            className="accent-emerald-500"
+          />
+          Bevel
+        </label>
+        <button
+          onClick={resetTextConfig}
+          className="text-xs text-zinc-500 hover:text-zinc-300"
+        >
+          Reset defaults
+        </button>
+      </div>
     </div>
   )
 }

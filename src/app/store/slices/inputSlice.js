@@ -40,5 +40,14 @@ export const createInputSlice = (set, _get) => ({
   setBevelEnabled: (bevelEnabled) => set({ bevelEnabled }),
   setFontFamily: (fontFamily) => set({ fontFamily }),
   setLetterSpacing: (letterSpacing) => set({ letterSpacing }),
+  resetTextConfig: () =>
+    set({
+      textContent: INPUT_DEFAULTS.textContent,
+      fontSize: INPUT_DEFAULTS.fontSize,
+      extrudeDepth: INPUT_DEFAULTS.extrudeDepth,
+      bevelEnabled: INPUT_DEFAULTS.bevelEnabled,
+      fontFamily: INPUT_DEFAULTS.fontFamily,
+      letterSpacing: INPUT_DEFAULTS.letterSpacing
+    }),
   setImageSource: (imageSource) => set({ imageSource })
 })
