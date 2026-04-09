@@ -45,8 +45,6 @@ Not just 3D models — four input types supported:
 
 A **model scale slider** lets you normalize any model to fit the viewport regardless of original size.
 
-![UI Screenshot](./docs/screenshot-ui.png)
-
 ---
 
 ### 🎨 Multiple Render Styles
@@ -67,8 +65,6 @@ A **model scale slider** lets you normalize any model to fit the viewport regard
 Drag and reorder up to 6 colors. The palette is brightness-mapped: leftmost = shadows, rightmost = highlights.
 
 **Color-only presets** let you swap palette themes without touching dither type, pixel size, or other settings.
-
-![Color Palette](./docs/screenshot-palette.png)
 
 ---
 
