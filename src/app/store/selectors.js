@@ -50,5 +50,6 @@ export const selectInputSource = (state) => ({
   extrudeDepth: state.extrudeDepth,
   bevelEnabled: state.bevelEnabled,
   fontFamily: state.fontFamily,
+  letterSpacing: state.letterSpacing,
   imageSource: state.imageSource
 })

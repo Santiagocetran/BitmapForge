@@ -8,6 +8,7 @@ export const INPUT_DEFAULTS = {
   extrudeDepth: 0.3,
   bevelEnabled: true,
   fontFamily: 'helvetiker',
+  letterSpacing: 0,
   imageSource: null
 }
 
@@ -38,5 +39,6 @@ export const createInputSlice = (set, _get) => ({
   setExtrudeDepth: (extrudeDepth) => set({ extrudeDepth: Math.max(0.05, extrudeDepth) }),
   setBevelEnabled: (bevelEnabled) => set({ bevelEnabled }),
   setFontFamily: (fontFamily) => set({ fontFamily }),
+  setLetterSpacing: (letterSpacing) => set({ letterSpacing }),
   setImageSource: (imageSource) => set({ imageSource })
 })

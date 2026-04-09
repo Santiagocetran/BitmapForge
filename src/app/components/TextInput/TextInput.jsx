@@ -7,23 +7,25 @@ function TextInput() {
   const extrudeDepth = useProjectStore((state) => state.extrudeDepth)
   const bevelEnabled = useProjectStore((state) => state.bevelEnabled)
   const fontFamily = useProjectStore((state) => state.fontFamily)
+  const letterSpacing = useProjectStore((state) => state.letterSpacing)
   const setTextContent = useProjectStore((state) => state.setTextContent)
   const setFontSize = useProjectStore((state) => state.setFontSize)
   const setExtrudeDepth = useProjectStore((state) => state.setExtrudeDepth)
   const setBevelEnabled = useProjectStore((state) => state.setBevelEnabled)
   const setFontFamily = useProjectStore((state) => state.setFontFamily)
+  const setLetterSpacing = useProjectStore((state) => state.setLetterSpacing)
 
   return (
     <div className="space-y-3">
       <div>
         <label className="mb-1 block text-xs text-zinc-400">Text</label>
-        <input
-          type="text"
+        <textarea
           value={textContent}
           onChange={(e) => setTextContent(e.target.value)}
           placeholder="BitmapForge"
-          className="w-full rounded bg-zinc-800 px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          maxLength={32}
+          rows={3}
+          maxLength={200}
+          className="w-full resize-none rounded bg-zinc-800 px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
       </div>
 
@@ -36,6 +38,8 @@ function TextInput() {
         >
           <option value="helvetiker">Helvetiker</option>
           <option value="helvetikerBold">Helvetiker Bold</option>
+          <option value="gentilisRegular">Gentilis</option>
+          <option value="gentilisBold">Gentilis Bold</option>
           <option value="optimer">Optimer</option>
           <option value="optimerBold">Optimer Bold</option>
           <option value="droidMono">Droid Mono</option>
@@ -54,6 +58,22 @@ function TextInput() {
           step="0.1"
           value={fontSize}
           onChange={(e) => setFontSize(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="flex justify-between text-xs text-zinc-400">
+          <span>Letter Spacing</span>
+          <span>{letterSpacing.toFixed(2)}</span>
+        </label>
+        <input
+          type="range"
+          min="-0.2"
+          max="1"
+          step="0.05"
+          value={letterSpacing}
+          onChange={(e) => setLetterSpacing(Number(e.target.value))}
           className="w-full"
         />
       </div>
