@@ -21,8 +21,10 @@ function AnimationControls() {
   const animationSpeed = useProjectStore((state) => state.animationSpeed)
   const showPhaseDuration = useProjectStore((state) => state.showPhaseDuration)
   const animationDuration = useProjectStore((state) => state.animationDuration)
+  const fadeMode = useProjectStore((state) => state.fadeMode)
   const setUseFadeInOut = useProjectStore((state) => state.setUseFadeInOut)
   const setFadeVariant = useProjectStore((state) => state.setFadeVariant)
+  const setFadeMode = useProjectStore((state) => state.setFadeMode)
   const setAnimationEffect = useProjectStore((state) => state.setAnimationEffect)
   const setAnimationSpeed = useProjectStore((state) => state.setAnimationSpeed)
   const setShowPhaseDuration = useProjectStore((state) => state.setShowPhaseDuration)
@@ -39,6 +41,25 @@ function AnimationControls() {
 
         {useFadeInOut && (
           <div className="space-y-1.5 pl-1">
+            <span className="text-xs font-medium text-zinc-400">Direction</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'both', label: 'Both' },
+                { key: 'in', label: 'Fade in only' },
+                { key: 'out', label: 'Fade out only' }
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
+                  <input
+                    type="radio"
+                    name="fade-mode"
+                    value={key}
+                    checked={(fadeMode ?? 'both') === key}
+                    onChange={() => setFadeMode(key)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
             <span className="text-xs font-medium text-zinc-400">Style</span>
             <div className="flex flex-wrap gap-2">
               {FADE_VARIANT_KEYS.map((key) => (

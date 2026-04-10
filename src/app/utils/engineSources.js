@@ -6,10 +6,12 @@ import BaseEffectSrc from '../../engine/effects/BaseEffect.js?raw'
 import BitmapEffectSrc from '../../engine/effects/BitmapEffect.js?raw'
 import ditherStrategiesSrc from '../../engine/effects/ditherStrategies.js?raw'
 import BaseFadeVariantSrc from '../../engine/effects/fadeVariants/BaseFadeVariant.js?raw'
-import BloomVariantSrc from '../../engine/effects/fadeVariants/BloomVariant.js?raw'
 import CascadeVariantSrc from '../../engine/effects/fadeVariants/CascadeVariant.js?raw'
 import StaticVariantSrc from '../../engine/effects/fadeVariants/StaticVariant.js?raw'
 import GlitchVariantSrc from '../../engine/effects/fadeVariants/GlitchVariant.js?raw'
+import DriftVariantSrc from '../../engine/effects/fadeVariants/DriftVariant.js?raw'
+import SweepVariantSrc from '../../engine/effects/fadeVariants/SweepVariant.js?raw'
+import VortexVariantSrc from '../../engine/effects/fadeVariants/VortexVariant.js?raw'
 import fadeVariantsIndexSrc from '../../engine/effects/fadeVariants/index.js?raw'
 import BaseRendererSrc from '../../engine/renderers/BaseRenderer.js?raw'
 import BitmapRendererSrc from '../../engine/renderers/BitmapRenderer.js?raw'
@@ -57,10 +59,12 @@ const ENGINE_SOURCES = [
   { path: 'engine/effects/BitmapEffect.js', content: BitmapEffectSrc },
   { path: 'engine/effects/ditherStrategies.js', content: ditherStrategiesSrc },
   { path: 'engine/effects/fadeVariants/BaseFadeVariant.js', content: BaseFadeVariantSrc },
-  { path: 'engine/effects/fadeVariants/BloomVariant.js', content: BloomVariantSrc },
   { path: 'engine/effects/fadeVariants/CascadeVariant.js', content: CascadeVariantSrc },
   { path: 'engine/effects/fadeVariants/StaticVariant.js', content: StaticVariantSrc },
   { path: 'engine/effects/fadeVariants/GlitchVariant.js', content: GlitchVariantSrc },
+  { path: 'engine/effects/fadeVariants/DriftVariant.js', content: DriftVariantSrc },
+  { path: 'engine/effects/fadeVariants/SweepVariant.js', content: SweepVariantSrc },
+  { path: 'engine/effects/fadeVariants/VortexVariant.js', content: VortexVariantSrc },
   { path: 'engine/effects/fadeVariants/index.js', content: fadeVariantsIndexSrc },
   { path: 'engine/renderers/BaseRenderer.js', content: BaseRendererSrc },
   { path: 'engine/renderers/BitmapRenderer.js', content: BitmapRendererSrc },

@@ -48,7 +48,7 @@ class BitmapEffect extends BaseEffect {
     this._postChain.addEffect('colorShift', new ColorShiftEffect())
 
     // Active fade variant — recreated whenever options.fadeVariant changes.
-    const initialVariant = this.options.fadeVariant ?? 'bloom'
+    const initialVariant = this.options.fadeVariant ?? 'cascade'
     this.fadeVariant = createFadeVariant(initialVariant)
     this._currentFadeVariantKey = initialVariant
   }
@@ -122,7 +122,7 @@ class BitmapEffect extends BaseEffect {
 
     // Swap variant instance when the store option changes and restart the fade
     // so the new style plays immediately from the beginning.
-    const wantedVariant = this.options.fadeVariant ?? 'bloom'
+    const wantedVariant = this.options.fadeVariant ?? 'cascade'
     if (wantedVariant !== this._currentFadeVariantKey) {
       this._currentFadeVariantKey = wantedVariant
       this.fadeVariant = createFadeVariant(wantedVariant)

@@ -10,7 +10,7 @@ function makeState(overrides = {}) {
     minBrightness: 0.05,
     backgroundColor: '#0a0a0a',
     animationDuration: 2500,
-    fadeVariant: 'bloom',
+    fadeVariant: 'cascade',
     renderMode: 'bitmap',
     model: null,
     useFadeInOut: true,

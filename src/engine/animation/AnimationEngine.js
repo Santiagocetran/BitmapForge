@@ -13,6 +13,7 @@ const EFFECT_ORDER = ['spinX', 'spinY', 'spinZ', 'float', 'bounce', 'pulse', 'sh
 class AnimationEngine {
   constructor() {
     this.useFadeInOut = true
+    this.fadeMode = 'both'
     this.animationEffects = { ...DEFAULT_ANIMATION_EFFECTS }
     this.speed = ANIMATION_PRESETS.spinY.defaultSpeed
     this.showPhaseDuration = 20000
@@ -101,6 +102,9 @@ class AnimationEngine {
 
   setFadeOptions(options = {}) {
     if (typeof options.useFadeInOut === 'boolean') this.useFadeInOut = options.useFadeInOut
+    if (options.fadeMode === 'both' || options.fadeMode === 'in' || options.fadeMode === 'out') {
+      this.fadeMode = options.fadeMode
+    }
     if (options.animationEffects && typeof options.animationEffects === 'object') {
       this.animationEffects = { ...this.animationEffects, ...options.animationEffects }
     }
@@ -212,26 +216,65 @@ class AnimationEngine {
 
     const now = performance.now()
     const currentPhase = effect.getAnimationPhase()
-    if (currentPhase === 'fadeIn' && effect.isAnimationComplete()) {
-      effect.startAnimation('show')
-      this.phaseStartTime = now
-      // Do NOT call applyEffects here. The transition frame must render at the same
-      // rotation the particles were computed from — any increment would cause a visible
-      // tilt as the static render snaps to a different pose than the particle positions.
-      // Rotation begins on the next frame when the show branch runs normally.
-    } else if (currentPhase === 'show') {
-      this.applyEffects(modelGroup, deltaSeconds, camera)
-      this._applyResetTransitions(modelGroup, deltaSeconds)
-      if (now - this.phaseStartTime >= this.showPhaseDuration) {
-        effect.startAnimation('fadeOut')
-      }
-    } else if (currentPhase === 'fadeOut') {
-      // Continue rotating during fade-out — particles are 2D snapshots that fade
-      // independently of the 3D model, so rotation here is visually seamless.
-      this.applyEffects(modelGroup, deltaSeconds, camera)
-      this._applyResetTransitions(modelGroup, deltaSeconds)
-      if (effect.isAnimationComplete()) {
+
+    if (this.fadeMode === 'in') {
+      // Sequence: fadeIn → show → fadeIn → … (no fadeOut)
+      if (currentPhase === 'fadeOut') {
+        // Landed here from a mode switch — jump back to fadeIn.
         effect.startAnimation('fadeIn')
+      } else if (currentPhase === 'fadeIn' && effect.isAnimationComplete()) {
+        effect.startAnimation('show')
+        this.phaseStartTime = now
+      } else if (currentPhase === 'show') {
+        this.applyEffects(modelGroup, deltaSeconds, camera)
+        this._applyResetTransitions(modelGroup, deltaSeconds)
+        if (now - this.phaseStartTime >= this.showPhaseDuration) {
+          effect.startAnimation('fadeIn')
+        }
+      }
+    } else if (this.fadeMode === 'out') {
+      // Sequence: show → fadeOut → show → … (no fadeIn)
+      if (currentPhase === 'fadeIn') {
+        // Initial state or mode switch — skip directly to show.
+        effect.startAnimation('show')
+        this.phaseStartTime = now
+      } else if (currentPhase === 'show') {
+        this.applyEffects(modelGroup, deltaSeconds, camera)
+        this._applyResetTransitions(modelGroup, deltaSeconds)
+        if (now - this.phaseStartTime >= this.showPhaseDuration) {
+          effect.startAnimation('fadeOut')
+        }
+      } else if (currentPhase === 'fadeOut') {
+        this.applyEffects(modelGroup, deltaSeconds, camera)
+        this._applyResetTransitions(modelGroup, deltaSeconds)
+        if (effect.isAnimationComplete()) {
+          effect.startAnimation('show')
+          this.phaseStartTime = now
+        }
+      }
+    } else {
+      // 'both' — original behaviour: fadeIn → show → fadeOut → …
+      if (currentPhase === 'fadeIn' && effect.isAnimationComplete()) {
+        effect.startAnimation('show')
+        this.phaseStartTime = now
+        // Do NOT call applyEffects here. The transition frame must render at the same
+        // rotation the particles were computed from — any increment would cause a visible
+        // tilt as the static render snaps to a different pose than the particle positions.
+        // Rotation begins on the next frame when the show branch runs normally.
+      } else if (currentPhase === 'show') {
+        this.applyEffects(modelGroup, deltaSeconds, camera)
+        this._applyResetTransitions(modelGroup, deltaSeconds)
+        if (now - this.phaseStartTime >= this.showPhaseDuration) {
+          effect.startAnimation('fadeOut')
+        }
+      } else if (currentPhase === 'fadeOut') {
+        // Continue rotating during fade-out — particles are 2D snapshots that fade
+        // independently of the 3D model, so rotation here is visually seamless.
+        this.applyEffects(modelGroup, deltaSeconds, camera)
+        this._applyResetTransitions(modelGroup, deltaSeconds)
+        if (effect.isAnimationComplete()) {
+          effect.startAnimation('fadeIn')
+        }
       }
     }
   }
@@ -239,6 +282,9 @@ class AnimationEngine {
   getLoopDurationMs() {
     if (!this.useFadeInOut) {
       return Math.round(((2 * Math.PI) / this.speed) * 1000)
+    }
+    if (this.fadeMode === 'in' || this.fadeMode === 'out') {
+      return this.animationDuration + this.showPhaseDuration
     }
     return this.animationDuration * 2 + this.showPhaseDuration
   }
@@ -273,17 +319,28 @@ class AnimationEngine {
       const e = this.animationEffects
 
       // Mirror update(): rotation only accumulates during the 'show' phase.
-      // During fadeIn and fadeOut the model is stationary — this keeps particle
-      // landing positions consistent with the rotation shown in the show phase.
+      // During fadeIn the model is stationary — this keeps particle landing
+      // positions consistent with the rotation shown in the show phase.
       let showTs = ts // seconds elapsed within the show phase
       if (this.useFadeInOut) {
         const fadeDurS = this.animationDuration / 1000
-        if (ts < fadeDurS) {
-          showTs = 0 // fade-in: model stationary at rotation 0
+        if (this.fadeMode === 'in') {
+          // Loop: [fadeIn(dur), show(showDur)]
+          if (ts < fadeDurS) {
+            showTs = 0 // fadeIn: model stationary
+          } else {
+            showTs = ts - fadeDurS
+          }
+        } else if (this.fadeMode === 'out') {
+          // Loop: [show(showDur), fadeOut(dur)] — no static phase, rotation runs from start.
+          showTs = ts
         } else {
-          // Both show and fade-out: rotation runs continuously from show start.
-          // fade-out keeps the model spinning (matches live animation behaviour).
-          showTs = ts - fadeDurS
+          // 'both': [fadeIn(dur), show(showDur), fadeOut(dur)]
+          if (ts < fadeDurS) {
+            showTs = 0 // fadeIn: model stationary
+          } else {
+            showTs = ts - fadeDurS
+          }
         }
       }
 
@@ -316,12 +373,29 @@ class AnimationEngine {
         const dur = this.animationDuration
         const show = this.showPhaseDuration
         const t = absoluteTimeMs
-        if (t < dur) {
-          effect.setPhaseProgress('fadeIn', t / dur)
-        } else if (t < dur + show) {
-          effect.setPhaseProgress('show', 1)
+        if (this.fadeMode === 'in') {
+          // Loop: [fadeIn(dur), show(showDur)]
+          if (t < dur) {
+            effect.setPhaseProgress('fadeIn', t / dur)
+          } else {
+            effect.setPhaseProgress('show', 1)
+          }
+        } else if (this.fadeMode === 'out') {
+          // Loop: [show(showDur), fadeOut(dur)]
+          if (t < show) {
+            effect.setPhaseProgress('show', 1)
+          } else {
+            effect.setPhaseProgress('fadeOut', (t - show) / dur)
+          }
         } else {
-          effect.setPhaseProgress('fadeOut', (t - dur - show) / dur)
+          // 'both': [fadeIn(dur), show(showDur), fadeOut(dur)]
+          if (t < dur) {
+            effect.setPhaseProgress('fadeIn', t / dur)
+          } else if (t < dur + show) {
+            effect.setPhaseProgress('show', 1)
+          } else {
+            effect.setPhaseProgress('fadeOut', (t - dur - show) / dur)
+          }
         }
       } else {
         effect.setPhaseProgress('show', 1)

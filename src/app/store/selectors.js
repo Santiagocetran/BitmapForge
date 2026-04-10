@@ -31,6 +31,7 @@ export const selectEffectOptions = (state) => ({
 
 export const selectAnimationOptions = (state) => ({
   useFadeInOut: state.useFadeInOut,
+  fadeMode: state.fadeMode,
   animationEffects: state.animationEffects,
   animationSpeed: state.animationSpeed,
   showPhaseDuration: state.showPhaseDuration,

@@ -9,10 +9,12 @@ const REQUIRED_PATHS = [
   'engine/effects/BitmapEffect.js',
   'engine/effects/ditherStrategies.js',
   'engine/effects/fadeVariants/BaseFadeVariant.js',
-  'engine/effects/fadeVariants/BloomVariant.js',
   'engine/effects/fadeVariants/CascadeVariant.js',
   'engine/effects/fadeVariants/StaticVariant.js',
   'engine/effects/fadeVariants/GlitchVariant.js',
+  'engine/effects/fadeVariants/DriftVariant.js',
+  'engine/effects/fadeVariants/SweepVariant.js',
+  'engine/effects/fadeVariants/VortexVariant.js',
   'engine/effects/fadeVariants/index.js',
   'engine/renderers/BaseRenderer.js',
   'engine/renderers/BitmapRenderer.js',
@@ -99,10 +101,12 @@ describe('ENGINE_SOURCES', () => {
   it('includes all fadeVariant files', () => {
     const fadeFiles = [
       'engine/effects/fadeVariants/BaseFadeVariant.js',
-      'engine/effects/fadeVariants/BloomVariant.js',
       'engine/effects/fadeVariants/CascadeVariant.js',
       'engine/effects/fadeVariants/StaticVariant.js',
       'engine/effects/fadeVariants/GlitchVariant.js',
+      'engine/effects/fadeVariants/DriftVariant.js',
+      'engine/effects/fadeVariants/SweepVariant.js',
+      'engine/effects/fadeVariants/VortexVariant.js',
       'engine/effects/fadeVariants/index.js'
     ]
     const paths = new Set(ENGINE_SOURCES.map((e) => e.path))
