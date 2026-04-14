@@ -111,7 +111,7 @@ class AnimationEngine {
   _computeSpinAlignedShowDuration() {
     const hasSpin = this.animationEffects.spinX || this.animationEffects.spinY || this.animationEffects.spinZ
     if (!hasSpin) return this.showPhaseDuration
-    const spinPeriodMs = (2 * Math.PI / this.speed) * 1000
+    const spinPeriodMs = ((2 * Math.PI) / this.speed) * 1000
     const minSpins = Math.max(1, Math.ceil(this.showPhaseDuration / spinPeriodMs))
     return minSpins * spinPeriodMs
   }
