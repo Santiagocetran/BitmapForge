@@ -9,10 +9,19 @@ BitmapForge is a client-side web app that converts 3D models (STL, OBJ, GLTF/GLB
 ## Commands
 
 - `npm run dev` — Start Vite dev server
-- `npm run build` — Production build to `dist/`
+- `npm run build` — Production build to `dist/` (also builds embed SDK first via `prebuild`)
+- `npm run build:embed` — Build embed SDK → copies to `public/embed/`
 - `npm run preview` — Preview production build
+- `npm test` — Run all tests (Vitest)
+- `npm run test:watch` — Run tests in watch mode
+- `npm run test:e2e` — Run Playwright E2E tests
+- `npm run coverage` — Generate coverage report
+- `npm run lint` — Check for ESLint errors
+- `npm run lint:fix` — Auto-fix ESLint errors
+- `npm run format` — Prettier format all files
+- `npm run format:check` — Check Prettier formatting
 
-No test framework or linter is configured.
+**Tooling:** ESLint + Prettier for code style, Vitest for unit/integration tests, Playwright for E2E. Pre-commit hooks (husky + lint-staged) run lint + format on staged files automatically.
 
 ## Architecture
 
@@ -55,10 +64,9 @@ React 19, Vite 7, Tailwind CSS 4, Zustand (state), Three.js (3D), Radix UI (prim
 - The engine and app layers are intentionally separated so the engine could be published as a standalone npm package.
 
 <!-- gitnexus:start -->
-
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **BitmapForge** (1798 symbols, 4337 relationships, 146 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BitmapForge** (1456 symbols, 4146 relationships, 117 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -92,36 +100,35 @@ This project is indexed by GitNexus as **BitmapForge** (1798 symbols, 4337 relat
 
 ## Tools Quick Reference
 
-| Tool             | When to use                   | Command                                                                 |
-| ---------------- | ----------------------------- | ----------------------------------------------------------------------- |
-| `query`          | Find code by concept          | `gitnexus_query({query: "auth validation"})`                            |
-| `context`        | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})`                              |
-| `impact`         | Blast radius before editing   | `gitnexus_impact({target: "X", direction: "upstream"})`                 |
-| `detect_changes` | Pre-commit scope check        | `gitnexus_detect_changes({scope: "staged"})`                            |
-| `rename`         | Safe multi-file rename        | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher`         | Custom graph queries          | `gitnexus_cypher({query: "MATCH ..."})`                                 |
+| Tool | When to use | Command |
+|------|-------------|---------|
+| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
+| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
+| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
+| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
+| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
+| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
 
 ## Impact Risk Levels
 
-| Depth | Meaning                               | Action                |
-| ----- | ------------------------------------- | --------------------- |
-| d=1   | WILL BREAK — direct callers/importers | MUST update these     |
-| d=2   | LIKELY AFFECTED — indirect deps       | Should test           |
-| d=3   | MAY NEED TESTING — transitive         | Test if critical path |
+| Depth | Meaning | Action |
+|-------|---------|--------|
+| d=1 | WILL BREAK — direct callers/importers | MUST update these |
+| d=2 | LIKELY AFFECTED — indirect deps | Should test |
+| d=3 | MAY NEED TESTING — transitive | Test if critical path |
 
 ## Resources
 
-| Resource                                     | Use for                                  |
-| -------------------------------------------- | ---------------------------------------- |
-| `gitnexus://repo/BitmapForge/context`        | Codebase overview, check index freshness |
-| `gitnexus://repo/BitmapForge/clusters`       | All functional areas                     |
-| `gitnexus://repo/BitmapForge/processes`      | All execution flows                      |
-| `gitnexus://repo/BitmapForge/process/{name}` | Step-by-step execution trace             |
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/BitmapForge/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/BitmapForge/clusters` | All functional areas |
+| `gitnexus://repo/BitmapForge/processes` | All execution flows |
+| `gitnexus://repo/BitmapForge/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 
 Before completing any code modification task, verify:
-
 1. `gitnexus_impact` was run for all modified symbols
 2. No HIGH/CRITICAL risk warnings were ignored
 3. `gitnexus_detect_changes()` confirms changes match expected scope
@@ -147,13 +154,13 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 
 ## CLI
 
-| Task                                         | Read this skill file                                        |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md`       |
-| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md`       |
-| Rename / extract / split / refactor          | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md`     |
-| Tools, resources, schema reference           | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md`           |
-| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`             |
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->

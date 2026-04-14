@@ -2,7 +2,7 @@ import { DEFAULT_ANIMATION_EFFECTS } from '../../../engine/animation/effectTypes
 
 export const ANIMATION_DEFAULTS = {
   useFadeInOut: true,
-  fadeVariant: 'cascade',
+  fadeVariant: 'glitch',
   fadeMode: 'both',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 1.0,

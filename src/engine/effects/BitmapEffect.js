@@ -48,9 +48,19 @@ class BitmapEffect extends BaseEffect {
     this._postChain.addEffect('colorShift', new ColorShiftEffect())
 
     // Active fade variant — recreated whenever options.fadeVariant changes.
-    const initialVariant = this.options.fadeVariant ?? 'cascade'
+    const initialVariant = this.options.fadeVariant ?? 'glitch'
     this.fadeVariant = createFadeVariant(initialVariant)
     this._currentFadeVariantKey = initialVariant
+
+    // Optional callback: fired when a variant change triggers a new fadeIn mid-loop.
+    // SceneManager uses this to reset the 3D model rotation so the rebuilt particles
+    // always capture the front-facing pose.
+    this.onVariantChange = null
+
+    // Held between render() and renderBitmap() so renderBitmap() can issue a
+    // corrective re-render after a variant-change rotation reset.
+    this._scene = null
+    this._camera = null
   }
 
   /** The visible output canvas from the active renderer. */
@@ -107,6 +117,8 @@ class BitmapEffect extends BaseEffect {
   }
 
   render(scene, camera) {
+    this._scene = scene
+    this._camera = camera
     this.renderer.render(scene, camera)
     this.tickAnimation()
     this.renderBitmap()
@@ -122,10 +134,23 @@ class BitmapEffect extends BaseEffect {
 
     // Swap variant instance when the store option changes and restart the fade
     // so the new style plays immediately from the beginning.
-    const wantedVariant = this.options.fadeVariant ?? 'cascade'
+    const wantedVariant = this.options.fadeVariant ?? 'glitch'
     if (wantedVariant !== this._currentFadeVariantKey) {
       this._currentFadeVariantKey = wantedVariant
       this.fadeVariant = createFadeVariant(wantedVariant)
+      // Order matters:
+      //  1. Reset the 3D model rotation to 0 (via SceneManager callback) so the
+      //     front face will be captured when particles initialise.
+      //  2. Re-render the 3D scene with the reset rotation so the WebGL canvas
+      //     is up-to-date before initializeParticles() samples it below.
+      //     (Without this, the canvas still holds the frame rendered at the top
+      //     of this render() call — before the rotation was reset.)
+      //  3. Start the fadeIn animation, which resets particles to uninitialised;
+      //     they will be initialised from the freshly-rendered canvas on this frame.
+      this.onVariantChange?.()
+      if (this._scene && this._camera) {
+        this.renderer.render(this._scene, this._camera)
+      }
       this.startAnimation('fadeIn')
     }
 
@@ -186,6 +211,8 @@ class BitmapEffect extends BaseEffect {
   }
 
   dispose() {
+    this._scene = null
+    this._camera = null
     this._postChain = null
     this._activeRenderer?.dispose()
     this._activeRenderer = null

@@ -3083,7 +3083,6 @@ class $ {
   applyReset(e, t) {
     return !1;
   }
-  // eslint-disable-line no-unused-vars
   /** Cancel any in-progress reset. */
   clearReset() {
   }
@@ -4073,11 +4072,6 @@ const tt = {
   helvetikerBold: () => import("./helvetiker_bold.typeface-Dpdv0pBL.js"),
   optimer: () => import("./optimer_regular.typeface-BwmB6JhU.js"),
   optimerBold: () => import("./optimer_bold.typeface-DdbaUQRb.js"),
-  gentilis: () => import("./gentilis_regular.typeface-D0DjsepO.js"),
-  gentilisBold: () => import("./gentilis_bold.typeface-6e94SVPf.js"),
-  droidSans: () => import("./droid_sans_regular.typeface-Bs81qZjP.js"),
-  droidSansBold: () => import("./droid_sans_bold.typeface-CSkX9gkA.js"),
-  droidSerif: () => import("./droid_serif_regular.typeface-fxu4RfN8.js"),
   droidMono: () => import("./droid_sans_mono_regular.typeface-Bk29f_ZW.js")
 }, Pn = new Ln(), Se = /* @__PURE__ */ new Map();
 async function Nn(u) {

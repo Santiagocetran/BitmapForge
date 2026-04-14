@@ -10,8 +10,7 @@ import CascadeVariantSrc from '../../engine/effects/fadeVariants/CascadeVariant.
 import StaticVariantSrc from '../../engine/effects/fadeVariants/StaticVariant.js?raw'
 import GlitchVariantSrc from '../../engine/effects/fadeVariants/GlitchVariant.js?raw'
 import DriftVariantSrc from '../../engine/effects/fadeVariants/DriftVariant.js?raw'
-import SweepVariantSrc from '../../engine/effects/fadeVariants/SweepVariant.js?raw'
-import VortexVariantSrc from '../../engine/effects/fadeVariants/VortexVariant.js?raw'
+import ScatterVariantSrc from '../../engine/effects/fadeVariants/ScatterVariant.js?raw'
 import fadeVariantsIndexSrc from '../../engine/effects/fadeVariants/index.js?raw'
 import BaseRendererSrc from '../../engine/renderers/BaseRenderer.js?raw'
 import BitmapRendererSrc from '../../engine/renderers/BitmapRenderer.js?raw'
@@ -63,8 +62,7 @@ const ENGINE_SOURCES = [
   { path: 'engine/effects/fadeVariants/StaticVariant.js', content: StaticVariantSrc },
   { path: 'engine/effects/fadeVariants/GlitchVariant.js', content: GlitchVariantSrc },
   { path: 'engine/effects/fadeVariants/DriftVariant.js', content: DriftVariantSrc },
-  { path: 'engine/effects/fadeVariants/SweepVariant.js', content: SweepVariantSrc },
-  { path: 'engine/effects/fadeVariants/VortexVariant.js', content: VortexVariantSrc },
+  { path: 'engine/effects/fadeVariants/ScatterVariant.js', content: ScatterVariantSrc },
   { path: 'engine/effects/fadeVariants/index.js', content: fadeVariantsIndexSrc },
   { path: 'engine/renderers/BaseRenderer.js', content: BaseRendererSrc },
   { path: 'engine/renderers/BitmapRenderer.js', content: BitmapRendererSrc },

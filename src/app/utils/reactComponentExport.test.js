@@ -63,7 +63,7 @@ describe('buildReactComponent — ZIP structure', () => {
   it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(42)
+    expect(engineFiles).toHaveLength(41)
   })
 
   it('uses custom component name for folder', async () => {

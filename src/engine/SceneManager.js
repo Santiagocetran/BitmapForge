@@ -64,6 +64,12 @@ class SceneManager {
 
     this.animationEngine = new AnimationEngine()
 
+    // When the user switches fade variant mid-loop, reset the model rotation so the
+    // new fadeIn always captures the front-facing pose.
+    this.effect.onVariantChange = () => {
+      this.animationEngine.onExternalFadeRestart(this.animGroup)
+    }
+
     this.objectGroup = null
     this.currentObjectUrl = null
     this.lastFrameTime = performance.now()

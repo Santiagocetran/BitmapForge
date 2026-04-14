@@ -44,6 +44,11 @@ class AnimationEngine {
     // Snapshot of previous effects — populated on the first update() call so
     // startup never triggers a spurious reset.
     this._previousEffects = null
+
+    // Spin-aligned show duration computed once when entering the show phase.
+    // Rounds up to the nearest full rotation so fadeOut always fires at a
+    // complete spin boundary (360°, 720°, …).
+    this._effectiveShowDuration = this.showPhaseDuration
   }
 
   // Build a proxy object that maps the old _resetTransitions shape to effect internals.
@@ -98,6 +103,34 @@ class AnimationEngine {
 
   set _orbitRestorePending(val) {
     this._effectMap.orbit._restorePending = val
+  }
+
+  // Compute the show phase duration rounded up to the nearest complete spin
+  // so fadeOut always fires at a 360°/720°/… boundary.
+  // Falls back to raw showPhaseDuration when no spin effect is active.
+  _computeSpinAlignedShowDuration() {
+    const hasSpin = this.animationEffects.spinX || this.animationEffects.spinY || this.animationEffects.spinZ
+    if (!hasSpin) return this.showPhaseDuration
+    const spinPeriodMs = (2 * Math.PI / this.speed) * 1000
+    const minSpins = Math.max(1, Math.ceil(this.showPhaseDuration / spinPeriodMs))
+    return minSpins * spinPeriodMs
+  }
+
+  // Called by SceneManager when an external event (e.g. fade variant change)
+  // triggers a new fadeIn mid-loop so the 3D model rotation is reset before
+  // particles are captured.
+  onExternalFadeRestart(modelGroup) {
+    this._resetSpinRotations(modelGroup)
+  }
+
+  // Reset accumulated rotation to 0 for every active spin axis.
+  // Called at cycle boundaries so each fadeIn always starts from the front.
+  _resetSpinRotations(modelGroup) {
+    if (!modelGroup) return
+    const e = this.animationEffects
+    if (e.spinX) modelGroup.rotation.x = 0
+    if (e.spinY) modelGroup.rotation.y = 0
+    if (e.spinZ) modelGroup.rotation.z = 0
   }
 
   setFadeOptions(options = {}) {
@@ -221,14 +254,18 @@ class AnimationEngine {
       // Sequence: fadeIn → show → fadeIn → … (no fadeOut)
       if (currentPhase === 'fadeOut') {
         // Landed here from a mode switch — jump back to fadeIn.
+        this._resetSpinRotations(modelGroup)
         effect.startAnimation('fadeIn')
       } else if (currentPhase === 'fadeIn' && effect.isAnimationComplete()) {
+        this._effectiveShowDuration = this._computeSpinAlignedShowDuration()
         effect.startAnimation('show')
         this.phaseStartTime = now
       } else if (currentPhase === 'show') {
         this.applyEffects(modelGroup, deltaSeconds, camera)
         this._applyResetTransitions(modelGroup, deltaSeconds)
-        if (now - this.phaseStartTime >= this.showPhaseDuration) {
+        if (now - this.phaseStartTime >= this._effectiveShowDuration) {
+          // Reset spin to front so the next fadeIn always assembles facing forward.
+          this._resetSpinRotations(modelGroup)
           effect.startAnimation('fadeIn')
         }
       }
@@ -236,25 +273,31 @@ class AnimationEngine {
       // Sequence: show → fadeOut → show → … (no fadeIn)
       if (currentPhase === 'fadeIn') {
         // Initial state or mode switch — skip directly to show.
+        this._effectiveShowDuration = this._computeSpinAlignedShowDuration()
         effect.startAnimation('show')
         this.phaseStartTime = now
       } else if (currentPhase === 'show') {
         this.applyEffects(modelGroup, deltaSeconds, camera)
         this._applyResetTransitions(modelGroup, deltaSeconds)
-        if (now - this.phaseStartTime >= this.showPhaseDuration) {
+        if (now - this.phaseStartTime >= this._effectiveShowDuration) {
           effect.startAnimation('fadeOut')
         }
       } else if (currentPhase === 'fadeOut') {
         this.applyEffects(modelGroup, deltaSeconds, camera)
         this._applyResetTransitions(modelGroup, deltaSeconds)
         if (effect.isAnimationComplete()) {
+          // Reset spin to front before the next show phase so the object always
+          // starts facing forward after fading back in.
+          this._resetSpinRotations(modelGroup)
+          this._effectiveShowDuration = this._computeSpinAlignedShowDuration()
           effect.startAnimation('show')
           this.phaseStartTime = now
         }
       }
     } else {
-      // 'both' — original behaviour: fadeIn → show → fadeOut → …
+      // 'both' — fadeIn → show → fadeOut → …
       if (currentPhase === 'fadeIn' && effect.isAnimationComplete()) {
+        this._effectiveShowDuration = this._computeSpinAlignedShowDuration()
         effect.startAnimation('show')
         this.phaseStartTime = now
         // Do NOT call applyEffects here. The transition frame must render at the same
@@ -264,7 +307,7 @@ class AnimationEngine {
       } else if (currentPhase === 'show') {
         this.applyEffects(modelGroup, deltaSeconds, camera)
         this._applyResetTransitions(modelGroup, deltaSeconds)
-        if (now - this.phaseStartTime >= this.showPhaseDuration) {
+        if (now - this.phaseStartTime >= this._effectiveShowDuration) {
           effect.startAnimation('fadeOut')
         }
       } else if (currentPhase === 'fadeOut') {
@@ -273,6 +316,8 @@ class AnimationEngine {
         this.applyEffects(modelGroup, deltaSeconds, camera)
         this._applyResetTransitions(modelGroup, deltaSeconds)
         if (effect.isAnimationComplete()) {
+          // Reset spin to front so the next fadeIn always assembles facing forward.
+          this._resetSpinRotations(modelGroup)
           effect.startAnimation('fadeIn')
         }
       }
@@ -283,10 +328,11 @@ class AnimationEngine {
     if (!this.useFadeInOut) {
       return Math.round(((2 * Math.PI) / this.speed) * 1000)
     }
+    const effectiveShow = this._computeSpinAlignedShowDuration()
     if (this.fadeMode === 'in' || this.fadeMode === 'out') {
-      return this.animationDuration + this.showPhaseDuration
+      return this.animationDuration + effectiveShow
     }
-    return this.animationDuration * 2 + this.showPhaseDuration
+    return this.animationDuration * 2 + effectiveShow
   }
 
   resetToStart() {
@@ -371,7 +417,7 @@ class AnimationEngine {
     if (effect) {
       if (this.useFadeInOut) {
         const dur = this.animationDuration
-        const show = this.showPhaseDuration
+        const show = this._computeSpinAlignedShowDuration()
         const t = absoluteTimeMs
         if (this.fadeMode === 'in') {
           // Loop: [fadeIn(dur), show(showDur)]

@@ -38,8 +38,9 @@ class StaticVariant extends BaseFadeVariant {
         // Signal clears from top (threshold≈0) downward
         alpha = Math.min(1, Math.max(0, (progress - p.staticThreshold + SOFTNESS) / SOFTNESS))
       } else if (phase === 'fadeOut') {
-        // Signal cuts out from bottom (threshold≈1) upward
-        alpha = Math.min(1, Math.max(0, (p.staticThreshold - (1 - progress) + SOFTNESS) / SOFTNESS))
+        // Signal cuts out from bottom (threshold≈1) upward — start fully visible, end invisible.
+        // Complement of the fadeIn formula with inverted threshold so bottom rows disappear first.
+        alpha = 1 - Math.min(1, Math.max(0, (progress + p.staticThreshold - 1 + SOFTNESS) / SOFTNESS))
       } else {
         continue
       }
