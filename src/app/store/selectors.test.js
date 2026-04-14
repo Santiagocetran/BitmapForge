@@ -32,6 +32,7 @@ function makeState() {
     colorShiftSaturation: 0,
     // animation
     useFadeInOut: true,
+    fadeMode: 'both',
     animationEffects: { spinY: true },
     animationSpeed: 1.0,
     showPhaseDuration: 3000,
@@ -39,7 +40,7 @@ function makeState() {
     animationPreset: 'spinY',
     rotateOnShow: false,
     showPreset: 'spinY',
-    fadeVariant: 'bloom',
+    fadeVariant: 'cascade',
     // input source
     inputType: 'model',
     model: null,
@@ -103,10 +104,11 @@ describe('selectEffectOptions', () => {
 })
 
 describe('selectAnimationOptions', () => {
-  it('returns object with all 8 animation fields', () => {
+  it('returns object with all 9 animation fields', () => {
     const result = selectAnimationOptions(makeState())
     const keys = [
       'useFadeInOut',
+      'fadeMode',
       'animationEffects',
       'animationSpeed',
       'showPhaseDuration',

@@ -1,28 +1,32 @@
-import { BloomVariant } from './BloomVariant.js'
 import { CascadeVariant } from './CascadeVariant.js'
 import { StaticVariant } from './StaticVariant.js'
 import { GlitchVariant } from './GlitchVariant.js'
+import { DriftVariant } from './DriftVariant.js'
+import { ScatterVariant } from './ScatterVariant.js'
 
 const FADE_VARIANT_LABELS = {
-  bloom: 'Bloom',
   cascade: 'Cascade',
   static: 'Static',
-  glitch: 'Glitch'
+  glitch: 'Glitch',
+  drift: 'Drift',
+  scatter: 'Scatter'
 }
 
 const FADE_VARIANT_KEYS = Object.keys(FADE_VARIANT_LABELS)
 
 function createFadeVariant(name, options = {}) {
   switch (name) {
-    case 'cascade':
-      return new CascadeVariant(options)
     case 'static':
       return new StaticVariant(options)
     case 'glitch':
       return new GlitchVariant(options)
-    case 'bloom':
+    case 'drift':
+      return new DriftVariant(options)
+    case 'scatter':
+      return new ScatterVariant(options)
+    case 'cascade':
     default:
-      return new BloomVariant(options)
+      return new CascadeVariant(options)
   }
 }
 

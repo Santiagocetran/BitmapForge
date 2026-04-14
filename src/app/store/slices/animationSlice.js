@@ -2,7 +2,8 @@ import { DEFAULT_ANIMATION_EFFECTS } from '../../../engine/animation/effectTypes
 
 export const ANIMATION_DEFAULTS = {
   useFadeInOut: true,
-  fadeVariant: 'bloom',
+  fadeVariant: 'glitch',
+  fadeMode: 'both',
   animationEffects: { ...DEFAULT_ANIMATION_EFFECTS },
   animationSpeed: 1.0,
   showPhaseDuration: 3000,
@@ -17,6 +18,7 @@ export const createAnimationSlice = (set, _get) => ({
 
   setUseFadeInOut: (useFadeInOut) => set({ useFadeInOut }),
   setFadeVariant: (fadeVariant) => set({ fadeVariant }),
+  setFadeMode: (fadeMode) => set({ fadeMode }),
   setAnimationEffect: (key, value) =>
     set((state) => ({
       animationEffects: { ...state.animationEffects, [key]: Boolean(value) }

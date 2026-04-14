@@ -86,7 +86,7 @@ function migrateV1toV2(project) {
     settings: {
       ...project.settings,
       useFadeInOut: project.settings.useFadeInOut ?? true,
-      fadeVariant: project.settings.fadeVariant ?? 'bloom',
+      fadeVariant: project.settings.fadeVariant ?? 'cascade',
       animationEffects: project.settings.animationEffects ?? { ...DEFAULT_ANIMATION_EFFECTS },
       baseRotation: project.settings.baseRotation ?? { x: 0, y: 0, z: 0 },
       seed: null // preserve old deterministic-hash behavior

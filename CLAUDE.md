@@ -9,10 +9,19 @@ BitmapForge is a client-side web app that converts 3D models (STL, OBJ, GLTF/GLB
 ## Commands
 
 - `npm run dev` — Start Vite dev server
-- `npm run build` — Production build to `dist/`
+- `npm run build` — Production build to `dist/` (also builds embed SDK first via `prebuild`)
+- `npm run build:embed` — Build embed SDK → copies to `public/embed/`
 - `npm run preview` — Preview production build
+- `npm test` — Run all tests (Vitest)
+- `npm run test:watch` — Run tests in watch mode
+- `npm run test:e2e` — Run Playwright E2E tests
+- `npm run coverage` — Generate coverage report
+- `npm run lint` — Check for ESLint errors
+- `npm run lint:fix` — Auto-fix ESLint errors
+- `npm run format` — Prettier format all files
+- `npm run format:check` — Check Prettier formatting
 
-No test framework or linter is configured.
+**Tooling:** ESLint + Prettier for code style, Vitest for unit/integration tests, Playwright for E2E. Pre-commit hooks (husky + lint-staged) run lint + format on staged files automatically.
 
 ## Architecture
 
@@ -58,7 +67,7 @@ React 19, Vite 7, Tailwind CSS 4, Zustand (state), Three.js (3D), Radix UI (prim
 
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **BitmapForge** (1798 symbols, 4337 relationships, 146 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BitmapForge** (1755 symbols, 4499 relationships, 144 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

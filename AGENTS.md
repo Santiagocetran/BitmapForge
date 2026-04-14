@@ -33,7 +33,7 @@ Read on session start, in order:
 
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **BitmapForge** (1798 symbols, 4337 relationships, 146 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BitmapForge** (1755 symbols, 4499 relationships, 144 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

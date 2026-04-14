@@ -10,7 +10,7 @@ const BASE_STATE = {
   minBrightness: 0.05,
   backgroundColor: '#0a0a0a',
   animationDuration: 2500,
-  fadeVariant: 'bloom',
+  fadeVariant: 'cascade',
   useFadeInOut: true,
   animationEffects: { spinX: false, spinY: true, spinZ: false, float: false },
   animationSpeed: 1.0,
@@ -63,7 +63,7 @@ describe('buildReactComponent — ZIP structure', () => {
   it('ZIP contains 35 engine source files', async () => {
     const zip = await getZip()
     const engineFiles = Object.keys(zip.files).filter((p) => p.includes('/engine/') && !p.endsWith('/'))
-    expect(engineFiles).toHaveLength(40)
+    expect(engineFiles).toHaveLength(41)
   })
 
   it('uses custom component name for folder', async () => {
