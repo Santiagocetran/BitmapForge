@@ -6,6 +6,14 @@ import { useProjectStore } from '../../store/useProjectStore.js'
 import { selectEffectOptions, selectAnimationOptions, selectInputSource } from '../../store/selectors.js'
 import { useSceneManager } from '../../context/SceneManagerContext.jsx'
 
+function applyActiveScale(manager, { inputType, modelScale, imageScale }) {
+  if (inputType === 'image') {
+    manager.setImageScale(imageScale)
+  } else {
+    manager.setModelScale(modelScale)
+  }
+}
+
 function PreviewCanvas() {
   const sceneManagerRef = useSceneManager()
   const containerRef = useRef(null)
@@ -33,7 +41,7 @@ function PreviewCanvas() {
     manager.updateAnimationOptions(selectAnimationOptions(s))
     manager.setLightDirection(s.lightDirection.x, s.lightDirection.y, s.lightDirection.z)
     manager.setBaseRotation(s.baseRotation.x, s.baseRotation.y, s.baseRotation.z)
-    manager.setModelScale(s.modelScale)
+    applyActiveScale(manager, s)
     manager.setRenderMode(s.renderMode)
 
     // Size the canvas immediately — ResizeObserver fires asynchronously so the
@@ -72,9 +80,10 @@ function PreviewCanvas() {
       { equalityFn: shallow }
     )
 
-    const unsubModelScale = useProjectStore.subscribe(
-      (state) => state.modelScale,
-      (scale) => manager.setModelScale(scale)
+    const unsubScale = useProjectStore.subscribe(
+      (state) => ({ inputType: state.inputType, modelScale: state.modelScale, imageScale: state.imageScale }),
+      (s) => applyActiveScale(manager, s),
+      { equalityFn: shallow }
     )
 
     const unsubRenderMode = useProjectStore.subscribe(
@@ -87,7 +96,7 @@ function PreviewCanvas() {
       unsubAnim()
       unsubLight()
       unsubRotation()
-      unsubModelScale()
+      unsubScale()
       unsubRenderMode()
       resizeObserver.disconnect()
       manager.dispose()
@@ -137,6 +146,8 @@ function PreviewCanvas() {
     const manager = sceneManagerRef.current
     if (!manager) return
     let cancelled = false
+
+    applyActiveScale(manager, useProjectStore.getState())
 
     switch (inputType) {
       case 'model': {
