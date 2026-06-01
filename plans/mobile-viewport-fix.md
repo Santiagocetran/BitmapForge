@@ -34,11 +34,13 @@ There is also a root-level mobile viewport concern: `#root` currently uses `min-
 ### Step 1 — Give `main` a definite height on mobile (`Layout.jsx:97`)
 
 **Current:**
+
 ```jsx
 <main className="relative flex min-h-screen flex-col p-2 lg:grid lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
 ```
 
 **Change to:**
+
 ```jsx
 <main className="relative flex h-dvh flex-col overflow-hidden p-2 lg:grid lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
 ```
@@ -51,11 +53,13 @@ There is also a root-level mobile viewport concern: `#root` currently uses `min-
 ### Step 2 — Make `section` fill remaining height (`Layout.jsx:165`)
 
 **Current:**
+
 ```jsx
 <section className="flex min-h-screen flex-col gap-2 lg:order-2 lg:min-h-0">
 ```
 
 **Change to:**
+
 ```jsx
 <section className="flex flex-1 min-h-0 flex-col gap-2 lg:order-2">
 ```
@@ -68,11 +72,13 @@ There is also a root-level mobile viewport concern: `#root` currently uses `min-
 ### Step 3 — Propagate `min-h-0` to the canvas wrapper (`Layout.jsx:210`)
 
 **Current:**
+
 ```jsx
 <div className="flex-1 lg:min-h-0">
 ```
 
 **Change to:**
+
 ```jsx
 <div className="flex-1 min-h-0">
 ```
@@ -84,6 +90,7 @@ There is also a root-level mobile viewport concern: `#root` currently uses `min-
 ### Step 4 — Align root viewport sizing (`styles.css:24`)
 
 **Current:**
+
 ```css
 #root {
   min-height: 100vh;
@@ -91,6 +98,7 @@ There is also a root-level mobile viewport concern: `#root` currently uses `min-
 ```
 
 **Change to:**
+
 ```css
 #root {
   min-height: 100vh;
@@ -124,10 +132,13 @@ Then use `app-shell` on `<main>` instead of `h-dvh`.
 ### Step 5 — iOS Safari body scroll lock (`Layout.jsx:80–85`)
 
 **Current:**
+
 ```js
 useEffect(() => {
   document.body.style.overflow = sidebarOpen ? 'hidden' : ''
-  return () => { document.body.style.overflow = '' }
+  return () => {
+    document.body.style.overflow = ''
+  }
 }, [sidebarOpen])
 ```
 
@@ -136,6 +147,7 @@ useEffect(() => {
 Do **not** use an effect that restores scroll position in an `else` branch by reading `document.body.style.top`. React runs the previous effect cleanup before the new effect body when `sidebarOpen` changes, so cleanup can clear `top` before the closing branch reads it. That causes a scroll jump to `0`.
 
 **Change to a ref-based lock:**
+
 ```js
 const bodyScrollYRef = useRef(0)
 
@@ -169,13 +181,15 @@ import { useState, useEffect, useRef } from 'react'
 ### Step 6 — Section collapse touch target size (`Layout.jsx:26`)
 
 **Current:**
+
 ```jsx
-className="rounded p-0.5 text-zinc-400 hover:text-zinc-200 lg:hidden"
+className = 'rounded p-0.5 text-zinc-400 hover:text-zinc-200 lg:hidden'
 ```
 
 **Minimum change:**
+
 ```jsx
-className="rounded p-2 text-zinc-400 hover:text-zinc-200 lg:hidden"
+className = 'rounded p-2 text-zinc-400 hover:text-zinc-200 lg:hidden'
 ```
 
 - `p-0.5` = 2px padding → total tap target about 20px.
@@ -183,7 +197,7 @@ className="rounded p-2 text-zinc-400 hover:text-zinc-200 lg:hidden"
 - If strict 44px touch targets are required, use fixed dimensions instead:
 
 ```jsx
-className="flex h-11 w-11 items-center justify-center rounded text-zinc-400 hover:text-zinc-200 lg:hidden"
+className = 'flex h-11 w-11 items-center justify-center rounded text-zinc-400 hover:text-zinc-200 lg:hidden'
 ```
 
 ---
@@ -220,12 +234,12 @@ Add a Playwright mobile viewport test. Recommended assertions:
 
 ## Files Changed
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/app/components/Layout/Layout.jsx` | 97 | `min-h-screen` → `h-dvh overflow-hidden`, or app-shell class with `100vh`/`100dvh` fallback |
-| `src/app/components/Layout/Layout.jsx` | 165 | `min-h-screen` → `flex-1 min-h-0` |
-| `src/app/components/Layout/Layout.jsx` | 210 | `lg:min-h-0` → `min-h-0` |
-| `src/app/styles.css` | 24 | add `100dvh` root fallback after `100vh` |
-| `src/app/components/Layout/Layout.jsx` | import + 80–85 | add `useRef`; ref-based iOS scroll-lock pattern |
-| `src/app/components/Layout/Layout.jsx` | 26 | chevron `p-0.5` → `p-2`, or fixed 44px dimensions if strict touch target compliance is required |
-| mobile e2e test | new or existing Playwright spec | assert mobile preview has nonzero height and drawer remains usable |
+| File                                   | Lines                           | Change                                                                                          |
+| -------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `src/app/components/Layout/Layout.jsx` | 97                              | `min-h-screen` → `h-dvh overflow-hidden`, or app-shell class with `100vh`/`100dvh` fallback     |
+| `src/app/components/Layout/Layout.jsx` | 165                             | `min-h-screen` → `flex-1 min-h-0`                                                               |
+| `src/app/components/Layout/Layout.jsx` | 210                             | `lg:min-h-0` → `min-h-0`                                                                        |
+| `src/app/styles.css`                   | 24                              | add `100dvh` root fallback after `100vh`                                                        |
+| `src/app/components/Layout/Layout.jsx` | import + 80–85                  | add `useRef`; ref-based iOS scroll-lock pattern                                                 |
+| `src/app/components/Layout/Layout.jsx` | 26                              | chevron `p-0.5` → `p-2`, or fixed 44px dimensions if strict touch target compliance is required |
+| mobile e2e test                        | new or existing Playwright spec | assert mobile preview has nonzero height and drawer remains usable                              |
