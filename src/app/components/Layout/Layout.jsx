@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useStore } from 'zustand'
 import { Undo2, Redo2, ChevronDown, X, Menu } from 'lucide-react'
 import { InputSource } from '../InputSource/InputSource.jsx'
@@ -23,7 +23,7 @@ function Section({ title, children, defaultOpen = true }) {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="rounded p-0.5 text-zinc-400 hover:text-zinc-200 lg:hidden"
+          className="rounded p-2 text-zinc-400 hover:text-zinc-200 lg:hidden"
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
           aria-expanded={open}
         >
@@ -76,11 +76,23 @@ function Layout() {
   const hasError = Boolean(status.error) // Finding 20: remove useMemo
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const bodyScrollYRef = useRef(0)
 
   useEffect(() => {
-    document.body.style.overflow = sidebarOpen ? 'hidden' : ''
+    if (!sidebarOpen) return undefined
+
+    bodyScrollYRef.current = window.scrollY
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${bodyScrollYRef.current}px`
+    document.body.style.width = '100%'
+
     return () => {
       document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, bodyScrollYRef.current)
     }
   }, [sidebarOpen])
 
@@ -94,7 +106,7 @@ function Layout() {
   }, [sidebarOpen])
 
   return (
-    <main className="relative flex min-h-screen flex-col p-2 lg:grid lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <main className="app-shell relative flex flex-col overflow-hidden p-2 lg:grid lg:h-screen lg:gap-4 lg:overflow-hidden lg:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
       {/* Hamburger FAB — mobile only, hidden when drawer is open */}
       {!sidebarOpen && (
         <button
@@ -162,7 +174,7 @@ function Layout() {
         />
       )}
 
-      <section className="flex min-h-screen flex-col gap-2 lg:order-2 lg:min-h-0">
+      <section className="flex flex-1 min-h-0 flex-col gap-2 lg:order-2">
         {/* Finding 14: ARIA roles on status messages */}
         {status.message && (
           <div role="status" className="rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">
@@ -207,7 +219,7 @@ function Layout() {
             Loading model...
           </div>
         )}
-        <div className="flex-1 lg:min-h-0">
+        <div className="flex-1 min-h-0">
           <PreviewCanvas />
         </div>
       </section>
