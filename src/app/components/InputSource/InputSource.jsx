@@ -18,6 +18,9 @@ function InputSource() {
   const setInputType = useProjectStore((state) => state.setInputType)
   const modelScale = useProjectStore((state) => state.modelScale)
   const setModelScale = useProjectStore((state) => state.setModelScale)
+  const imageScale = useProjectStore((state) => state.imageScale)
+  const setImageScale = useProjectStore((state) => state.setImageScale)
+  const imageSource = useProjectStore((state) => state.imageSource)
 
   return (
     <div className="space-y-3">
@@ -58,6 +61,24 @@ function InputSource() {
       {inputType === 'shape' && <ShapeSelector />}
       {inputType === 'text' && <TextInput />}
       {inputType === 'image' && <ImageInput />}
+      {inputType === 'image' && imageSource && (
+        <div className="space-y-1">
+          <label htmlFor="input-image-scale" className="flex items-center text-xs text-zinc-400">
+            Scale: {imageScale.toFixed(2)}×
+            <InfoTooltip content="Uniformly scales the image. Useful when the image appears too large or too small in the preview." />
+          </label>
+          <input
+            id="input-image-scale"
+            type="range"
+            min="0.1"
+            max="10"
+            step="0.05"
+            value={imageScale}
+            onChange={(e) => setImageScale(Number(e.target.value))}
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   )
 }

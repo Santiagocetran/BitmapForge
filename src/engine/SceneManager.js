@@ -231,6 +231,15 @@ class SceneManager {
   }
 
   /**
+   * Uniformly scale the image plane. Kept separate from setModelScale so model
+   * and image scales don't bleed into each other when switching input tabs.
+   * @param {number} scale - Uniform scale factor (e.g. 0.5 = half size, 2 = double)
+   */
+  setImageScale(scale) {
+    this.baseGroup.scale.setScalar(scale)
+  }
+
+  /**
    * Swap the rendering mode.
    * @param {string} mode
    */
