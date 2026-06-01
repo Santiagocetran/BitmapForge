@@ -23,6 +23,12 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* Touch-friendly range inputs on coarse-pointer (touch) devices */
