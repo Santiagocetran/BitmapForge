@@ -1,5 +1,5 @@
 // Standalone native-bitmap smoke; intentionally outside Vitest's mocked DOM.
-// Run: node src/engine/loaders/bitmap.browser-smoke.mjs (Node 26).
+// Run: node src/engine/loaders/bitmap.browser-smoke.mjs (Node 24).
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'

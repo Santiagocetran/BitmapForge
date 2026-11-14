@@ -1,5 +1,7 @@
 # Node 26 release repair — local verification
 
+> Historical Node 26 local evidence, not release clearance: fresh hosted browser installation later hung. Superseded by the Node 24 revision and its separately recorded verification.
+
 Base: merged main `cb824259bea2f6c1b96e3298f5c5625fbdce398a`. Branch: `gloin/supported-node-release`.
 
 ## Scope and evidence

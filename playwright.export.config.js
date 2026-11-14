@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import { randomInt } from 'node:crypto'
 
 // Isolate Vite's dependency cache and generated HTML from other browser suites.
-// Run with Node 26: node node_modules/@playwright/test/cli.js test --config=playwright.export.config.js
+// Run with Node 24: node node_modules/@playwright/test/cli.js test --config=playwright.export.config.js
 const artifacts = path.resolve(
   process.env.BITMAPFORGE_EXPORT_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'bitmapforge-export-visual-'))
 )

@@ -1,5 +1,7 @@
 # Supported Node release fix — bounded implementation plan
 
+> Historical Node 26 plan, superseded by [the current Node 24 revision](node24-plan.md).
+
 ## Evidence and decision
 
 Merged commit `cb824259bea2f6c1b96e3298f5c5625fbdce398a` passed all verification jobs in main run43628734392 but Vercel rejected root `engines.node:20.x` as discontinued. Its actual build error requests26.x. The official Node release schedule identifies26 as LTS from2026-10-28 through maintenance2027-10-20, end2029-04-30. A local Node26 executable has been obtained and reportsv26.13.1. Freshly fetched [Vercel support documentation](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions?release-check=20261114) explicitly lists26.x as supported/default, with24.x and22.x alternatives; root engines override the project setting.

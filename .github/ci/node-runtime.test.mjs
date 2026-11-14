@@ -16,10 +16,10 @@ const policy = {
 // Intentionally checks this workflow's fixed six-space step structure, not arbitrary YAML.
 // A workflow/action-shape change must update this guard rather than silently escape it.
 function verify(value) {
-  assert.equal(value.engine, '26.x', 'root engine must pin the supported major')
+  assert.equal(value.engine, '24.x', 'root engine must pin the supported major')
   assert.equal(value.lockedEngine, value.engine, 'lock root must match the package engine')
-  assert.equal(value.nvmrc, '26', '.nvmrc must select the same major')
-  assert.equal(value.runtime, '26', 'execute verification with the declared runtime')
+  assert.equal(value.nvmrc, '24', '.nvmrc must select the same major')
+  assert.equal(value.runtime, '24', 'execute verification with the declared runtime')
   const steps = value.workflow.split(/^ {6}- /m).filter((step) => /^uses: actions\/setup-node@v4\s*\n/.test(step))
   assert.equal(steps.length, 5, 'check all five existing setup-node steps')
   assert.doesNotMatch(value.workflow, /^\s*node-version\s*:/m, 'no competing literal or expression selector')
@@ -29,14 +29,14 @@ function verify(value) {
   }
 }
 
-test('application, lock, local toolchain, CI and execution use Node 26', () => verify(policy))
+test('application, lock, local toolchain, CI and execution use Node 24', () => verify(policy))
 
 const mutations = [
   ['lock/root mismatch', { lockedEngine: '20.x' }],
-  ['unbounded engine', { engine: '>=26', lockedEngine: '>=26' }],
-  ['wrong local major', { nvmrc: '24' }],
+  ['unbounded engine', { engine: '>=24', lockedEngine: '>=24' }],
+  ['wrong local major', { nvmrc: '26' }],
   ['mixed CI selector', { workflow: policy.workflow.replace("node-version-file: '.nvmrc'", "node-version: '20'") }],
-  ['wrong execution runtime', { runtime: '24' }]
+  ['wrong execution runtime', { runtime: '26' }]
 ]
 for (const [name, mutation] of mutations) {
   test(`policy rejects ${name}`, () => assert.throws(() => verify({ ...policy, ...mutation })))
