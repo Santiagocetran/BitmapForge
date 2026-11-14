@@ -8,7 +8,7 @@
   "type": "module",
   "description": "Client-side web app to generate bitmap animations from 3D models.",
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   },
   "scripts": {
     "dev": "vite",

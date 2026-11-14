@@ -9,7 +9,7 @@ Thanks for your interest in contributing! This guide will help you get started.
 3. Start the dev server: `npm run dev`
 4. Open `http://localhost:5173` in your browser
 
-Requires Node.js 20+. Use the `.nvmrc` file with `nvm use` if you have nvm installed.
+Requires Node.js 26.x for application development and builds. Use the `.nvmrc` file with `nvm use` if you have nvm installed.
 
 ## Project structure
 
