@@ -59,6 +59,8 @@ jobs:
         with:
           name: dist
           path: dist/
+          # Preserve dotfiles such as embed/.gitkeep covered by the checksum manifest.
+          include-hidden-files: true
           if-no-files-found: error
   cli:
     runs-on: ubuntu-latest
