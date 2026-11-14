@@ -1,146 +1,117 @@
-import { useState } from 'react'
-import { useExport } from '../../hooks/useExport.js'
-import { useProjectStore } from '../../store/useProjectStore.js'
-import { useSceneManager } from '../../context/SceneManagerContext.jsx'
-import { loadProjectFile } from '../../utils/projectFile.js'
+import { useId } from 'react'
 import { BTN } from '../../styles/buttonStyles.js'
+import * as contracts from '../../utils/uiPropValidators.js'
 
 const FORMAT_OPTIONS = [
   {
     value: 'apng',
     label: 'APNG',
-    description:
-      'Animated PNG. Full color, transparent background supported. Best for embedding in websites or sharing.'
+    description: 'Animated PNG with full color and alpha transparency.'
   },
   {
     value: 'gif',
     label: 'GIF',
-    description: 'Classic animated GIF. Universal compatibility. 256-color limit, no partial transparency.'
+    description: 'Animated GIF with up to 256 colors and limited transparency; no partial alpha.'
   },
   {
     value: 'webm',
     label: 'Video',
-    description: 'MP4 (WebM fallback). Best quality for presentations or social media.'
+    description: 'MP4 video with WebM fallback. The generated container depends on browser codec support.'
   },
   {
     value: 'spritesheet',
     label: 'Sprite Sheet',
-    description: 'PNG grid of all frames. For game engines (Phaser, Unity) or custom code.'
+    description: 'PNG grid of animation frames for game engines or custom playback code.'
   },
   {
     value: 'css',
     label: 'CSS Anim',
-    description: 'Pure CSS + sprite sheet. Drop into any website — no JavaScript needed.'
+    description: 'Sprite sheet and CSS animation files for website integration.'
   },
   {
     value: 'react',
     label: 'React',
-    description: 'React component with the live animation engine. Drop into any React/Vite project.'
+    description: 'Generated React component with the live animation engine and project settings.'
   },
   {
     value: 'webcomponent',
-    label: 'Web Comp',
-    description: '<bitmap-animation> custom element. Works in any framework or plain HTML.'
+    label: 'Web Component',
+    description: 'Generated <bitmap-animation> custom element with the live animation engine.'
   },
-  { value: 'embed', label: 'Embed', description: 'Static site ready to deploy. Upload to any web host.' },
+  {
+    value: 'embed',
+    label: 'Embed',
+    description: 'Static site files with the live runtime for self-hosting; not a published URL.'
+  },
   {
     value: 'zip',
     label: 'Code ZIP',
-    description: 'Full engine source code. For developers who want to build their own integration.'
+    description: 'Engine source archive for developers building a custom integration.'
   }
 ]
 
-function ExportPanel() {
-  const sceneManagerRef = useSceneManager()
-  const { exportAs, saveProject } = useExport(sceneManagerRef)
-  const status = useProjectStore((state) => state.status)
-  const setStatus = useProjectStore((state) => state.setStatus)
-  const setModel = useProjectStore((state) => state.setModel)
-  const inputType = useProjectStore((s) => s.inputType)
-
-  const [selectedFormat, setSelectedFormat] = useState('apng')
-
-  async function onExport() {
-    setStatus({ error: '', message: '' })
-    await exportAs(selectedFormat)
-  }
-
-  async function onLoadProject(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const currentModel = useProjectStore.getState().model
-    if (currentModel && !window.confirm('Loading a project will replace your current settings and model. Continue?')) {
-      event.target.value = ''
-      return
-    }
-    try {
-      const { settings, modelFile } = await loadProjectFile(file)
-      useProjectStore.setState((state) => ({ ...state, ...settings }))
-      if (modelFile) setModel(modelFile)
-      setStatus({ message: 'Project loaded.', error: '' })
-    } catch (error) {
-      setStatus({ error: error.message })
-    }
-  }
-
+function ExportPanel({ selectedFormat, onSelectFormat, exportSelected, cancelExport, exporting, disabledReason }) {
+  const descriptionId = useId()
   const selectedOption = FORMAT_OPTIONS.find((f) => f.value === selectedFormat)
-
   return (
-    <section className="space-y-2">
-      <div className="grid grid-cols-3 gap-1">
-        {FORMAT_OPTIONS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setSelectedFormat(value)}
-            className={`${BTN.base} px-1.5 py-1 ${
-              selectedFormat === value ? 'bg-emerald-600 text-black' : 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600'
-            }`}
-          >
-            {label}
-          </button>
+    <section className="bf-control-group">
+      <div role="group" aria-label="Export format" className="bf-control-group">
+        {[
+          { heading: 'Animation & assets', formats: FORMAT_OPTIONS.slice(0, 4) },
+          { heading: 'Website integration', formats: FORMAT_OPTIONS.slice(4, 8) },
+          { heading: 'Developer source', formats: FORMAT_OPTIONS.slice(8) }
+        ].map(({ heading, formats }) => (
+          <section key={heading}>
+            <h3 className="bf-group-title">{heading}</h3>
+            <div className="bf-choice-grid">
+              {formats.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={selectedFormat === value}
+                  aria-describedby={selectedFormat === value ? descriptionId : undefined}
+                  onClick={() => onSelectFormat(value)}
+                  className="bf-choice"
+                >
+                  {selectedFormat === value && <span aria-hidden="true">✓ </span>}
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
-
-      {selectedOption?.description && <p className="text-xs text-zinc-400">{selectedOption.description}</p>}
-
-      {selectedFormat === 'embed' && inputType === 'image' && (
-        <p className="text-xs text-amber-400">Image input cannot be embedded — switch to model, shape, or text.</p>
+      <p id={descriptionId} className="bf-help">
+        {selectedOption?.description}
+      </p>
+      {disabledReason && (
+        <p id={`${descriptionId}-reason`} className="bf-help">
+          {disabledReason}
+        </p>
       )}
-
       <button
         type="button"
-        disabled={status.exporting || (selectedFormat === 'embed' && inputType === 'image')}
-        onClick={onExport}
-        className={`w-full ${BTN.base} ${BTN.primary} disabled:opacity-50`}
+        disabled={exporting || Boolean(disabledReason)}
+        aria-describedby={disabledReason ? `${descriptionId}-reason` : undefined}
+        onClick={exportSelected}
+        className={`w-full ${BTN.base} ${BTN.primary}`}
       >
-        {status.exporting ? status.message || 'Exporting…' : `Export ${selectedOption?.label}`}
+        {exporting ? 'Exporting…' : `Export ${selectedOption?.label}`}
       </button>
-
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" className={`${BTN.base} ${BTN.secondary}`} onClick={() => saveProject()}>
-          Save .bitmapforge
+      {exporting && (
+        <button type="button" onClick={cancelExport} className={`${BTN.base} ${BTN.secondary}`}>
+          Cancel export
         </button>
-        <label
-          className={`${BTN.base} bg-zinc-800 px-2 py-1 text-center text-zinc-200 cursor-pointer hover:bg-zinc-700`}
-        >
-          Load .bitmapforge
-          <input
-            type="file"
-            accept=".bitmapforge"
-            className="hidden"
-            onChange={onLoadProject}
-            aria-label="Load BitmapForge project file"
-          />
-        </label>
-      </div>
-
-      {status.error && <p className="text-xs text-red-400">{status.error}</p>}
-      {!status.exporting && !status.error && status.message && (
-        <p className="text-xs text-emerald-300">{status.message}</p>
       )}
     </section>
   )
 }
-
+ExportPanel.propTypes = {
+  selectedFormat: contracts.exportFormat,
+  onSelectFormat: contracts.requiredFunction,
+  exportSelected: contracts.requiredFunction,
+  cancelExport: contracts.cancelExport,
+  exporting: contracts.optionalBoolean,
+  disabledReason: contracts.optionalString
+}
 export { ExportPanel }

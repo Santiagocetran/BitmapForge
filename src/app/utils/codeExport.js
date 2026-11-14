@@ -30,6 +30,33 @@ import { config } from './config.js'
 
 const container = document.getElementById('app')
 const manager = new SceneManager(container, config.effectOptions)
+let disposed = false
+let lastWidth
+let lastHeight
+
+function syncSize() {
+  if (disposed) return
+  const width = Math.floor(container.clientWidth)
+  const height = Math.floor(container.clientHeight)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return
+  if (width === lastWidth && height === lastHeight) return
+  manager.setSize(width, height)
+  lastWidth = width
+  lastHeight = height
+}
+
+syncSize()
+const resizeObserver = new ResizeObserver(syncSize)
+resizeObserver.observe(container)
+
+function onPageHide(event) {
+  if (event.persisted || disposed) return
+  disposed = true
+  resizeObserver.disconnect()
+  window.removeEventListener('pagehide', onPageHide)
+  manager.dispose()
+}
+window.addEventListener('pagehide', onPageHide)
 
 fetch('./models/${modelName}')
   .then(res => { if (!res.ok) throw new Error('Failed to load model'); return res.blob() })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TooltipProvider } from '@radix-ui/react-tooltip'
 import { Layout } from './components/Layout/Layout.jsx'
 import { useAutoSave } from './hooks/useAutoSave.js'
@@ -14,7 +14,15 @@ registerBuiltins()
 function App() {
   useAutoSave()
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  useKeyboardShortcuts({ onShowHelp: () => setShortcutsOpen(true) })
+  const bridgeRef = useRef(null)
+  const showHelp = () => {
+    bridgeRef.current?.beforeHelp()
+    setShortcutsOpen(true)
+  }
+  useKeyboardShortcuts({
+    onShowHelp: showHelp,
+    onSaveProject: () => bridgeRef.current?.saveProject()
+  })
 
   useEffect(() => {
     document.title = 'BitmapForge'
@@ -23,8 +31,15 @@ function App() {
   return (
     <SceneManagerProvider>
       <TooltipProvider delayDuration={400}>
-        <Layout />
-        <ShortcutsModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+        <Layout bridgeRef={bridgeRef} helpOpen={shortcutsOpen} onShowHelp={showHelp} />
+        <ShortcutsModal
+          open={shortcutsOpen}
+          onOpenChange={setShortcutsOpen}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            bridgeRef.current?.restoreHelpFocus()
+          }}
+        />
       </TooltipProvider>
     </SceneManagerProvider>
   )

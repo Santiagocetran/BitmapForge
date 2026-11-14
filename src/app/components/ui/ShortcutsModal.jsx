@@ -1,4 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
+import { optionalFunction, requiredBoolean, requiredFunction } from '../../utils/uiPropValidators.js'
 
 const SHORTCUTS = [
   { keys: 'Ctrl + Z', description: 'Undo' },
@@ -8,32 +9,41 @@ const SHORTCUTS = [
   { keys: '?', description: 'Show this help' }
 ]
 
-function ShortcutsModal({ open, onOpenChange }) {
+function ShortcutsModal({ open, onOpenChange, onCloseAutoFocus }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
-          <Dialog.Title className="mb-4 text-sm font-semibold text-zinc-100">Keyboard Shortcuts</Dialog.Title>
-          <table className="w-full text-xs">
-            <tbody>
-              {SHORTCUTS.map(({ keys, description }) => (
-                <tr key={keys} className="border-b border-zinc-800 last:border-0">
-                  <td className="py-2 pr-4 font-mono text-emerald-400">{keys}</td>
-                  <td className="py-2 text-zinc-300">{description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Dialog.Close asChild>
-            <button type="button" className="mt-4 w-full rounded bg-zinc-700 px-3 py-1.5 text-xs hover:bg-zinc-600">
-              Close
-            </button>
-          </Dialog.Close>
+        <Dialog.Overlay className="bf-overlay bf-help-overlay" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          onCloseAutoFocus={onCloseAutoFocus}
+          className="bf-dialog bf-help-dialog"
+        >
+          <div className="bf-dialog-header">
+            <Dialog.Title>Keyboard Shortcuts</Dialog.Title>
+            <Dialog.Close asChild>
+              <button type="button" className="bf-button bf-button--secondary">
+                Close
+              </button>
+            </Dialog.Close>
+          </div>
+          <div className="bf-help-body">
+            <table className="w-full text-xs">
+              <tbody>
+                {SHORTCUTS.map(({ keys, description }) => (
+                  <tr key={keys} className="border-b border-zinc-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[var(--bf-accent)]">{keys}</td>
+                    <td className="py-2 text-zinc-300">{description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   )
 }
 
+ShortcutsModal.propTypes = { open: requiredBoolean, onOpenChange: requiredFunction, onCloseAutoFocus: optionalFunction }
 export { ShortcutsModal }

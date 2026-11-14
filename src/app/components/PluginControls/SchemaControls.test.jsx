@@ -7,6 +7,93 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe('SchemaControls — direct React 19 contracts', () => {
+  const validate = (name, props) => SchemaControls.propTypes[name](props, name, 'SchemaControls')
+  it('accepts nullish contracts, consumed-field types, unrelated keywords and skipped fields', () => {
+    for (const schema of [
+      undefined,
+      null,
+      {},
+      { x: {} },
+      { x: { type: 'unsupported', title: {}, default: {}, enum: 1 } },
+      {
+        b: { type: 'boolean', title: null, default: true, minimum: 'ignored', enum: {} },
+        s: { type: 'string', title: '', default: 'a', enum: [], minimum: {} },
+        n: { type: 'number', default: 1.5, minimum: null, maximum: 0, enum: {} },
+        i: { type: 'integer', default: 2, minimum: 10, maximum: -1 },
+        extra: { type: 'string', custom: {} }
+      }
+    ]) {
+      expect(validate('schema', { schema })).toBeNull()
+      expect(validate('values', { schema, values: { unknown: Symbol('unused') } })).toBeNull()
+    }
+    for (const values of [undefined, null, {}, { x: null }])
+      expect(validate('values', { schema: { x: { type: 'integer', default: 2 } }, values })).toBeNull()
+    for (const onChange of [undefined, null, () => {}]) expect(validate('onChange', { onChange })).toBeNull()
+  })
+  it.each([
+    [],
+    1,
+    'schema',
+    { x: null },
+    { x: [] },
+    { x: 1 },
+    { x: { type: 1 } },
+    { x: { type: 'boolean', title: 1 } },
+    { x: { type: 'boolean', default: 0 } },
+    { x: { type: 'string', default: 1 } },
+    { x: { type: 'string', enum: 'x' } },
+    { x: { type: 'string', enum: [1] } },
+    { x: { type: 'integer', default: 1.5 } },
+    { x: { type: 'number', default: Infinity } },
+    { x: { type: 'number', minimum: '0' } },
+    { x: { type: 'integer', maximum: NaN } }
+  ])('rejects malformed descriptors without throwing %#', (schema) => {
+    const error = validate('schema', { schema })
+    expect(error).toBeInstanceOf(Error)
+    expect(error.message).toContain('SchemaControls.schema')
+    expect(() => validate('values', { schema, values: { unknown: 1 } })).not.toThrow()
+    expect(validate('values', { schema, values: { unknown: 1 } })).toBeInstanceOf(Error)
+  })
+  it.each([
+    ['boolean', false, 1],
+    ['string', 'a', false],
+    ['integer', 2, 2.5],
+    ['number', 1.5, Infinity]
+  ])('checks consumed %s values only', (type, good, bad) => {
+    const schema = { x: { type }, ignored: { type: 'object' } }
+    expect(validate('values', { schema, values: { x: good, ignored: () => {}, unknown: {} } })).toBeNull()
+    const error = validate('values', { schema, values: { x: bad } })
+    expect(error).toBeInstanceOf(Error)
+    expect(error.message).toContain('SchemaControls.values.x')
+  })
+  it('rejects invalid record shapes and callbacks', () => {
+    for (const values of [[], 1, 'values', () => {}]) expect(validate('values', { values })).toBeInstanceOf(Error)
+    for (const onChange of [false, 1, 'callback', {}]) expect(validate('onChange', { onChange })).toBeInstanceOf(Error)
+  })
+  it.each([undefined, null, { x: null }])('keeps nullish values and title fallbacks %#', (values) => {
+    render(
+      <SchemaControls
+        schema={{ x: { type: 'integer', title: null, default: 5 } }}
+        values={values}
+        onChange={() => {}}
+      />
+    )
+    expect(screen.getByRole('slider').value).toBe('5')
+    expect(screen.getByText('x: 5')).toBeDefined()
+  })
+  it('keeps omitted/null guards and unsupported/missing/no-enum fields empty', () => {
+    const view = render(<SchemaControls />)
+    expect(view.container.textContent).toBe('')
+    view.rerender(<SchemaControls schema={{ x: {} }} />)
+    expect(view.container.textContent).toBe('')
+    view.rerender(
+      <SchemaControls schema={{ x: {}, y: { type: 'unknown' }, z: { type: 'string' } }} onChange={() => {}} />
+    )
+    expect(view.container.textContent).toBe('')
+  })
+})
+
 // ---------------------------------------------------------------------------
 // boolean field
 // ---------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 import { ANIMATION_EFFECT_KEYS } from '../../../engine/animation/effectTypes.js'
 import { FADE_VARIANT_KEYS, FADE_VARIANT_LABELS } from '../../../engine/effects/fadeVariants/index.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
-import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 const EFFECT_LABELS = {
   spinX: 'Spin X',
@@ -31,64 +30,66 @@ function AnimationControls() {
   const setAnimationDuration = useProjectStore((state) => state.setAnimationDuration)
 
   return (
-    <section className="space-y-3">
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm">
+    <section className="bf-control-group">
+      <div className="bf-control-group">
+        <h3 className="bf-group-title">Loop animation</h3>
+        <label className="bf-check-row">
           <input type="checkbox" checked={useFadeInOut} onChange={(e) => setUseFadeInOut(e.target.checked)} />
           Fade in / out
-          <InfoTooltip content="Animate pixels scattering apart (fade out) and assembling together (fade in) at the start and end of each loop." />
         </label>
 
         {useFadeInOut && (
-          <div className="space-y-1.5 pl-1">
-            <span className="text-xs font-medium text-zinc-400">Direction</span>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'both', label: 'Both' },
-                { key: 'in', label: 'Fade in only' },
-                { key: 'out', label: 'Fade out only' }
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
-                  <input
-                    type="radio"
-                    name="fade-mode"
-                    value={key}
-                    checked={(fadeMode ?? 'both') === key}
-                    onChange={() => setFadeMode(key)}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-            <span className="text-xs font-medium text-zinc-400">Style</span>
-            <div className="flex flex-wrap gap-2">
-              {FADE_VARIANT_KEYS.map((key) => (
-                <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
-                  <input
-                    type="radio"
-                    name="fade-variant"
-                    value={key}
-                    checked={fadeVariant === key}
-                    onChange={() => setFadeVariant(key)}
-                  />
-                  {FADE_VARIANT_LABELS[key]}
-                </label>
-              ))}
-            </div>
+          <div className="bf-control-group">
+            <fieldset>
+              <legend className="bf-label">Fade direction</legend>
+              <div className="bf-choice-grid">
+                {[
+                  { key: 'both', label: 'Both' },
+                  { key: 'in', label: 'Fade in only' },
+                  { key: 'out', label: 'Fade out only' }
+                ].map(({ key, label }) => (
+                  <label key={key} className="bf-check-row">
+                    <input
+                      type="radio"
+                      name="fade-mode"
+                      value={key}
+                      checked={(fadeMode ?? 'both') === key}
+                      onChange={() => setFadeMode(key)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="bf-label">Fade style</legend>
+              <div className="bf-choice-grid">
+                {FADE_VARIANT_KEYS.map((key) => (
+                  <label key={key} className="bf-check-row">
+                    <input
+                      type="radio"
+                      name="fade-variant"
+                      value={key}
+                      checked={fadeVariant === key}
+                      onChange={() => setFadeVariant(key)}
+                    />
+                    {FADE_VARIANT_LABELS[key]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </div>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <span className="flex items-center text-xs font-medium text-zinc-400">
-          Motion (combine any)
-          <InfoTooltip content="Continuous motion applied during the animation loop. Multiple effects can be active at once." />
-        </span>
-        <div className="flex flex-wrap gap-2">
+      <fieldset className="bf-group">
+        <legend className="bf-group-title">Motion (combine any)</legend>
+        <p className="bf-help">Combine continuous effects independently of the static pose.</p>
+        <div className="bf-choice-grid">
           {ANIMATION_EFFECT_KEYS.map((key) => {
             const label = EFFECT_LABELS[key] ?? key
             return (
-              <label key={key} className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-1 text-xs">
+              <label key={key} className="bf-check-row">
                 <input
                   type="checkbox"
                   checked={animationEffects[key] ?? false}
@@ -99,26 +100,25 @@ function AnimationControls() {
             )
           })}
         </div>
-      </div>
 
-      <label htmlFor="anim-speed" className="flex items-center text-sm">
-        Speed: {animationSpeed.toFixed(2)} rad/s
-        <InfoTooltip content="Rotation and float speed in radians per second. Affects all motion effects." />
-      </label>
-      <input
-        id="anim-speed"
-        type="range"
-        min="0.05"
-        max="2"
-        step="0.01"
-        value={animationSpeed}
-        onChange={(e) => setAnimationSpeed(Number(e.target.value))}
-        className="w-full"
-      />
-
+        <label htmlFor="anim-speed" className="bf-label">
+          Speed: {animationSpeed.toFixed(2)} rad/s
+        </label>
+        <input
+          id="anim-speed"
+          type="range"
+          min="0.05"
+          max="2"
+          step="0.01"
+          value={animationSpeed}
+          onChange={(e) => setAnimationSpeed(Number(e.target.value))}
+          className="bf-range"
+        />
+      </fieldset>
       {useFadeInOut && (
-        <div className="space-y-2 border-t border-zinc-700 pt-2">
-          <label htmlFor="anim-fade-duration" className="block text-sm">
+        <div className="bf-group bf-control-group">
+          <h3 className="bf-group-title">Timing</h3>
+          <label htmlFor="anim-fade-duration" className="bf-label">
             Fade duration: {animationDuration}ms
           </label>
           <input
@@ -129,9 +129,9 @@ function AnimationControls() {
             step="100"
             value={animationDuration}
             onChange={(e) => setAnimationDuration(Number(e.target.value))}
-            className="w-full"
+            className="bf-range"
           />
-          <label htmlFor="anim-show-duration" className="block text-sm">
+          <label htmlFor="anim-show-duration" className="bf-label">
             Show duration: {showPhaseDuration}ms
           </label>
           <input
@@ -142,7 +142,7 @@ function AnimationControls() {
             step="500"
             value={showPhaseDuration}
             onChange={(e) => setShowPhaseDuration(Number(e.target.value))}
-            className="w-full"
+            className="bf-range"
           />
         </div>
       )}

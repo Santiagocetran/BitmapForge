@@ -1,3 +1,4 @@
+import { headingRef } from '../../utils/uiPropValidators.js'
 import { useDropzone } from 'react-dropzone'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
@@ -10,7 +11,7 @@ const ACCEPTED_IMAGE_TYPES = {
   'image/svg+xml': ['.svg']
 }
 
-function ImageInput() {
+function ImageInput({ chooseButtonRef } = {}) {
   const imageSource = useProjectStore((state) => state.imageSource)
   const setImageSource = useProjectStore((state) => state.setImageSource)
   const setStatus = useProjectStore((state) => state.setStatus)
@@ -38,25 +39,26 @@ function ImageInput() {
     return (
       <div
         {...getRootProps()}
-        className={`rounded-xl border border-dashed p-3 transition ${
-          isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-800'
-        } flex flex-col gap-2`}
+        className="bf-field flex flex-col gap-2 border-dashed p-3"
+        aria-label="Image file drop area"
       >
         <input {...getInputProps()} aria-label="Upload image file" />
+        <p className="bf-help">Image</p>
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-zinc-300" title={imageSource.name}>
+          <span className="truncate bf-value min-w-0" title={imageSource.name}>
             {imageSource.name}
           </span>
-          <span className="shrink-0 text-xs text-zinc-500">{(imageSource.size / 1024).toFixed(1)} KB</span>
+          <span className="shrink-0 bf-help">{(imageSource.size / 1024).toFixed(1)} KB</span>
         </div>
         <div className="flex gap-2">
-          <button type="button" className={`flex-1 ${BTN.base} ${BTN.secondary}`} onClick={open}>
+          <button ref={chooseButtonRef} type="button" className={`flex-1 ${BTN.base} ${BTN.secondary}`} onClick={open}>
             Replace
           </button>
           <button type="button" className={`flex-1 ${BTN.base} ${BTN.danger}`} onClick={() => setImageSource(null)}>
             Remove
           </button>
         </div>
+        {isDragActive && <p className="bf-help">Drop to replace image</p>}
       </div>
     )
   }
@@ -64,19 +66,18 @@ function ImageInput() {
   return (
     <div
       {...getRootProps()}
-      className={`w-full rounded-xl border border-dashed p-4 transition ${
-        isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-900'
-      } flex min-h-[120px] flex-col items-center justify-center gap-3`}
+      className="bf-field flex flex-col items-start gap-3 border-dashed p-3"
+      aria-label="Image file drop area"
     >
       <input {...getInputProps()} aria-label="Upload image file" />
-      <p className="text-center text-sm text-zinc-400">
-        {isDragActive ? 'Drop image here' : 'Drag and drop PNG, JPG, SVG, GIF'}
-      </p>
-      <button type="button" className={`${BTN.base} ${BTN.primary}`} onClick={open}>
+      <p className="bf-help">{isDragActive ? 'Drop image here' : 'Drop an image: PNG, JPG/JPEG, GIF, WebP or SVG.'}</p>
+      <button ref={chooseButtonRef} type="button" className={`${BTN.base} ${BTN.primary}`} onClick={open}>
         Choose Image
       </button>
     </div>
   )
 }
+
+ImageInput.propTypes = { chooseButtonRef: headingRef }
 
 export { ImageInput }

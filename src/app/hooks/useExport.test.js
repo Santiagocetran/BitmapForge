@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useExport } from './useExport.js'
+import { useExport, isExportProgressMessage } from './useExport.js'
 import { useProjectStore } from '../store/useProjectStore.js'
 
 // ─── Mock all builder utilities ───────────────────────────────────────────────
@@ -99,6 +99,27 @@ beforeEach(() => {
 // ─── exportAs('apng') ─────────────────────────────────────────────────────────
 
 describe('useExport — exportAs(apng)', () => {
+  it('emits recognized current APNG percentage progress, never save completion', async () => {
+    const { captureFrames } = await import('../utils/framesProvider.js')
+    let progress
+    captureFrames.mockImplementationOnce(async (_, __, { onProgress }) => {
+      onProgress(42, 100)
+      progress = getStatus().message
+      return []
+    })
+    const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    try {
+      const { result } = renderHook(() => useExport(makeMockSceneManagerRef()))
+      await act(async () => result.current.exportAs('apng'))
+      expect(progress).toBe('Encoding APNG 42%')
+      expect(isExportProgressMessage(progress)).toBe(true)
+      expect(isExportProgressMessage(getStatus().message)).toBe(false)
+      await act(async () => result.current.saveProject())
+      expect(isExportProgressMessage(getStatus().message)).toBe(false)
+    } finally {
+      download.mockRestore()
+    }
+  })
   it('sets exporting=false on success', async () => {
     const ref = makeMockSceneManagerRef()
     const { result } = renderHook(() => useExport(ref))
@@ -290,5 +311,115 @@ describe('useExport — cancelExport', () => {
       result.current.cancelExport()
     })
     expect(getStatus().message.toLowerCase()).toContain('cancel')
+  })
+})
+
+describe('useExport lifetime and stale status', () => {
+  it('invalidates nonabortable completion and progress on owner disposal', async () => {
+    const { buildCodeZip } = await import('../utils/codeExport.js')
+    let resolve
+    buildCodeZip.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r
+        })
+    )
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { result, unmount } = renderHook(() => useExport(makeMockSceneManagerRef()))
+    let pending
+    act(() => {
+      pending = result.current.exportAs('zip')
+    })
+    await vi.waitFor(() => expect(resolve).toBeDefined())
+    unmount()
+    expect(getStatus()).toMatchObject({ exporting: false, message: '' })
+    const snapshot = getStatus()
+    await act(async () => {
+      resolve(new Blob(['late']))
+      await pending
+    })
+    expect(click).not.toHaveBeenCalled()
+    expect(getStatus()).toBe(snapshot)
+    click.mockRestore()
+  })
+  it('ignores late capture progress after cancellation, disposal and a new generation', async () => {
+    const { captureFrames } = await import('../utils/framesProvider.js')
+    const requests = []
+    captureFrames.mockImplementationOnce(
+      (_manager, _count, options) => new Promise((resolve) => requests.push({ ...options, resolve }))
+    )
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { result, unmount } = renderHook(() => useExport(makeMockSceneManagerRef()))
+    let pending
+    act(() => {
+      pending = result.current.exportAs('apng')
+    })
+    await vi.waitFor(() => expect(requests).toHaveLength(1))
+    act(() => requests[0].onProgress(1, 4))
+    expect(getStatus().message).toContain('25%')
+    act(() => result.current.cancelExport())
+    expect(requests[0].signal.aborted).toBe(true)
+    const cancelled = getStatus()
+    act(() => requests[0].onProgress(3, 4))
+    expect(getStatus()).toBe(cancelled)
+    await act(async () => {
+      await result.current.exportAs('zip')
+      requests[0].onProgress(4, 4)
+      requests[0].resolve([])
+      await pending
+    })
+    expect(getStatus().message).toBe('Code ZIP exported.')
+    expect(click).toHaveBeenCalledOnce()
+    unmount()
+    const disposed = getStatus()
+    act(() => requests[0].onProgress(4, 4))
+    expect(getStatus()).toBe(disposed)
+    click.mockRestore()
+  })
+  it('rejects duplicate work and suppresses cancelled completion', async () => {
+    const { buildCodeZip } = await import('../utils/codeExport.js')
+    let resolve
+    buildCodeZip.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r
+        })
+    )
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { result } = renderHook(() => useExport(makeMockSceneManagerRef()))
+    let pending
+    act(() => {
+      pending = result.current.exportAs('zip')
+    })
+    await vi.waitFor(() => expect(resolve).toBeDefined())
+    await act(async () => {
+      await result.current.exportAs('zip')
+      result.current.cancelExport()
+    })
+    await act(async () => {
+      resolve(new Blob(['late']))
+      await pending
+    })
+    expect(buildCodeZip).toHaveBeenCalledOnce()
+    expect(click).not.toHaveBeenCalled()
+    expect(getStatus().message).toContain('cancelled')
+    click.mockRestore()
+  })
+  it('clears counterparts on failure and save recovery without resetting loading', async () => {
+    const { saveProjectFile } = await import('../utils/projectFile.js')
+    saveProjectFile.mockRejectedValueOnce(new Error('disk full'))
+    const { result } = renderHook(() => useExport(makeMockSceneManagerRef()))
+    act(() => useProjectStore.getState().setStatus({ loading: true, message: 'Old success', error: 'Old error' }))
+    await act(async () => {
+      await result.current.saveProject()
+    })
+    expect(getStatus().message).toBe('')
+    expect(getStatus().error).toContain('disk full')
+    expect(getStatus().loading).toBe(true)
+    await act(async () => {
+      await result.current.saveProject()
+    })
+    expect(getStatus().error).toBe('')
+    expect(getStatus().message).toContain('Project saved')
   })
 })

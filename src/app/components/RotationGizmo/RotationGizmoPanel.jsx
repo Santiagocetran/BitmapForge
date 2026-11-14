@@ -1,6 +1,6 @@
+import { BTN } from '../../styles/buttonStyles.js'
 import { GizmoCanvas } from './GizmoCanvas.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
-import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 const RAD_TO_DEG = 180 / Math.PI
 const DEG_TO_RAD = Math.PI / 180
@@ -21,7 +21,8 @@ function RotationGizmoPanel() {
   const isZero = baseRotation.x === 0 && baseRotation.y === 0 && baseRotation.z === 0
 
   return (
-    <section className="space-y-3">
+    <section className="bf-control-group">
+      <p className="bf-help">Static pose applied before animated Spin. Drag the gizmo or adjust each axis.</p>
       <div className="flex justify-center">
         <GizmoCanvas />
       </div>
@@ -35,7 +36,7 @@ function RotationGizmoPanel() {
           const deg = Math.round(baseRotation[axis] * RAD_TO_DEG)
           return (
             <div key={axis}>
-              <label htmlFor={`rot-${axis}`} className="mb-1 block text-xs text-zinc-400">
+              <label htmlFor={`rot-${axis}`} className="bf-label">
                 {label}: {deg}°
               </label>
               <input
@@ -46,7 +47,7 @@ function RotationGizmoPanel() {
                 step="1"
                 value={deg}
                 onChange={(e) => setAxis(axis, Number(e.target.value))}
-                className="w-full"
+                className="bf-range"
               />
             </div>
           )
@@ -54,15 +55,9 @@ function RotationGizmoPanel() {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={resetBaseRotation}
-          disabled={isZero}
-          className="flex-1 rounded bg-zinc-700 px-2 py-1.5 text-xs hover:bg-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
-        >
+        <button type="button" onClick={resetBaseRotation} disabled={isZero} className={`${BTN.base} ${BTN.secondary}`}>
           Reset Rotation (R)
         </button>
-        <InfoTooltip content="Static rotation offset applied before animation. Press R to reset to 0°." />
       </div>
     </section>
   )

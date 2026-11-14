@@ -1,17 +1,17 @@
 import { useEffect, useCallback } from 'react'
 import { useProjectStore } from '../store/useProjectStore.js'
-import { saveProjectFile } from '../utils/projectFile.js'
 
 function isTyping(e) {
   const tag = e.target.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable
 }
 
-function useKeyboardShortcuts({ onShowHelp } = {}) {
+function useKeyboardShortcuts({ onShowHelp, onSaveProject } = {}) {
   const resetBaseRotation = useProjectStore((s) => s.resetBaseRotation)
 
   const handleKeyDown = useCallback(
     (e) => {
+      if (e.defaultPrevented) return
       const ctrl = e.ctrlKey || e.metaKey
 
       // Ctrl+Z → undo
@@ -33,7 +33,7 @@ function useKeyboardShortcuts({ onShowHelp } = {}) {
       // Ctrl+S → save project (intercept before browser save dialog)
       if (ctrl && !e.shiftKey && e.key === 's') {
         e.preventDefault()
-        saveProjectFile(useProjectStore.getState()).catch(() => {})
+        onSaveProject?.()
         return
       }
 
@@ -49,7 +49,7 @@ function useKeyboardShortcuts({ onShowHelp } = {}) {
         onShowHelp?.()
       }
     },
-    [resetBaseRotation, onShowHelp]
+    [resetBaseRotation, onShowHelp, onSaveProject]
   )
 
   useEffect(() => {
