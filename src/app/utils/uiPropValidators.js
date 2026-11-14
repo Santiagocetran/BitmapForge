@@ -9,6 +9,20 @@ function contract(description, accepts, required = false) {
     return accepts(value, props) ? null : new Error(`${component}.${name} must be ${description}`)
   }
 }
+export const navigationRef = contract('a mutable ref with a nullable source focus handle', (v) =>
+  refObject(
+    v,
+    (current) => current === null || (typeof current === 'object' && typeof current.focusSource === 'function')
+  )
+)
+export const qualityPart = contract('all, renderer or refinements', (v) =>
+  ['all', 'renderer', 'refinements'].includes(v)
+)
+export const sourceKind = contract(
+  'model, shape, text or image',
+  (v) => ['model', 'shape', 'text', 'image'].includes(v),
+  true
+)
 export const optionalBoolean = contract('a boolean when supplied', (v) => typeof v === 'boolean')
 export const requiredBoolean = contract('a boolean', (v) => typeof v === 'boolean', true)
 export const optionalString = contract('a string when supplied', (v) => typeof v === 'string')

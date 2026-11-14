@@ -1,3 +1,4 @@
+import { headingRef } from '../../utils/uiPropValidators.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { getShapeTypes, getDefaultParams, getShapeLabels } from '../../../engine/loaders/shapeGenerator.js'
 
@@ -37,7 +38,7 @@ const SHAPE_PARAMS_CONFIG = {
   ]
 }
 
-function ShapeSelector() {
+function ShapeSelector({ selectedShapeRef } = {}) {
   const shapeType = useProjectStore((state) => state.shapeType)
   const shapeParams = useProjectStore((state) => state.shapeParams)
   const setShapeType = useProjectStore((state) => state.setShapeType)
@@ -48,39 +49,44 @@ function ShapeSelector() {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-1">
+      <div role="group" aria-label="Shape" className="bf-choice-grid">
         {SHAPE_TYPES.map((type) => (
           <button
             key={type}
             type="button"
             onClick={() => setShapeType(type)}
-            className={`rounded px-1 py-2 text-xs transition ${
-              type === shapeType ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-            }`}
+            ref={type === shapeType ? selectedShapeRef : null}
+            aria-pressed={type === shapeType}
+            className="bf-choice"
           >
+            {type === shapeType && <span aria-hidden="true">✓ </span>}
             {SHAPE_LABELS[type]}
           </button>
         ))}
       </div>
 
       {paramConfigs.length > 0 && (
-        <div className="space-y-2">
+        <div className="bf-group">
+          <h3 className="bf-group-title">Geometry</h3>
           {paramConfigs.map(({ key, label, min, max, step }) => {
             const value = shapeParams[key] ?? defaults[key] ?? min
             return (
               <div key={key}>
-                <label className="flex justify-between text-xs text-zinc-400">
-                  <span>{label}</span>
-                  <span>{Number(value).toFixed(step < 1 ? 2 : 0)}</span>
-                </label>
+                <div className="flex justify-between gap-2">
+                  <label htmlFor={`shape-${key}`} className="bf-label">
+                    {label}
+                  </label>
+                  <span className="bf-value">{Number(value).toFixed(step < 1 ? 2 : 0)}</span>
+                </div>
                 <input
+                  id={`shape-${key}`}
                   type="range"
                   min={min}
                   max={max}
                   step={step}
                   value={value}
                   onChange={(e) => setShapeParam(key, Number(e.target.value))}
-                  className="w-full"
+                  className="bf-range"
                 />
               </div>
             )
@@ -90,5 +96,7 @@ function ShapeSelector() {
     </div>
   )
 }
+
+ShapeSelector.propTypes = { selectedShapeRef: headingRef }
 
 export { ShapeSelector }

@@ -10,14 +10,14 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import * as Popover from '@radix-ui/react-popover'
 import { HexColorPicker } from 'react-colorful'
-import { useState, useRef, useEffect, useId } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useId } from 'react'
+import * as contracts from '../../utils/uiPropValidators.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { usePresetStore } from '../../store/usePresetStore.js'
 import { BUILT_IN_PRESETS } from '../../data/builtInPresets.js'
 import { BTN } from '../../styles/buttonStyles.js'
 
-const target =
-  'min-h-11 min-w-11 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400'
+const target = 'min-h-11 min-w-11 rounded'
 const button = `${BTN.base} ${BTN.secondary} ${target}`
 
 export function normalizePaletteHex(value) {
@@ -46,7 +46,7 @@ function SortableColor({ id, index, color, open, onOpenChange, triggerRef, child
           <button
             ref={triggerRef}
             type="button"
-            className={`${target} w-11 border border-zinc-500`}
+            className={`${button} w-11`}
             style={{ backgroundColor: color }}
             aria-label={`Edit color ${index + 1}: ${color}`}
           />
@@ -59,7 +59,7 @@ function SortableColor({ id, index, color, open, onOpenChange, triggerRef, child
         {...attributes}
         {...listeners}
         style={{ touchAction: 'none' }}
-        className={`${target} cursor-grab border border-zinc-700 text-zinc-400`}
+        className={`${button} cursor-grab`}
         aria-label={`Reorder color ${index + 1}`}
       >
         <span aria-hidden="true">⠿</span>
@@ -68,19 +68,60 @@ function SortableColor({ id, index, color, open, onOpenChange, triggerRef, child
   )
 }
 
-function PalettePresets({ onApply, presetDraft, onPresetDraftChange, presetSaveOpen, onPresetSaveOpenChange }) {
+function PalettePresets({
+  onApply,
+  onCancelInteraction,
+  focusGenerationRef,
+  presetDraft,
+  onPresetDraftChange,
+  presetSaveOpen,
+  onPresetSaveOpenChange,
+  palettesOpen,
+  onPalettesOpenChange
+}) {
   const { customPresets, saveCurrentPreset, deletePreset } = usePresetStore()
   const [localDraft, setLocalDraft] = useState('')
   const [localOpen, setLocalOpen] = useState(false)
+  const [localBrowse, setLocalBrowse] = useState(false)
   const draft = presetDraft ?? localDraft
   const open = presetSaveOpen ?? localOpen
+  const browse = palettesOpen ?? localBrowse
   const setDraft = onPresetDraftChange ?? setLocalDraft
   const setOpen = onPresetSaveOpenChange ?? setLocalOpen
+  const setBrowse = onPalettesOpenChange ?? setLocalBrowse
   const saveRef = useRef(null)
+  const nameRef = useRef(null)
+  const browseRef = useRef(null)
+  const pendingNameFocus = useRef(null)
+  const browseId = useId()
+  function focusVisible(node) {
+    if (node?.isConnected && !node.disabled && !node.closest('[hidden], [inert]') && node.getClientRects().length)
+      node.focus()
+  }
+  // Only this instance's explicit invocation can request focus. Controlled-open
+  // remounts (or a cancelled request before a delayed controlled commit) cannot.
+  useLayoutEffect(() => {
+    if (!open || pendingNameFocus.current === null) return
+    if (pendingNameFocus.current === focusGenerationRef.current) focusVisible(nameRef.current)
+    pendingNameFocus.current = null
+  })
+  useLayoutEffect(
+    () => () => {
+      ++focusGenerationRef.current
+    },
+    [focusGenerationRef]
+  )
+  function restore(node) {
+    const generation = ++focusGenerationRef.current
+    queueMicrotask(() => {
+      if (generation === focusGenerationRef.current) focusVisible(node)
+    })
+  }
   function finish() {
+    pendingNameFocus.current = null
     setDraft('')
     setOpen(false)
-    queueMicrotask(() => saveRef.current?.focus())
+    restore(saveRef.current)
   }
   function save() {
     if (draft.trim()) {
@@ -89,31 +130,45 @@ function PalettePresets({ onApply, presetDraft, onPresetDraftChange, presetSaveO
     }
   }
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+    <div className="min-w-0 space-y-3" onPointerDownCapture={onCancelInteraction}>
+      <button
+        ref={browseRef}
+        type="button"
+        aria-expanded={browse}
+        aria-controls={browseId}
+        className={`${button} w-full justify-between`}
+        onClick={() => {
+          onCancelInteraction()
+          setBrowse(!browse)
+        }}
+      >
+        Browse palettes <span aria-hidden="true">{browse ? '−' : '+'}</span>
+      </button>
+      <div id={browseId} hidden={!browse} className="min-w-0 space-y-2">
+        <p className="bf-help">Palettes change colors only.</p>
         {[...BUILT_IN_PRESETS, ...customPresets].map((preset) => (
-          <div key={preset.id} className="flex max-w-full items-center gap-1">
+          <div key={preset.id} className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => onApply(preset.settings.colors)}
-              className={`${button} flex max-w-full items-center gap-1.5 border border-zinc-700 px-2 text-xs`}
+              className={`${button} min-w-0 flex-1 justify-start gap-2 text-left`}
             >
               <span className="flex shrink-0 gap-0.5" aria-hidden="true">
-                {preset.settings.colors.slice(0, 4).map((c, i) => (
-                  <span key={i} className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: c }} />
+                {preset.settings.colors.map((c, i) => (
+                  <span key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: c }} />
                 ))}
               </span>
-              <span className="break-words">{preset.name}</span>
+              <span className="min-w-0 break-words">{preset.name}</span>
             </button>
             {preset.category === 'custom' && (
               <button
                 type="button"
-                className={button}
-                aria-label={`Delete preset ${preset.name}`}
-                onClick={(event) => {
-                  const previous = event.currentTarget.previousElementSibling
+                className={`${BTN.base} ${BTN.danger} ${target} shrink-0`}
+                aria-label={`Delete palette ${preset.name}`}
+                onClick={() => {
+                  onCancelInteraction()
                   deletePreset(preset.id)
-                  queueMicrotask(() => (previous?.isConnected ? previous : saveRef.current)?.focus())
+                  restore(browseRef.current)
                 }}
               >
                 ×
@@ -123,11 +178,12 @@ function PalettePresets({ onApply, presetDraft, onPresetDraftChange, presetSaveO
         ))}
       </div>
       {open && (
-        <div className="flex flex-wrap gap-1">
-          <label className="w-full text-xs text-zinc-300">
-            Preset name
+        <div className="flex flex-wrap gap-2">
+          <label className="bf-label w-full">
+            Palette name
             <input
-              autoFocus
+              ref={nameRef}
+              data-bf-palette-name=""
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
@@ -141,14 +197,14 @@ function PalettePresets({ onApply, presetDraft, onPresetDraftChange, presetSaveO
                   finish()
                 }
               }}
-              className={`${target} mt-1 w-full bg-zinc-800 px-2`}
+              className="bf-field mt-1"
             />
           </label>
           <button type="button" className={button} disabled={!draft.trim()} onClick={save}>
-            Save preset
+            Save palette
           </button>
           <button type="button" className={button} onClick={finish}>
-            Cancel preset
+            Cancel palette
           </button>
         </div>
       )}
@@ -156,10 +212,14 @@ function PalettePresets({ onApply, presetDraft, onPresetDraftChange, presetSaveO
         ref={saveRef}
         type="button"
         hidden={open}
-        className={`${button} w-full text-xs`}
-        onClick={() => setOpen(true)}
+        className={`${button} w-full`}
+        onClick={() => {
+          onCancelInteraction()
+          pendingNameFocus.current = ++focusGenerationRef.current
+          setOpen(true)
+        }}
       >
-        + Save current as preset
+        Save palette
       </button>
     </div>
   )
@@ -171,7 +231,9 @@ function ColorPalette({
   presetDraft,
   onPresetDraftChange,
   presetSaveOpen,
-  onPresetSaveOpenChange
+  onPresetSaveOpenChange,
+  palettesOpen,
+  onPalettesOpenChange
 }) {
   const colors = useProjectStore((state) => state.colors)
   const [editing, setEditing] = useState(null)
@@ -182,7 +244,7 @@ function ColorPalette({
   const transaction = useRef(null)
   const ownWrite = useRef(false)
   const revision = useRef(0)
-  const focusGeneration = useRef(0)
+  const focusGenerationRef = useRef(0)
   const triggers = useRef([])
   const addRef = useRef(null)
   const contentRef = useRef(null)
@@ -196,9 +258,9 @@ function ColorPalette({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   function focusItem(index, handle = false) {
-    const generation = ++focusGeneration.current
+    const generation = ++focusGenerationRef.current
     queueMicrotask(() => {
-      if (generation !== focusGeneration.current) return
+      if (generation !== focusGenerationRef.current) return
       const count = useProjectStore.getState().colors.length
       const trigger = triggers.current[Math.min(index, count - 1)]
       const node = handle ? trigger?.nextElementSibling : trigger
@@ -210,7 +272,7 @@ function ColorPalette({
   function cancel({ restoreFocus = false, resetDrag = true } = {}) {
     const index = transaction.current?.index
     transaction.current = null
-    ++focusGeneration.current
+    ++focusGenerationRef.current
     setEditing(null)
     setError(false)
     if (resetDrag && dragRef.current !== null) {
@@ -221,7 +283,7 @@ function ColorPalette({
   }
   cancelRef.current = cancel
   useEffect(() => {
-    const generation = focusGeneration
+    const generation = focusGenerationRef
     if (interactionRef)
       interactionRef.current = {
         cancel: (options) => cancelRef.current(options),
@@ -319,16 +381,12 @@ function ColorPalette({
   const ids = colors.map((_, index) => `color-${index}`)
   return (
     <section className="min-w-0 space-y-3" aria-label="Color palette editor">
-      <PalettePresets
-        {...{ presetDraft, onPresetDraftChange, presetSaveOpen, onPresetSaveOpenChange }}
-        onApply={(next) => structural((state) => state.setColors(next))}
-      />
-      <div className="min-w-0 border-t border-zinc-800 pt-3">
-        <div className="mb-2 flex justify-between text-xs text-zinc-400">
+      <div className="min-w-0">
+        <div className="bf-help mb-2 flex justify-between gap-2">
           <span>Dark (shadows)</span>
           <span>Bright (highlights)</span>
         </div>
-        <p className="mb-2 text-xs text-zinc-400">
+        <p className="bf-help mb-2">
           Select a swatch to edit. Use its handle to drag or reorder with the keyboard; move buttons are inside the
           editor.
         </p>
@@ -378,7 +436,7 @@ function ColorPalette({
                         aria-label={`Edit color ${index + 1}`}
                         sideOffset={8}
                         collisionPadding={8}
-                        className="z-50 max-h-[calc(100dvh-16px)] w-64 max-w-[calc(100vw-16px)] overflow-y-auto rounded border border-zinc-600 bg-zinc-900 p-3 text-zinc-100 shadow-xl"
+                        className="bf-picker z-[60] w-64 max-w-[calc(100vw-16px)] overflow-y-auto p-3"
                         style={{ maxHeight: 'min(calc(100dvh - 16px), var(--radix-popover-content-available-height))' }}
                         onPlaced={() => inputRef.current?.scrollIntoView?.({ block: 'nearest' })}
                         onOpenAutoFocus={(event) => {
@@ -409,7 +467,7 @@ function ColorPalette({
                         onPointerDownOutside={() => cancel()}
                         onFocusOutside={() => cancel()}
                       >
-                        <div className="sticky top-0 z-10 mb-2 flex items-center justify-between bg-zinc-900">
+                        <div className="sticky top-0 z-10 mb-2 flex items-center justify-between bg-[var(--bf-panel)]">
                           <span className="text-sm">Edit color {index + 1}</span>
                           <button
                             type="button"
@@ -422,7 +480,7 @@ function ColorPalette({
                           </button>
                         </div>
                         <HexColorPicker color={color} onChange={(next) => commit(next)} />
-                        <label htmlFor={fieldId} className="mt-2 block text-xs">
+                        <label htmlFor={fieldId} className="bf-label mt-2">
                           Hex color
                         </label>
                         <input
@@ -431,7 +489,7 @@ function ColorPalette({
                           value={draft}
                           aria-invalid={error}
                           aria-describedby={error ? `${fieldId}-error` : undefined}
-                          className={`${target} mt-1 w-full border border-zinc-600 bg-zinc-800 px-2 text-sm`}
+                          className="bf-field mt-1"
                           onChange={(event) => {
                             setDraft(event.target.value)
                             setError(false)
@@ -450,7 +508,7 @@ function ColorPalette({
                           }}
                         />
                         {error && (
-                          <p id={`${fieldId}-error`} className="mt-1 text-xs text-red-300">
+                          <p id={`${fieldId}-error`} className="bf-error mt-1">
                             Enter a hex color: #RGB or #RRGGBB.
                           </p>
                         )}
@@ -482,7 +540,7 @@ function ColorPalette({
             </div>
           </SortableContext>
         </DndContext>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex gap-2" onPointerDownCapture={() => cancel()}>
           <button
             ref={addRef}
             type="button"
@@ -502,8 +560,31 @@ function ColorPalette({
           </button>
         </div>
       </div>
+      <PalettePresets
+        {...{
+          presetDraft,
+          onPresetDraftChange,
+          presetSaveOpen,
+          onPresetSaveOpenChange,
+          palettesOpen,
+          onPalettesOpenChange,
+          focusGenerationRef
+        }}
+        onCancelInteraction={() => cancel()}
+        onApply={(next) => structural((state) => state.setColors(next))}
+      />
     </section>
   )
+}
+
+ColorPalette.propTypes = {
+  interactionRef: contracts.interactionRef,
+  presetDraft: contracts.optionalString,
+  onPresetDraftChange: contracts.optionalFunction,
+  presetSaveOpen: contracts.optionalBoolean,
+  onPresetSaveOpenChange: contracts.optionalFunction,
+  palettesOpen: contracts.optionalBoolean,
+  onPalettesOpenChange: contracts.optionalFunction
 }
 
 export { ColorPalette }

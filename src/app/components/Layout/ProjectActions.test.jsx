@@ -1,0 +1,25 @@
+import { it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { ProjectActions } from './ProjectActions.jsx'
+afterEach(cleanup)
+it('owns one project input, resets same-file and cancel paths, and calls supplied commands only', () => {
+  const saveProject = vi.fn()
+  const loadProject = vi.fn()
+  render(<ProjectActions saveProject={saveProject} loadProject={loadProject} />)
+  const input = screen.getByLabelText('Load BitmapForge project file')
+  const choose = vi.spyOn(input, 'click')
+  fireEvent.click(screen.getByRole('button', { name: 'Load .bitmapforge', exact: true }))
+  expect(choose).toHaveBeenCalledOnce()
+  fireEvent.change(input, { target: { files: [] } })
+  expect(loadProject).not.toHaveBeenCalled()
+  const file = new File(['{}'], 'test.bitmapforge')
+  fireEvent.change(input, { target: { files: [file] } })
+  expect(input.value).toBe('')
+  fireEvent.change(input, { target: { files: [file] } })
+  expect(loadProject).toHaveBeenCalledTimes(2)
+  expect(loadProject).toHaveBeenLastCalledWith(file)
+  fireEvent(input, new Event('cancel'))
+  expect(input.value).toBe('')
+  fireEvent.click(screen.getByRole('button', { name: 'Save .bitmapforge', exact: true }))
+  expect(saveProject).toHaveBeenCalledOnce()
+})

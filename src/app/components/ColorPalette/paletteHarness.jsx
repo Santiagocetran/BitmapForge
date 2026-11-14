@@ -15,7 +15,10 @@ function Harness() {
   const [shown, setShown] = useState(true)
   const palette = <ColorPalette interactionRef={interactionRef} portalContainer={host ?? undefined} />
   return (
-    <div style={{ width: '100%', maxWidth: 320, padding: 12, boxSizing: 'border-box' }}>
+    <div
+      className="bf-scope"
+      style={{ width: '100%', maxWidth: 320, minHeight: 1200, padding: 12, boxSizing: 'border-box' }}
+    >
       <button
         onClick={() => {
           interactionRef.current?.cancel({ restoreFocus: false })
@@ -25,6 +28,7 @@ function Harness() {
         Toggle palette
       </button>
       <button onClick={() => setModal(true)}>Open modal</button>
+      <button>Outside destination</button>
       {!modal && shown && palette}
       <Dialog.Root
         open={modal}
@@ -35,7 +39,7 @@ function Harness() {
       >
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-          <Dialog.Content className="fixed inset-y-0 left-0 w-full max-w-80 overflow-auto bg-zinc-950 p-3 text-white">
+          <Dialog.Content className="bf-scope fixed inset-y-0 left-0 w-full max-w-80 overflow-auto bg-zinc-950 p-3 text-white">
             <Dialog.Title>Fixture settings</Dialog.Title>
             <Dialog.Description>Palette modal integration fixture</Dialog.Description>
             <Dialog.Close>Close modal</Dialog.Close>
@@ -44,7 +48,6 @@ function Harness() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
-      <button>Outside destination</button>
     </div>
   )
 }

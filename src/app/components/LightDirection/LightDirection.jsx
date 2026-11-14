@@ -1,5 +1,4 @@
 import { useProjectStore } from '../../store/useProjectStore.js'
-import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 
 const DIRECTIONS = [
   { label: 'NW', x: -3, y: 4, z: 5 },
@@ -13,17 +12,26 @@ const DIRECTIONS = [
   { label: 'SE', x: 3, y: 1, z: -4 }
 ]
 
+const DIRECTION_NAMES = {
+  NW: 'North west',
+  N: 'North',
+  NE: 'North east',
+  W: 'West',
+  C: 'Center',
+  E: 'East',
+  SW: 'South west',
+  S: 'South',
+  SE: 'South east'
+}
+
 function LightDirection() {
   const lightDirection = useProjectStore((state) => state.lightDirection)
   const setLightDirection = useProjectStore((state) => state.setLightDirection)
 
   return (
-    <section className="space-y-2">
-      <p className="flex items-center text-xs text-zinc-400">
-        Position of the directional light
-        <InfoTooltip content="Sets where light comes from. Affects shading and which surfaces appear bright or dark in the bitmap effect." />
-      </p>
-      <div className="grid grid-cols-3 gap-1">
+    <section className="bf-control-group">
+      <p className="bf-help">Position of the directional light</p>
+      <div role="group" aria-label="Light direction" className="grid grid-cols-3 gap-2">
         {DIRECTIONS.map((direction) => {
           const active =
             direction.x === lightDirection.x && direction.y === lightDirection.y && direction.z === lightDirection.z
@@ -31,9 +39,12 @@ function LightDirection() {
             <button
               key={direction.label}
               type="button"
-              className={`rounded px-2 py-1 text-xs ${active ? 'bg-emerald-500 text-black' : 'bg-zinc-700'}`}
+              className="bf-choice"
+              aria-pressed={active}
+              aria-label={DIRECTION_NAMES[direction.label]}
               onClick={() => setLightDirection({ x: direction.x, y: direction.y, z: direction.z })}
             >
+              {active && <span aria-hidden="true">✓ </span>}
               {direction.label}
             </button>
           )

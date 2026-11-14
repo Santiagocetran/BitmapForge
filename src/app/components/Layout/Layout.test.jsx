@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   desktop: false,
   realExportPanel: false,
   saveOverride: null,
+  focusSource: vi.fn(),
   cancel: vi.fn()
 }))
 vi.mock('../../../engine/SceneManager.js', () => ({
@@ -40,7 +41,29 @@ vi.mock('../../../engine/SceneManager.js', () => ({
     }
   }
 }))
-vi.mock('../InputSource/InputSource.jsx', () => ({ InputSource: () => <input aria-label="Input fixture" /> }))
+vi.mock('../InputSource/InputSource.jsx', async () => {
+  const { useLayoutEffect, useRef } = await import('react')
+  const contracts = await import('../../utils/uiPropValidators.js')
+  function InputFixture({ navigationRef }) {
+    const target = useRef(null)
+    useLayoutEffect(() => {
+      const handle = {
+        focusSource: (kind) => {
+          mocks.focusSource(kind)
+          target.current.focus()
+          return true
+        }
+      }
+      navigationRef.current = handle
+      return () => {
+        if (navigationRef.current === handle) navigationRef.current = null
+      }
+    }, [navigationRef])
+    return <input ref={target} aria-label="Input fixture" />
+  }
+  InputFixture.propTypes = { navigationRef: contracts.navigationRef }
+  return { InputSource: InputFixture }
+})
 vi.mock('../ColorPalette/ColorPalette.jsx', async () => {
   const { useImperativeHandle } = await import('react')
   const contracts = await import('../../utils/uiPropValidators.js')
@@ -63,7 +86,8 @@ vi.mock('../ColorPalette/ColorPalette.jsx', async () => {
 })
 vi.mock('../QualitySettings/QualitySettings.jsx', async () => {
   const contracts = await import('../../utils/uiPropValidators.js')
-  function QualityFixture({ advancedOpen, onAdvancedOpenChange }) {
+  function QualityFixture({ part, advancedOpen, onAdvancedOpenChange }) {
+    if (part === 'renderer') return <div>Renderer fixture</div>
     return (
       <button onClick={() => onAdvancedOpenChange(!advancedOpen)} aria-pressed={advancedOpen}>
         Advanced fixture
@@ -71,6 +95,7 @@ vi.mock('../QualitySettings/QualitySettings.jsx', async () => {
     )
   }
   QualityFixture.propTypes = {
+    part: contracts.qualityPart,
     advancedOpen: contracts.requiredBoolean,
     onAdvancedOpenChange: contracts.requiredFunction
   }
@@ -107,12 +132,10 @@ function mount(props = {}) {
 }
 // Scope accessible queries to the section under test instead of computing names
 // for every unrelated setting/format button in jsdom.
-function sectionButton(title, root = document.body) {
-  const section = [...root.querySelectorAll('[data-section]')].find((node) => node.dataset.section === title)
-  return within(section.querySelector('h3')).getByRole('button', {
-    name: title,
-    exact: true
-  })
+function selectTask(name) {
+  const button = within(screen.getByRole('group', { name: 'Editor tasks' })).getByRole('button', { name, exact: true })
+  fireEvent.click(button)
+  return document.getElementById(`bf-panel-${name.toLowerCase()}`)
 }
 function closeButton() {
   return within(screen.getByRole('dialog', { name: 'Settings' }).firstElementChild).getByRole('button', {
@@ -120,7 +143,7 @@ function closeButton() {
   })
 }
 function advancedButton() {
-  return within(sectionButton('Look').closest('section')).getByRole('button', { name: 'Advanced fixture' })
+  return within(document.getElementById('bf-panel-look')).getByRole('button', { name: 'Advanced fixture' })
 }
 function resize(desktop) {
   act(() => {
@@ -136,6 +159,7 @@ beforeEach(() => {
   mocks.saveOverride = null
   mocks.listeners.clear()
   mocks.cancel.mockClear()
+  mocks.focusSource.mockClear()
   vi.stubGlobal('matchMedia', () => ({
     get matches() {
       return mocks.desktop
@@ -162,6 +186,62 @@ afterEach(() => {
 })
 
 describe('responsive Layout integration with real PreviewCanvas', () => {
+  it('keeps four mounted task panels, resets reactivation without focus theft and cancels at pointer capture', () => {
+    mocks.desktop = true
+    mount()
+    const history = useProjectStore.temporal.getState().pastStates.length
+    selectTask('Look')
+    const panels = [...document.querySelectorAll('.bf-task-panel')]
+    const body = document.querySelector('.bf-task-body')
+    body.scrollTop = 700
+    const task = within(screen.getByRole('group', { name: 'Editor tasks' })).getByRole('button', {
+      name: 'Look',
+      exact: true
+    })
+    task.focus()
+    mocks.cancel.mockClear()
+    fireEvent.pointerDown(task)
+    expect(mocks.cancel).toHaveBeenCalledWith({ restoreFocus: false })
+    fireEvent.click(task)
+    expect(body.scrollTop).toBe(0)
+    expect(document.activeElement).toBe(task)
+    selectTask('Motion')
+    expect([...document.querySelectorAll('.bf-task-panel')]).toEqual(panels)
+    expect(panels.filter((panel) => !panel.hidden)).toHaveLength(1)
+    expect(useProjectStore.temporal.getState().pastStates.length).toBe(history)
+    expect(mocks.constructors).toBe(1)
+  })
+  it('consumes the committed source handle once after visibility/reset without synthesizing a chooser', () => {
+    mocks.desktop = true
+    useProjectStore.setState({ inputType: 'model', model: null })
+    mount()
+    selectTask('Look')
+    fireEvent.click(screen.getByRole('button', { name: 'Image', exact: true }))
+    expect(useProjectStore.getState().inputType).toBe('image')
+    expect(document.getElementById('bf-panel-source').hidden).toBe(false)
+    expect(document.activeElement).toBe(screen.getByLabelText('Input fixture'))
+    expect(mocks.focusSource).toHaveBeenCalledExactlyOnceWith('image')
+    expect(document.querySelector('.bf-task-body').scrollTop).toBe(0)
+    selectTask('Look')
+    expect(mocks.focusSource).toHaveBeenCalledOnce()
+    expect(mocks.constructors).toBe(1)
+  })
+  it('publishes viewport height AND offset synchronously, updates scroll-only offset and cleans listeners', () => {
+    const viewport = new EventTarget()
+    viewport.height = 280
+    viewport.offsetTop = 40
+    vi.stubGlobal('visualViewport', viewport)
+    const view = mount()
+    expect(document.documentElement.style.getPropertyValue('--bf-visible-height')).toBe('280px')
+    expect(document.documentElement.style.getPropertyValue('--bf-visible-top')).toBe('40px')
+    viewport.offsetTop = 65
+    fireEvent(viewport, new Event('scroll'))
+    expect(document.documentElement.style.getPropertyValue('--bf-visible-top')).toBe('65px')
+    view.unmount()
+    viewport.offsetTop = 90
+    fireEvent(viewport, new Event('resize'))
+    expect(document.documentElement.style.getPropertyValue('--bf-visible-top')).toBe('')
+  })
   it('publishes the latest committed bridge, detaches replaced refs and clears its own handle', async () => {
     const first = { current: null }
     const second = { current: null }
@@ -233,7 +313,7 @@ describe('responsive Layout integration with real PreviewCanvas', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
     const close = within(screen.getByRole('dialog').firstElementChild).getByRole('button', { name: 'Close settings' })
-    const exportSection = within(sectionButton('Export & Project').closest('section'))
+    const exportSection = within(selectTask('Export'))
     const formats = within(exportSection.getByRole('group', { name: 'Export format' }))
     fireEvent.click(formats.getByRole('button', { name: 'Code ZIP', exact: true }))
     fireEvent.click(exportSection.getByRole('button', { name: 'Export Code ZIP' }))
@@ -246,8 +326,8 @@ describe('responsive Layout integration with real PreviewCanvas', () => {
         .getAttribute('aria-pressed')
     ).toBe('true')
     resize(false)
-    fireEvent.click(screen.getByRole('button', { name: 'Export & Project', exact: true }))
-    const reopened = within(sectionButton('Export & Project').closest('section'))
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }))
+    const reopened = within(document.getElementById('bf-panel-export'))
     expect(reopened.getByRole('button', { name: 'Exporting…' }).disabled).toBe(true)
     await act(async () => resolve(new Blob(['one result'])))
     await waitFor(() => expect(download).toHaveBeenCalledOnce())
@@ -258,15 +338,15 @@ describe('responsive Layout integration with real PreviewCanvas', () => {
   it('preserves required disclosure/draft state and cancels palette before parent hiding', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
+    selectTask('Look')
     fireEvent.change(screen.getByLabelText('Preset draft fixture'), { target: { value: 'My palette' } })
     fireEvent.click(advancedButton())
-    fireEvent.click(sectionButton('Color Palette'))
+    selectTask('Source')
     expect(mocks.cancel).toHaveBeenCalledWith({ restoreFocus: false })
     fireEvent.click(closeButton())
     resize(true)
-    const palette = sectionButton('Color Palette')
-    expect(palette.getAttribute('aria-expanded')).toBe('false')
-    fireEvent.click(palette)
+    expect(document.getElementById('bf-panel-look').hidden).toBe(true)
+    selectTask('Look')
     expect(screen.getByLabelText('Preset draft fixture').value).toBe('My palette')
     expect(advancedButton().getAttribute('aria-pressed')).toBe('true')
   })
@@ -316,7 +396,7 @@ describe('responsive Layout integration with real PreviewCanvas', () => {
   it('preserves unrelated preview focus and UI-only changes stay outside history', () => {
     const bridgeRef = { current: null }
     mount({ bridgeRef })
-    const previewAction = screen.getByRole('button', { name: 'Export & Project', exact: true })
+    const previewAction = screen.getByRole('button', { name: 'Export', exact: true })
     previewAction.focus()
     resize(true)
     // The mobile action itself disappears; use the stable preview container for
@@ -347,6 +427,22 @@ describe('responsive Layout integration with real PreviewCanvas', () => {
     invoker.remove()
     bridgeRef.current.restoreHelpFocus()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open settings', exact: true }))
+  })
+  it('composes one renderer, one refinement and one project input; repeats modal-close resize focus safely', async () => {
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
+    selectTask('Look')
+    expect(screen.getAllByText('Renderer fixture')).toHaveLength(1)
+    expect(screen.getAllByText('Advanced fixture')).toHaveLength(1)
+    expect(document.querySelectorAll('input[accept=".bitmapforge"]')).toHaveLength(1)
+    fireEvent.change(screen.getByLabelText('Preset draft fixture'), { target: { value: 'retained' } })
+    fireEvent.click(closeButton())
+    fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
+    closeButton().focus()
+    resize(true)
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('bf-heading-look')))
+    expect(screen.getByLabelText('Preset draft fixture').value).toBe('retained')
+    expect(mocks.constructors).toBe(1)
   })
   it('moves one stable notice into drawer, defers help updates and returns it to preview', async () => {
     const view = mount()

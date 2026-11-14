@@ -17,17 +17,18 @@ let origin
 let relative
 
 test.beforeAll(async () => {
-  const outputs = path.resolve('test/fixtures/outputs')
+  const outputs = path.resolve(process.env.BITMAPFORGE_SOURCE_OUTPUT || 'test/fixtures/outputs')
   await fs.mkdir(outputs, { recursive: true })
   directory = await fs.mkdtemp(path.join(outputs, 'ascii-generated-'))
-  relative = '/' + path.relative(process.cwd(), directory).split(path.sep).join('/')
+  relative = '/@fs' + directory.split(path.sep).join('/')
   await fs.writeFile(path.join(directory, 'index.html'), '<!doctype html><html><body></body></html>')
   server = await createServer({
     configFile: false,
     cacheDir: path.join(directory, '.vite'),
     root: process.cwd(),
     esbuild: { jsx: 'automatic' },
-    server: { port: 0, host: '127.0.0.1' }
+    resolve: { dedupe: ['react', 'react-dom', 'three'] },
+    server: { port: 0, host: '127.0.0.1', strictPort: true, hmr: false, fs: { allow: [process.cwd(), directory] } }
   })
   await server.listen()
   origin = `http://127.0.0.1:${server.httpServer.address().port}`

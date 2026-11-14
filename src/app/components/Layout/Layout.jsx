@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from 'zustand'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Undo2, Redo2, ChevronDown } from 'lucide-react'
+import { ProjectActions } from './ProjectActions.jsx'
 import { useExportController } from '../../hooks/useExportController.js'
 import { StatusNotice } from '../ui/StatusNotice.jsx'
 import { InputSource } from '../InputSource/InputSource.jsx'
@@ -20,7 +21,7 @@ import * as contracts from '../../utils/uiPropValidators.js'
 function Section({ title, open, onToggle, children, headingRef }) {
   const id = useId()
   return (
-    <section className="rounded-lg border border-zinc-700 bg-zinc-900">
+    <section className="bf-disclosure">
       <h3>
         <button
           ref={headingRef}
@@ -28,7 +29,7 @@ function Section({ title, open, onToggle, children, headingRef }) {
           aria-expanded={open}
           aria-controls={id}
           onClick={onToggle}
-          className="flex min-h-11 w-full items-center justify-between rounded p-3 text-left text-sm font-semibold focus-visible:ring-2 focus-visible:ring-emerald-300"
+          className="bf-disclosure-trigger"
         >
           {title}
           <ChevronDown size={16} aria-hidden="true" className={open ? 'rotate-180' : ''} />
@@ -50,7 +51,7 @@ Section.propTypes = {
 function UndoRedoBar() {
   const { undo, redo, pastStates, futureStates } = useStore(useProjectStore.temporal)
   return (
-    <div className="flex items-center gap-1 px-1">
+    <div className="bf-history">
       <button
         type="button"
         onClick={() => {
@@ -58,7 +59,7 @@ function UndoRedoBar() {
         }}
         disabled={pastStates.length === 0}
         title="Undo (Ctrl+Z)"
-        className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="bf-button bf-button--ghost"
       >
         <Undo2 size={14} />
       </button>
@@ -69,31 +70,27 @@ function UndoRedoBar() {
         }}
         disabled={futureStates.length === 0}
         title="Redo (Ctrl+Shift+Z)"
-        className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="bf-button bf-button--ghost"
       >
         <Redo2 size={14} />
       </button>
-      <span className="ml-auto text-xs text-zinc-600">
-        {pastStates.length > 0 ? `${pastStates.length} step${pastStates.length > 1 ? 's' : ''}` : ''}
-      </span>
     </div>
   )
 }
 
-function Layout({ bridgeRef, helpOpen = false }) {
+function Layout({ bridgeRef, helpOpen = false, onShowHelp }) {
   const controller = useExportController()
   const [desktop, setDesktop] = useState(() => window.matchMedia('(min-width: 1024px)').matches)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const [sections, setSections] = useState({
-    Input: true,
-    'Color Palette': true,
-    Look: true,
-    Animation: true,
-    'Rotation Offset': false,
-    'Light Direction': false,
-    'Export & Project': true
-  })
+  const [activeTask, setActiveTask] = useState('source')
+  const [sections, setSections] = useState({ 'Rotation Offset': false, 'Light Direction': false })
+  const [postEffectsOpen, setPostEffectsOpen] = useState(false)
+  const [palettesOpen, setPalettesOpen] = useState(false)
+  const sourceNavigationRef = useRef(null)
+  const taskBodyRef = useRef(null)
+  const resetScroll = useRef(true)
+  const [transition, setTransition] = useState(0)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [presetDraft, setPresetDraft] = useState('')
   const [presetSaveOpen, setPresetSaveOpen] = useState(false)
@@ -115,14 +112,58 @@ function Layout({ bridgeRef, helpOpen = false }) {
   const drawerLive = useRef(false)
   const focusGeneration = useRef(0)
   const reveal = useRef(null)
+  const resizeRestore = useRef(null)
   const cancelReveal = () => {
     focusGeneration.current++
     reveal.current = null
+    resizeRestore.current = null
   }
   const resizeFocus = useRef(null)
   const resizing = useRef(false)
   const helpInvoker = useRef(null)
   const cancelPalette = () => paletteRef.current?.cancel({ restoreFocus: false })
+  const barrier = () => {
+    cancelReveal()
+    cancelPalette()
+  }
+  const requestReset = () => {
+    resetScroll.current = true
+    setTransition((n) => n + 1)
+  }
+
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    let previous = ''
+    function measure() {
+      const viewport = window.visualViewport
+      const valid = Number.isFinite(viewport?.height) && viewport.height > 0
+      const height = valid ? viewport.height : window.innerHeight
+      const top = valid && Number.isFinite(viewport.offsetTop) ? Math.max(0, viewport.offsetTop) : 0
+      const key = `${height}:${top}:${window.innerWidth}`
+      if (previous === key) return
+      previous = key
+      root.style.setProperty('--bf-visible-height', `${height}px`)
+      root.style.setProperty('--bf-visible-top', `${top}px`)
+      const sheet = height >= 600 && window.innerWidth < height ? Math.min(height * 0.6, 560) : height
+      root.style.setProperty('--bf-sheet-height', `${sheet}px`)
+      root.style.setProperty('--bf-sheet-top', `${top + height - sheet}px`)
+      root.dataset.bfShort = String(height < 240)
+      const focused = document.activeElement
+      if (taskBodyRef.current?.contains(focused)) focused.scrollIntoView?.({ block: 'nearest', behavior: 'instant' })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('scroll', measure)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('scroll', measure)
+      for (const name of ['--bf-visible-height', '--bf-visible-top', '--bf-sheet-height', '--bf-sheet-top'])
+        root.style.removeProperty(name)
+      delete root.dataset.bfShort
+    }
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)')
@@ -136,13 +177,18 @@ function Layout({ bridgeRef, helpOpen = false }) {
         return surface?.contains(focused)
       })
       const inside = settings?.contains(focused) || Boolean(portalTrigger)
-      resizeFocus.current = inside
-        ? media.matches
-          ? (portalTrigger || focused).closest('[data-section]')?.dataset.section || 'Input'
-          : 'mobile'
-        : null
+      resizeFocus.current =
+        inside && !helpOpen
+          ? media.matches
+            ? (portalTrigger || focused).closest('[data-section]')?.dataset.section || activeTask
+            : 'mobile'
+          : null
+      resetScroll.current = true
       resizing.current = true
       cancelReveal()
+      if (inside && media.matches && !helpOpen) {
+        resizeRestore.current = { owner: resizeFocus.current, generation: focusGeneration.current }
+      }
       paletteRef.current?.cancel({ restoreFocus: false })
       setDrawerOpen(false)
       setDesktop(media.matches)
@@ -150,7 +196,7 @@ function Layout({ bridgeRef, helpOpen = false }) {
     }
     media.addEventListener('change', change)
     return () => media.removeEventListener('change', change)
-  }, [])
+  }, [activeTask, helpOpen])
 
   // Publish committed state before Radix's deferred close autofocus and host work.
   useLayoutEffect(() => {
@@ -170,7 +216,7 @@ function Layout({ bridgeRef, helpOpen = false }) {
         const target = helpInvoker.current
         if (target?.isConnected && !target.closest('[hidden], [inert]') && !target.matches(':disabled')) target.focus()
         else if (drawerOpen) closeRef.current?.focus()
-        else (desktop ? railRef.current : openRef.current)?.focus()
+        else (desktop ? headingRefs.current[activeTask] || railRef.current : openRef.current)?.focus()
       }
     }
     bridgeRef.current = bridge
@@ -181,6 +227,10 @@ function Layout({ bridgeRef, helpOpen = false }) {
 
   useLayoutEffect(() => {
     if (backgroundRef.current) backgroundRef.current.inert = !desktop && drawerOpen
+    if (resetScroll.current && taskBodyRef.current) {
+      taskBodyRef.current.scrollTop = 0
+      resetScroll.current = false
+    }
     const host = !desktop && drawerOpen ? drawerNoticeRef.current : previewNoticeRef.current
     if (host) host.appendChild(noticeNode)
     if (resizeFocus.current) {
@@ -190,15 +240,16 @@ function Layout({ bridgeRef, helpOpen = false }) {
       resizeFocus.current = null
     }
     if (
-      reveal.current === focusGeneration.current &&
+      reveal.current?.generation === focusGeneration.current &&
       (desktop || drawerOpen) &&
       !collapsed &&
-      sections['Export & Project']
+      activeTask === reveal.current.task
     ) {
-      const target = headingRefs.current['Export & Project']
+      const request = reveal.current
+      const target = headingRefs.current[request.task]
       if (target) {
         target.scrollIntoView?.({ block: 'nearest', behavior: 'instant' })
-        target.focus()
+        if (!request.kind || !sourceNavigationRef.current?.focusSource(request.kind)) target.focus()
         cancelReveal()
       }
     }
@@ -218,15 +269,19 @@ function Layout({ bridgeRef, helpOpen = false }) {
   function closeDrawer() {
     cancelReveal()
     cancelPalette()
+    if (taskBodyRef.current) taskBodyRef.current.scrollTop = 0
+    resetScroll.current = true
     setDrawerOpen(false)
   }
   function revealExport(event) {
     resizing.current = false
     opener.current = event.currentTarget
     openingKind.current = 'export'
-    reveal.current = ++focusGeneration.current
+    barrier()
+    reveal.current = { generation: focusGeneration.current, task: 'export' }
+    requestReset()
     setCollapsed(false)
-    setSections((s) => ({ ...s, 'Export & Project': true }))
+    setActiveTask('export')
     if (!desktop) setDrawerOpen(true)
   }
   function toggleSection(title) {
@@ -234,21 +289,69 @@ function Layout({ bridgeRef, helpOpen = false }) {
     if (sections[title]) cancelPalette()
     setSections((s) => ({ ...s, [title]: !s[title] }))
   }
+  function chooseSource(kind, event) {
+    barrier()
+    opener.current = event.currentTarget
+    openingKind.current = 'source'
+    resizing.current = false
+    useProjectStore.getState().setInputType(kind)
+    setActiveTask('source')
+    setCollapsed(false)
+    requestReset()
+    reveal.current = { generation: focusGeneration.current, task: 'source', kind }
+    if (!desktop) setDrawerOpen(true)
+  }
+  const navigation = (
+    <div role="group" aria-label="Editor tasks" className="bf-task-nav">
+      {['source', 'look', 'motion', 'export'].map((task) => (
+        <button
+          key={task}
+          type="button"
+          className="bf-task"
+          aria-pressed={activeTask === task}
+          aria-controls={`bf-panel-${task}`}
+          onPointerDownCapture={barrier}
+          onClick={() => {
+            barrier()
+            requestReset()
+            setActiveTask(task)
+          }}
+        >
+          {task[0].toUpperCase() + task.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
   const contents = (
-    <>
-      <UndoRedoBar />
-      {Object.keys(sections).map((title) => (
-        <div key={title} data-section={title}>
-          <Section
-            title={title}
-            open={sections[title]}
-            onToggle={() => toggleSection(title)}
-            headingRef={(node) => {
-              if (node) headingRefs.current[title] = node
+    <div ref={taskBodyRef} className="bf-task-body" data-transition={transition}>
+      {['source', 'look', 'motion', 'export'].map((task) => (
+        <section
+          key={task}
+          id={`bf-panel-${task}`}
+          data-section={task}
+          hidden={activeTask !== task}
+          aria-labelledby={`bf-heading-${task}`}
+          className="bf-task-panel"
+        >
+          <h2
+            id={`bf-heading-${task}`}
+            tabIndex={-1}
+            ref={(node) => {
+              headingRefs.current[task] = node
             }}
           >
-            {title === 'Input' && <InputSource />}
-            {title === 'Color Palette' && (
+            {task[0].toUpperCase() + task.slice(1)}
+          </h2>
+          {task === 'source' && <InputSource navigationRef={sourceNavigationRef} />}
+          {task === 'look' && (
+            <>
+              <QualitySettings
+                part="renderer"
+                advancedOpen={advancedOpen}
+                onAdvancedOpenChange={setAdvancedOpen}
+                postEffectsOpen={postEffectsOpen}
+                onPostEffectsOpenChange={setPostEffectsOpen}
+              />
               <ColorPalette
                 interactionRef={paletteRef}
                 portalContainer={desktop ? undefined : portalContainer}
@@ -256,97 +359,129 @@ function Layout({ bridgeRef, helpOpen = false }) {
                 onPresetDraftChange={setPresetDraft}
                 presetSaveOpen={presetSaveOpen}
                 onPresetSaveOpenChange={setPresetSaveOpen}
+                palettesOpen={palettesOpen}
+                onPalettesOpenChange={setPalettesOpen}
               />
-            )}
-            {title === 'Look' && (
-              <>
-                <p className="mb-2 text-xs text-zinc-400">Render mode, detail and effects.</p>
-                <QualitySettings advancedOpen={advancedOpen} onAdvancedOpenChange={setAdvancedOpen} />
-              </>
-            )}
-            {title === 'Animation' && <AnimationControls />}
-            {title === 'Rotation Offset' && <RotationGizmoPanel />}
-            {title === 'Light Direction' && <LightDirection />}
-            {title === 'Export & Project' && (
-              <ErrorBoundary>
-                <ExportPanel {...controller} />
-              </ErrorBoundary>
-            )}
-          </Section>
-        </div>
+              <QualitySettings
+                part="refinements"
+                advancedOpen={advancedOpen}
+                onAdvancedOpenChange={setAdvancedOpen}
+                postEffectsOpen={postEffectsOpen}
+                onPostEffectsOpenChange={setPostEffectsOpen}
+              />
+            </>
+          )}
+          {task === 'motion' && (
+            <>
+              <AnimationControls />
+              <h3 className="bf-group-title">Composition</h3>
+              {Object.keys(sections).map((title) => (
+                <Section key={title} title={title} open={sections[title]} onToggle={() => toggleSection(title)}>
+                  {title === 'Rotation Offset' ? <RotationGizmoPanel /> : <LightDirection />}
+                </Section>
+              ))}
+            </>
+          )}
+          {task === 'export' && (
+            <ErrorBoundary>
+              <ExportPanel
+                selectedFormat={controller.selectedFormat}
+                onSelectFormat={controller.onSelectFormat}
+                exportSelected={controller.exportSelected}
+                cancelExport={controller.cancelExport}
+                exporting={controller.exporting}
+                disabledReason={controller.disabledReason}
+              />
+            </ErrorBoundary>
+          )}
+        </section>
       ))}
-    </>
+    </div>
   )
   return (
     <>
-      <main className="app-shell flex gap-3 overflow-hidden p-2 lg:p-4">
-        {desktop && (
-          <aside
-            className={`flex min-h-0 shrink-0 flex-col gap-2 ${collapsed ? 'w-16' : 'w-[340px]'}`}
-            aria-label="Settings panel"
-          >
+      <div ref={backgroundRef} className="bf-workbench">
+        <header className="bf-header">
+          <div className="bf-brand">
+            <span aria-hidden="true" className="bf-mark">
+              ▦
+            </span>
+            BitmapForge
+          </div>
+          <UndoRedoBar />
+          <ProjectActions saveProject={controller.saveProject} loadProject={controller.loadProject} />
+          <button className="bf-button bf-button--ghost" onPointerDownCapture={barrier} onClick={onShowHelp}>
+            Help
+          </button>
+          {desktop && (
+            <button className="bf-button bf-button--primary" onPointerDownCapture={barrier} onClick={revealExport}>
+              Export
+            </button>
+          )}
+        </header>
+        <main className="bf-workspace">
+          {desktop && (
+            <aside className={`bf-inspector ${collapsed ? 'bf-inspector-collapsed' : ''}`} aria-label="Settings panel">
+              <button
+                ref={railRef}
+                type="button"
+                aria-expanded={!collapsed}
+                aria-controls="desktop-settings"
+                className="bf-button bf-button--ghost bf-collapse"
+                onPointerDownCapture={barrier}
+                onClick={() => {
+                  barrier()
+                  requestReset()
+                  setCollapsed((c) => !c)
+                }}
+              >
+                {collapsed ? 'Expand settings' : 'Collapse settings'}
+              </button>
+              <div id="desktop-settings" hidden={collapsed} ref={desktopSettingsRef} className="bf-inspector-inner">
+                {navigation}
+                {contents}
+              </div>
+            </aside>
+          )}
+          <section className="bf-preview" aria-label="Preview">
+            <div ref={previewNoticeRef} className="bf-notice-slot" />
+            <div className="bf-stage" onPointerDownCapture={barrier}>
+              <PreviewCanvas onChooseSource={chooseSource} />
+            </div>
+          </section>
+        </main>
+        {!desktop && (
+          <footer className="bf-mobile-toolbar">
             <button
-              ref={railRef}
+              ref={openRef}
               type="button"
-              aria-expanded={!collapsed}
-              aria-controls="desktop-settings"
-              className="min-h-11 rounded bg-zinc-800 px-2 text-xs"
-              onClick={() => {
-                cancelPalette()
-                cancelReveal()
-                setCollapsed((c) => !c)
+              aria-expanded={drawerOpen}
+              aria-haspopup="dialog"
+              className="bf-button bf-button--secondary"
+              onPointerDownCapture={barrier}
+              onClick={(event) => {
+                barrier()
+                requestReset()
+                resizing.current = false
+                opener.current = event.currentTarget
+                openingKind.current = 'ordinary'
+                setDrawerOpen(true)
               }}
             >
-              {collapsed ? 'Expand settings' : 'Collapse settings'}
+              Open settings
             </button>
-            <button type="button" onClick={revealExport} className="min-h-11 rounded bg-emerald-800 p-2 text-xs">
-              Export & Project
-            </button>
-            <div
-              id="desktop-settings"
-              hidden={collapsed}
-              ref={desktopSettingsRef}
-              className="min-h-0 flex-1 space-y-3 overflow-y-auto"
+            <button
+              ref={exportAccessRef}
+              type="button"
+              className="bf-button bf-button--primary"
+              onPointerDownCapture={barrier}
+              onClick={revealExport}
             >
-              {contents}
-            </div>
-          </aside>
+              Export
+            </button>
+          </footer>
         )}
-        <section ref={backgroundRef} className="flex min-h-0 min-w-0 flex-1 flex-col gap-2" aria-label="Preview">
-          {!desktop && (
-            <div className="flex shrink-0 gap-2">
-              <button
-                ref={openRef}
-                type="button"
-                aria-expanded={drawerOpen}
-                aria-haspopup="dialog"
-                onClick={(event) => {
-                  resizing.current = false
-                  opener.current = event.currentTarget
-                  openingKind.current = 'ordinary'
-                  cancelReveal()
-                  setDrawerOpen(true)
-                }}
-                className="min-h-11 rounded bg-zinc-800 px-3 text-xs"
-              >
-                Open settings
-              </button>
-              <button
-                ref={exportAccessRef}
-                type="button"
-                onClick={revealExport}
-                className="min-h-11 rounded bg-emerald-800 px-3 text-xs"
-              >
-                Export & Project
-              </button>
-            </div>
-          )}
-          <div ref={previewNoticeRef} />
-          <div className="min-h-0 flex-1">
-            <PreviewCanvas />
-          </div>
-        </section>
-      </main>
+      </div>
       <Dialog.Root
         open={!desktop && drawerOpen}
         onOpenChange={(open) => {
@@ -354,37 +489,75 @@ function Layout({ bridgeRef, helpOpen = false }) {
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
+          <Dialog.Overlay className="bf-overlay bf-settings-overlay" onPointerDownCapture={barrier} />
           <Dialog.Content
             aria-describedby={undefined}
             ref={drawerSettingsRef}
             onOpenAutoFocus={(event) => {
               event.preventDefault()
-              if (openingKind.current === 'export') headingRefs.current['Export & Project']?.focus()
+              if (openingKind.current === 'export') headingRefs.current.export?.focus()
               else closeRef.current?.focus()
             }}
             onCloseAutoFocus={(event) => {
               event.preventDefault()
-              if (!drawerLive.current && !resizing.current && !helpOpen && !desktop) opener.current?.focus()
+              // A departing modal FocusScope can reject the parent's layout-phase
+              // desktop focus. Complete that same generation at Radix teardown,
+              // never with a timer or after a newer task/source request.
+              const request = resizeRestore.current
+              if (!drawerLive.current && resizing.current && request?.generation === focusGeneration.current) {
+                resizeRestore.current = null
+                const target = headingRefs.current[request.owner]
+                if (target?.isConnected && !target.closest('[hidden], [inert]')) {
+                  target.focus()
+                  target.scrollIntoView?.({ block: 'nearest', behavior: 'instant' })
+                }
+              }
+              if (!drawerLive.current && !resizing.current && !helpOpen && !desktop) {
+                const target = opener.current
+                if (target?.isConnected && !target.closest('[hidden], [inert]') && !target.matches(':disabled'))
+                  target.focus()
+                else openRef.current?.focus()
+              }
             }}
             onEscapeKeyDown={(event) => {
-              if (helpOpen || paletteRef.current?.isKeyboardDragging?.()) event.preventDefault()
+              const nameOwnsEscape =
+                event.target === document.activeElement &&
+                event.target?.matches?.('input[data-bf-palette-name]') &&
+                drawerSettingsRef.current?.contains(event.target)
+              // Retire only Dialog dismissal; the name input's existing React
+              // Escape handler must still clear the form and restore its trigger.
+              if (helpOpen || paletteRef.current?.isKeyboardDragging?.() || nameOwnsEscape) event.preventDefault()
             }}
             onInteractOutside={(event) => {
               if (helpOpen) event.preventDefault()
             }}
-            className="fixed inset-y-0 left-0 z-50 flex w-[min(100vw,360px)] flex-col gap-2 border-r border-zinc-700 bg-zinc-950 p-3 shadow-xl"
+            className="bf-dialog bf-settings"
           >
-            <div className="flex shrink-0 items-center justify-between">
+            <div className="bf-dialog-header">
               <Dialog.Title>Settings</Dialog.Title>
+              <button
+                type="button"
+                className="bf-button bf-button--ghost"
+                onPointerDownCapture={barrier}
+                onClick={onShowHelp}
+              >
+                Help
+              </button>
               <Dialog.Close asChild>
-                <button ref={closeRef} type="button" className="min-h-11 px-3" aria-label="Close settings">
+                <button
+                  ref={closeRef}
+                  type="button"
+                  className="bf-button bf-button--secondary"
+                  onPointerDownCapture={barrier}
+                  aria-label="Close settings"
+                >
                   Close
                 </button>
               </Dialog.Close>
             </div>
-            <div ref={drawerNoticeRef} className="shrink-0" />
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">{!desktop && contents}</div>
+            <div ref={drawerNoticeRef} className="bf-notice-slot" />
+            {!desktop && navigation}
+            {!desktop && contents}
             <div ref={setPortalContainer} />
           </Dialog.Content>
         </Dialog.Portal>
@@ -393,5 +566,9 @@ function Layout({ bridgeRef, helpOpen = false }) {
     </>
   )
 }
-Layout.propTypes = { bridgeRef: contracts.bridgeRef, helpOpen: contracts.optionalBoolean }
+Layout.propTypes = {
+  bridgeRef: contracts.bridgeRef,
+  helpOpen: contracts.optionalBoolean,
+  onShowHelp: contracts.optionalFunction
+}
 export { Layout }

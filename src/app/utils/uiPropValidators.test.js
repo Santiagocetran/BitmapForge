@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createElement, Fragment } from 'react'
 import * as c from './uiPropValidators.js'
 import { ExportPanel } from '../components/ExportPanel/ExportPanel.jsx'
+import { ProjectActions } from '../components/Layout/ProjectActions.jsx'
 import { QualitySettings } from '../components/QualitySettings/QualitySettings.jsx'
 import { ShortcutsModal } from '../components/ui/ShortcutsModal.jsx'
 import { Layout } from '../components/Layout/Layout.jsx'
@@ -25,6 +26,17 @@ describe('callable UI contracts (React 19 does not invoke these automatically)',
       expect(error).toBeInstanceOf(Error)
       expect(error.message).toContain('ContractTest.value')
     }
+  })
+  it('validates the frozen source navigation and finite presentation contracts', () => {
+    for (const value of [undefined, null, { current: null }, { current: { focusSource() {} } }])
+      expect(check(c.navigationRef, value)).toBeNull()
+    for (const value of [{}, { current: undefined }, { current: {} }, { current: { focusSource: true } }])
+      expect(check(c.navigationRef, value)).toBeInstanceOf(Error)
+    for (const value of [undefined, null, 'all', 'renderer', 'refinements'])
+      expect(check(c.qualityPart, value)).toBeNull()
+    for (const value of ['render', '', true, {}]) expect(check(c.qualityPart, value)).toBeInstanceOf(Error)
+    for (const value of ['model', 'shape', 'text', 'image']) expect(check(c.sourceKind, value)).toBeNull()
+    for (const value of [undefined, null, 'shapes', true, {}]) expect(check(c.sourceKind, value)).toBeInstanceOf(Error)
   })
   it('validates renderable children including fragments and nested arrays', () => {
     for (const value of [
@@ -90,15 +102,22 @@ describe('callable UI contracts (React 19 does not invoke these automatically)',
   it.each([undefined, null, '', 'png', 'APNG', 1, {}, true])('rejects unknown format %s', (value) => {
     expect(check(ExportPanel.propTypes.selectedFormat, value)).toBeInstanceOf(Error)
   })
-  it.each(['onSelectFormat', 'exportSelected', 'saveProject', 'loadProject'])(
-    'requires callable ExportPanel.%s',
-    (key) => {
-      const validator = ExportPanel.propTypes[key]
-      expect(validator({ [key]: () => {} }, key)).toBeNull()
-      for (const value of [undefined, null, false, 'callback', {}])
-        expect(validator({ [key]: value }, key)).toBeInstanceOf(Error)
-    }
-  )
+  it.each(['onSelectFormat', 'exportSelected'])('requires callable ExportPanel.%s', (key) => {
+    const validator = ExportPanel.propTypes[key]
+    expect(validator({ [key]: () => {} }, key)).toBeNull()
+    for (const value of [undefined, null, false, 'callback', {}])
+      expect(validator({ [key]: value }, key)).toBeInstanceOf(Error)
+  })
+  it.each(['saveProject', 'loadProject'])('requires callable ProjectActions.%s', (key) => {
+    const validator = ProjectActions.propTypes[key]
+    expect(validator({ [key]: () => {} }, key)).toBeNull()
+    for (const value of [undefined, null, false, 'callback', {}])
+      expect(validator({ [key]: value }, key)).toBeInstanceOf(Error)
+  })
+  it('keeps project callback contracts out of the output-only ExportPanel', () => {
+    expect(ExportPanel.propTypes).not.toHaveProperty('saveProject')
+    expect(ExportPanel.propTypes).not.toHaveProperty('loadProject')
+  })
   it('requires cancellation only while exporting, but never accepts a wrong supplied type', () => {
     for (const exporting of [undefined, false, true]) {
       expect(check(c.cancelExport, () => {}, { exporting })).toBeNull()

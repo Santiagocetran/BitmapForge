@@ -1,5 +1,5 @@
 import { useDropzone } from 'react-dropzone'
-import { optionalBoolean } from '../../utils/uiPropValidators.js'
+import { optionalBoolean, headingRef } from '../../utils/uiPropValidators.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 
@@ -14,7 +14,7 @@ const ACCEPTED_TYPES = {
 // Finding 28: large model warning threshold
 const SIZE_WARN_BYTES = 2 * 1024 * 1024 // 2 MB
 
-function ModelUploader({ compact = false }) {
+function ModelUploader({ compact = false, chooseButtonRef } = {}) {
   const model = useProjectStore((state) => state.model)
   const setModel = useProjectStore((state) => state.setModel)
   const setStatus = useProjectStore((state) => state.setStatus)
@@ -50,21 +50,21 @@ function ModelUploader({ compact = false }) {
     return (
       <div
         {...getRootProps()}
-        className={`rounded-xl border border-dashed p-3 transition ${
-          isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-800'
-        } flex flex-col gap-2`}
+        className="bf-field flex flex-col gap-2 border-dashed p-3"
+        aria-label="3D model file drop area"
       >
         {/* Finding 16: aria-label for hidden file input */}
         <input {...getInputProps()} aria-label="Upload 3D model file (STL, OBJ, GLTF, or GLB)" />
+        <p className="bf-help">3D model</p>
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-zinc-300" title={model.name}>
+          <span className="truncate bf-value min-w-0" title={model.name}>
             {model.name}
           </span>
-          <span className="shrink-0 text-xs text-zinc-500">{(model.size / 1024).toFixed(1)} KB</span>
+          <span className="shrink-0 bf-help">{(model.size / 1024).toFixed(1)} KB</span>
         </div>
         {/* Finding 22: standardized button styles */}
         <div className="flex gap-2">
-          <button type="button" className={`flex-1 ${BTN.base} ${BTN.secondary}`} onClick={open}>
+          <button ref={chooseButtonRef} type="button" className={`flex-1 ${BTN.base} ${BTN.secondary}`} onClick={open}>
             Replace
           </button>
           <button
@@ -78,7 +78,7 @@ function ModelUploader({ compact = false }) {
             Remove
           </button>
         </div>
-        {isDragActive && <p className="text-center text-xs text-emerald-400">Drop to replace model</p>}
+        {isDragActive && <p className="bf-help text-center">Drop to replace model</p>}
       </div>
     )
   }
@@ -86,23 +86,20 @@ function ModelUploader({ compact = false }) {
   return (
     <div
       {...getRootProps()}
-      className={`w-full max-w-[280px] rounded-xl border border-dashed p-4 transition ${
-        isDragActive ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-600 bg-zinc-900'
-      } flex min-h-[200px] flex-col items-center justify-center gap-3`}
+      className="bf-field flex flex-col items-start gap-3 border-dashed p-3"
+      aria-label="3D model file drop area"
     >
       {/* Finding 16: aria-label for hidden file input */}
       <input {...getInputProps()} aria-label="Upload 3D model file (STL, OBJ, GLTF, or GLB)" />
-      <p className="text-sm text-zinc-200">
-        {isDragActive ? 'Drop model file here' : 'Drag and drop STL/OBJ/GLTF/GLB'}
-      </p>
+      <p className="bf-help">{isDragActive ? 'Drop model file here' : 'Drop a 3D model: STL, OBJ, GLTF or GLB.'}</p>
       {/* Finding 22: standardized button style */}
-      <button type="button" className={`${BTN.base} ${BTN.primary}`} onClick={open}>
+      <button ref={chooseButtonRef} type="button" className={`${BTN.base} ${BTN.primary}`} onClick={open}>
         Choose File
       </button>
     </div>
   )
 }
 
-ModelUploader.propTypes = { compact: optionalBoolean }
+ModelUploader.propTypes = { compact: optionalBoolean, chooseButtonRef: headingRef }
 
 export { ModelUploader }

@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react'
+import { useId } from 'react'
 import { BTN } from '../../styles/buttonStyles.js'
 import * as contracts from '../../utils/uiPropValidators.js'
 
@@ -6,86 +6,95 @@ const FORMAT_OPTIONS = [
   {
     value: 'apng',
     label: 'APNG',
-    description:
-      'Animated PNG. Full color, transparent background supported. Best for embedding in websites or sharing.'
+    description: 'Animated PNG with full color and alpha transparency.'
   },
   {
     value: 'gif',
     label: 'GIF',
-    description: 'Classic animated GIF. Universal compatibility. 256-color limit, no partial transparency.'
+    description: 'Animated GIF with up to 256 colors and limited transparency; no partial alpha.'
   },
   {
     value: 'webm',
     label: 'Video',
-    description: 'MP4 (WebM fallback). Best quality for presentations or social media.'
+    description: 'MP4 video with WebM fallback. The generated container depends on browser codec support.'
   },
   {
     value: 'spritesheet',
     label: 'Sprite Sheet',
-    description: 'PNG grid of all frames. For game engines (Phaser, Unity) or custom code.'
+    description: 'PNG grid of animation frames for game engines or custom playback code.'
   },
   {
     value: 'css',
     label: 'CSS Anim',
-    description: 'Pure CSS + sprite sheet. Drop into any website — no JavaScript needed.'
+    description: 'Sprite sheet and CSS animation files for website integration.'
   },
   {
     value: 'react',
     label: 'React',
-    description: 'React component with the live animation engine. Drop into any React/Vite project.'
+    description: 'Generated React component with the live animation engine and project settings.'
   },
   {
     value: 'webcomponent',
-    label: 'Web Comp',
-    description: '<bitmap-animation> custom element. Works in any framework or plain HTML.'
+    label: 'Web Component',
+    description: 'Generated <bitmap-animation> custom element with the live animation engine.'
   },
-  { value: 'embed', label: 'Embed', description: 'Static site ready to deploy. Upload to any web host.' },
+  {
+    value: 'embed',
+    label: 'Embed',
+    description: 'Static site files with the live runtime for self-hosting; not a published URL.'
+  },
   {
     value: 'zip',
     label: 'Code ZIP',
-    description: 'Full engine source code. For developers who want to build their own integration.'
+    description: 'Engine source archive for developers building a custom integration.'
   }
 ]
 
-function ExportPanel({
-  selectedFormat,
-  onSelectFormat,
-  exportSelected,
-  cancelExport,
-  saveProject,
-  loadProject,
-  exporting,
-  disabledReason
-}) {
+function ExportPanel({ selectedFormat, onSelectFormat, exportSelected, cancelExport, exporting, disabledReason }) {
   const descriptionId = useId()
-  const inputRef = useRef(null)
   const selectedOption = FORMAT_OPTIONS.find((f) => f.value === selectedFormat)
   return (
-    <section className="space-y-2">
-      <div role="group" aria-label="Export format" className="grid grid-cols-3 gap-1">
-        {FORMAT_OPTIONS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={selectedFormat === value}
-            aria-describedby={selectedFormat === value ? descriptionId : undefined}
-            onClick={() => onSelectFormat(value)}
-            className={`${BTN.base} px-1.5 py-1 focus-visible:ring-2 focus-visible:ring-emerald-300 ${selectedFormat === value ? 'bg-emerald-600 text-black' : 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600'}`}
-          >
-            {selectedFormat === value && <span aria-hidden="true">✓ </span>}
-            {label}
-          </button>
+    <section className="bf-control-group">
+      <div role="group" aria-label="Export format" className="bf-control-group">
+        {[
+          { heading: 'Animation & assets', formats: FORMAT_OPTIONS.slice(0, 4) },
+          { heading: 'Website integration', formats: FORMAT_OPTIONS.slice(4, 8) },
+          { heading: 'Developer source', formats: FORMAT_OPTIONS.slice(8) }
+        ].map(({ heading, formats }) => (
+          <section key={heading}>
+            <h3 className="bf-group-title">{heading}</h3>
+            <div className="bf-choice-grid">
+              {formats.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={selectedFormat === value}
+                  aria-describedby={selectedFormat === value ? descriptionId : undefined}
+                  onClick={() => onSelectFormat(value)}
+                  className="bf-choice"
+                >
+                  {selectedFormat === value && <span aria-hidden="true">✓ </span>}
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
-      <p id={descriptionId} className="text-xs text-zinc-400">
+      <p id={descriptionId} className="bf-help">
         {selectedOption?.description}
       </p>
-      {disabledReason && <p className="text-xs text-amber-400">{disabledReason}</p>}
+      {disabledReason && (
+        <p id={`${descriptionId}-reason`} className="bf-help">
+          {disabledReason}
+        </p>
+      )}
       <button
         type="button"
         disabled={exporting || Boolean(disabledReason)}
+        aria-describedby={disabledReason ? `${descriptionId}-reason` : undefined}
         onClick={exportSelected}
-        className={`w-full ${BTN.base} ${BTN.primary} disabled:opacity-50`}
+        className={`w-full ${BTN.base} ${BTN.primary}`}
       >
         {exporting ? 'Exporting…' : `Export ${selectedOption?.label}`}
       </button>
@@ -94,26 +103,6 @@ function ExportPanel({
           Cancel export
         </button>
       )}
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" className={`${BTN.base} ${BTN.secondary}`} onClick={saveProject}>
-          Save .bitmapforge
-        </button>
-        <button type="button" className={`${BTN.base} ${BTN.secondary}`} onClick={() => inputRef.current?.click()}>
-          Load .bitmapforge
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".bitmapforge"
-          hidden
-          aria-label="Load BitmapForge project file"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            event.target.value = ''
-            if (file) loadProject(file)
-          }}
-        />
-      </div>
     </section>
   )
 }
@@ -122,8 +111,6 @@ ExportPanel.propTypes = {
   onSelectFormat: contracts.requiredFunction,
   exportSelected: contracts.requiredFunction,
   cancelExport: contracts.cancelExport,
-  saveProject: contracts.requiredFunction,
-  loadProject: contracts.requiredFunction,
   exporting: contracts.optionalBoolean,
   disabledReason: contracts.optionalString
 }

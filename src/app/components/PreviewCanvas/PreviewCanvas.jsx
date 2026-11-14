@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { shallow } from 'zustand/shallow'
+import { optionalFunction } from '../../utils/uiPropValidators.js'
 import { SceneManager } from '../../../engine/SceneManager.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { selectEffectOptions, selectAnimationOptions, selectInputSource } from '../../store/selectors.js'
@@ -14,7 +15,7 @@ function applyActiveScale(manager, { inputType, modelScale, imageScale }) {
   }
 }
 
-function PreviewCanvas() {
+function PreviewCanvas({ onChooseSource }) {
   const sceneManagerRef = useSceneManager()
   const containerRef = useRef(null)
 
@@ -221,44 +222,53 @@ function PreviewCanvas() {
   ])
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">
+    <div className="bf-canvas-surface">
       <div ref={containerRef} className="h-full w-full" />
       {/* Finding 9: loading spinner overlay */}
       {isLoading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-zinc-950/60">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-emerald-400" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-[var(--bf-accent)]" />
         </div>
       )}
-      {inputType === 'model' && !model && !isLoading && !statusError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <div className="pointer-events-none flex flex-col items-center gap-2 text-zinc-600">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1}
+      {((inputType === 'model' && !model) || (inputType === 'image' && !imageSource)) && !isLoading && !statusError && (
+        <div className="bf-empty-scroll">
+          <div className="bf-empty">
+            <h1>{inputType === 'image' ? 'Choose an image' : 'Start with a source'}</h1>
+            <p>Choose a source, tune its look, then export.</p>
+            <div className="bf-source-routes">
+              {[
+                ['model', '3D model'],
+                ['shape', 'Shapes'],
+                ['text', 'Text'],
+                ['image', 'Image']
+              ].map(([kind, label]) => (
+                <button
+                  key={kind}
+                  type="button"
+                  className="bf-button bf-button--secondary"
+                  onClick={(event) => onChooseSource?.(kind, event)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={(event) => {
+                // The image invitation also offers the existing model demo.
+                // Use the same source bridge first; keep demo fetch/load intact.
+                if (inputType === 'image') onChooseSource?.('model', event)
+                handleLoadDemo()
+              }}
+              className="bf-button bf-button--ghost"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-              />
-            </svg>
-            <p className="text-sm">Upload a model to get started</p>
+              Try demo model
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleLoadDemo}
-            className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
-          >
-            Try demo model
-          </button>
         </div>
       )}
     </div>
   )
 }
-
+PreviewCanvas.propTypes = { onChooseSource: optionalFunction }
 export { PreviewCanvas }

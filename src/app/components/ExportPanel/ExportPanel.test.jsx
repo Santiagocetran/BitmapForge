@@ -11,7 +11,7 @@ const formats = [
   ['Sprite Sheet', 'spritesheet'],
   ['CSS Anim', 'css'],
   ['React', 'react'],
-  ['Web Comp', 'webcomponent'],
+  ['Web Component', 'webcomponent'],
   ['Embed', 'embed'],
   ['Code ZIP', 'zip']
 ]
@@ -22,8 +22,6 @@ function Fixture({ route = () => {}, ...props }) {
       selectedFormat={selectedFormat}
       onSelectFormat={onSelectFormat}
       exportSelected={() => route(selectedFormat)}
-      saveProject={() => {}}
-      loadProject={() => {}}
       {...props}
     />
   )
@@ -56,12 +54,25 @@ describe('controlled ExportPanel', () => {
     expect(cancelExport).toHaveBeenCalledOnce()
     expect(screen.queryByRole('status')).toBeNull()
   })
-  it('honors disabled reason and exposes keyboard-operable load button', () => {
+  it('honors and associates the disabled reason without project controls', () => {
     render(<Fixture disabledReason="Image input cannot be embedded" />)
-    expect(screen.getByRole('button', { name: 'Export APNG' }).disabled).toBe(true)
-    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
-    fireEvent.click(screen.getByRole('button', { name: 'Load .bitmapforge' }))
-    expect(click).toHaveBeenCalledOnce()
-    click.mockRestore()
+    const action = screen.getByRole('button', { name: 'Export APNG' })
+    expect(action.disabled).toBe(true)
+    expect(document.getElementById(action.getAttribute('aria-describedby')).textContent).toBe(
+      'Image input cannot be embedded'
+    )
+    expect(screen.queryByRole('button', { name: 'Load .bitmapforge' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save .bitmapforge' })).toBeNull()
+    expect(document.querySelector('input[type="file"]')).toBeNull()
+  })
+  it('keeps all nine formats under three purpose headings in one choice group', () => {
+    render(<Fixture />)
+    expect(screen.getAllByRole('group')).toHaveLength(1)
+    expect(screen.getAllByRole('heading', { level: 3 }).map((el) => el.textContent)).toEqual([
+      'Animation & assets',
+      'Website integration',
+      'Developer source'
+    ])
+    expect(screen.getAllByRole('button').filter((el) => el.hasAttribute('aria-pressed'))).toHaveLength(9)
   })
 })

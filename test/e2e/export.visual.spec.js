@@ -20,13 +20,13 @@ import fs from 'node:fs'
 import process from 'node:process'
 import path from 'node:path'
 import { startStaticServer } from './utils/server.js'
+import { setupApp, exportFormat, expectPreviewSize } from './utils/exportApp.js'
+import { selectTask } from './utils/editor.js'
 import { analyzeScreenshot, isBlank } from './utils/imageMetrics.js'
 
-const APP_URL = process.env.BITMAPFORGE_UI_URL || 'http://localhost:5173'
 // A single planar triangle can become edge-on during the default rotation and
 // fail meaningful-content checks even on the unchanged base revision. A closed
 // volume remains visible in preview AND capture without test-only pose changes.
-const VISUAL_STL = path.resolve('test/fixtures/models/export-visual-cube.stl')
 const ARTIFACT_ROOT = path.resolve(process.env.BITMAPFORGE_EXPORT_OUTPUT || 'test/fixtures/outputs')
 const OUTPUT_DIR = path.join(ARTIFACT_ROOT, 'screenshots')
 
@@ -56,117 +56,6 @@ function toBase64(nodeBuffer) {
 }
 
 // ─── App setup helper ─────────────────────────────────────────────────────────
-
-// Canvas → BitmapEffect wrapper → PreviewCanvas's ResizeObserver container.
-// Size layout only; normal engine resize owns backing dimensions and model framing.
-async function sizePreview(page, { width, height }) {
-  const region = page.getByRole('region', { name: 'Preview' })
-  const canvas = region.locator('canvas')
-  await expect(canvas).toHaveCount(1)
-  await canvas.evaluate(
-    (element, size) => {
-      const wrapper = element.parentElement
-      const container = wrapper?.parentElement
-      const region = element.closest('section[aria-label="Preview"], [role="region"][aria-label="Preview"]')
-      if (
-        !container ||
-        !region?.contains(container) ||
-        wrapper.children.length !== 1 ||
-        container.children.length !== 1 ||
-        !container.matches('div.h-full.w-full') ||
-        !container.parentElement?.matches('div.relative.overflow-hidden.border')
-      ) {
-        throw new Error('Preview canvas → effect wrapper → observed container hierarchy changed')
-      }
-      container.style.width = `${size.width}px`
-      container.style.height = `${size.height}px`
-    },
-    { width, height }
-  )
-  await expectPreviewSize(page, { width, height })
-}
-
-async function expectPreviewSize(page, { width, height }) {
-  const canvas = page.getByRole('region', { name: 'Preview' }).locator('canvas')
-  await expect(canvas).toHaveCount(1)
-  await expect(canvas).toBeVisible()
-  expect(page.viewportSize()).toEqual({ width: 1280, height: 800 })
-  const expected = {
-    backing: [width, height],
-    rendered: [width, height],
-    client: [width, height],
-    container: [width, height],
-    dpr: 1
-  }
-  await expect
-    .poll(() =>
-      canvas.evaluate((element) => {
-        const rect = element.getBoundingClientRect()
-        const container = element.parentElement.parentElement
-        return {
-          backing: [element.width, element.height],
-          rendered: [rect.width, rect.height],
-          client: [element.clientWidth, element.clientHeight],
-          container: [container.clientWidth, container.clientHeight],
-          dpr: window.devicePixelRatio
-        }
-      })
-    )
-    .toEqual(expected)
-  return expected
-}
-
-async function setupApp(browser, { previewSize } = {}) {
-  const context = await browser.newContext({
-    viewport: { width: 1280, height: 800 },
-    deviceScaleFactor: 1
-  })
-  const page = await context.newPage()
-  const pageErrors = []
-  const failedRequests = []
-
-  page.on('pageerror', (err) => pageErrors.push(err.message))
-  page.on('response', (res) => {
-    if (!res.ok() && res.url().startsWith(APP_URL)) failedRequests.push(`${res.status()} ${res.url()}`)
-  })
-
-  await page.goto(APP_URL)
-  if (previewSize) await sizePreview(page, previewSize)
-
-  // Upload model via the hidden file input
-  const fileInput = page.locator('input[aria-label="Upload 3D model file (STL, OBJ, GLTF, or GLB)"]').first()
-  await fileInput.setInputFiles(VISUAL_STL)
-
-  // Wait for model to finish loading (status bar shows "Model loaded.")
-  await page
-    .getByRole('region', { name: 'Preview' })
-    .locator('canvas')
-    .first()
-    .waitFor({ state: 'visible', timeout: 15_000 })
-  await page.waitForFunction(
-    () => [...document.querySelectorAll('[role="status"]')].some((el) => el.textContent?.includes('Model loaded')),
-    { timeout: 15_000 }
-  )
-  await page.waitForTimeout(1000) // let first render frame complete
-  if (previewSize) await expectPreviewSize(page, previewSize)
-
-  return { page, context, pageErrors, failedRequests }
-}
-
-// ─── Format selector + export trigger ────────────────────────────────────────
-
-async function exportFormat(page, formatLabel) {
-  // Select format button (e.g. "APNG", "Code ZIP", "CSS Anim")
-  await page.getByRole('button', { name: formatLabel, exact: true }).click()
-
-  // Trigger export and wait for download. APNG/GIF can take >60s with swiftshader.
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 120_000 }),
-    page.getByRole('button', { name: new RegExp(`Export ${formatLabel}`, 'i') }).click()
-  ])
-
-  return download
-}
 
 // ─── Test: App baseline ───────────────────────────────────────────────────────
 
@@ -456,6 +345,7 @@ test.describe('Export visual verification', () => {
     const previewSize = { width: 384, height: 320 }
     const { page, context, pageErrors } = await setupApp(browser, { previewSize })
 
+    await selectTask(page, 'Export')
     await expect(page.getByRole('button', { name: 'CSS Anim', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'CSS Anim', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Export CSS Anim', exact: true })).toBeVisible()

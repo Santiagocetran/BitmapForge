@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import process from 'node:process'
+import { selectTask } from './utils/editor.js'
 
 const baseURL = process.env.PALETTE_BASE_URL ?? 'http://localhost:5173'
 
@@ -165,6 +166,7 @@ test('integrated drawer keeps a middle-of-screen picker within the short viewpor
   await page.goto(`${baseURL}/`)
   await page.getByRole('button', { name: 'Open settings', exact: true }).click()
   const drawer = page.getByRole('dialog', { name: 'Settings', exact: true })
+  await selectTask(page, 'Look')
   await edit(page).evaluate((node) => node.scrollIntoView({ block: 'center' }))
   await edit(page).click()
   await expect(drawer.getByLabel('Hex color')).toBeFocused()
@@ -289,15 +291,16 @@ test.describe('mobile touch emulation', () => {
 })
 
 test('presets save/delete with native keyboard and preserve initiator on replacement', async ({ page }) => {
-  await page.getByRole('button', { name: '+ Save current as preset' }).focus()
+  await page.getByRole('button', { name: 'Save palette' }).focus()
   await page.keyboard.press('Enter')
-  await page.getByLabel('Preset name').fill('Keyboard palette')
-  await page.getByLabel('Preset name').press('Enter')
+  await page.getByLabel('Palette name').fill('Keyboard palette')
+  await page.getByLabel('Palette name').press('Enter')
+  await page.getByRole('button', { name: 'Browse palettes', exact: true }).click()
   const preset = page.getByRole('button', { name: 'Keyboard palette', exact: true })
   await preset.focus()
   await preset.press('Space')
   await expect(preset).toBeFocused()
-  const remove = page.getByRole('button', { name: 'Delete preset Keyboard palette' })
+  const remove = page.getByRole('button', { name: 'Delete palette Keyboard palette' })
   const box = await remove.boundingBox()
   expect(box.height).toBeGreaterThanOrEqual(44)
   expect(box.width).toBeGreaterThanOrEqual(44)

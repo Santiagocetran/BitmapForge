@@ -15,11 +15,12 @@ function App() {
   useAutoSave()
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const bridgeRef = useRef(null)
+  const showHelp = () => {
+    bridgeRef.current?.beforeHelp()
+    setShortcutsOpen(true)
+  }
   useKeyboardShortcuts({
-    onShowHelp: () => {
-      bridgeRef.current?.beforeHelp()
-      setShortcutsOpen(true)
-    },
+    onShowHelp: showHelp,
     onSaveProject: () => bridgeRef.current?.saveProject()
   })
 
@@ -30,7 +31,7 @@ function App() {
   return (
     <SceneManagerProvider>
       <TooltipProvider delayDuration={400}>
-        <Layout bridgeRef={bridgeRef} helpOpen={shortcutsOpen} />
+        <Layout bridgeRef={bridgeRef} helpOpen={shortcutsOpen} onShowHelp={showHelp} />
         <ShortcutsModal
           open={shortcutsOpen}
           onOpenChange={setShortcutsOpen}

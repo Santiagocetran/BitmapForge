@@ -44,22 +44,19 @@ export function StatusNotice({ suspended = false }) {
   }, [suspended])
   const dismiss = () => useProjectStore.getState().setStatus({ error: '', message: '' })
   return (
-    <div className="text-xs">
+    <div className="bf-notice">
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className={display?.message && !display.error ? 'rounded bg-zinc-800 px-3 py-2' : ''}
+        className={display?.message && !display.error ? 'bf-notice-message' : ''}
       >
         {!display?.error && display?.message}
       </div>
       {display?.error && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded border border-red-800 bg-red-950 px-3 py-2 text-red-200"
-        >
+        <div role="alert" className="bf-notice-error">
           <span>{display.error}</span>
-          <button type="button" className="ml-auto min-h-11 px-2" aria-label="Dismiss error" onClick={dismiss}>
+          <button type="button" className="bf-button bf-button--ghost" aria-label="Dismiss error" onClick={dismiss}>
             Dismiss
           </button>
         </div>
