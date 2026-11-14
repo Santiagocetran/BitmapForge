@@ -35,7 +35,7 @@ These are low-effort, high-impact items that should be done before any public an
 | README roadmap accuracy       | ✅ Fixed (Plugin API + E2E checked off) | —                                                                                                                                             |
 | CLAUDE.md commands section    | ✅ Fixed (reflects actual scripts)      | —                                                                                                                                             |
 | GitHub repo topics            | ⏳ Pending                              | Add via repo settings: `threejs`, `pixel-art`, `dithering`, `bitmap-animation`, `webgl`, `gltf`, `retro`, `indie-game-dev`, `creative-coding` |
-| Live URL matches main         | ⏳ Verify                               | Open `bitmapforge.vercel.app` and confirm current state is deployed                                                                           |
+| Live URL matches main         | ⏳ Verify                               | Open `bitmap-forge.vercel.app` and confirm current state is deployed                                                                          |
 | Demo assets fresh             | ⏳ Verify                               | Check `docs/demo.gif` and `docs/screenshot-ui.png` reflect current UI                                                                         |
 
 ---

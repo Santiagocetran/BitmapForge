@@ -6,7 +6,7 @@
 
 ### Turn any 3D model into retro pixel animations — in your browser, no install, no signup.
 
-**[🚀 Try it now →](https://bitmapforge.vercel.app)**
+**[🚀 Try it now →](https://bitmap-forge.vercel.app)**
 
 ![Open Source](https://img.shields.io/badge/Open%20Source-MIT-green?style=flat-square)
 ![No Install](https://img.shields.io/badge/No%20Install-Browser--only-blue?style=flat-square)
