@@ -1,3 +1,5 @@
+import { optionalFunction } from '../../utils/uiPropValidators.js'
+
 /**
  * SchemaControls — renders form controls from a JSON Schema `properties` map.
  *
@@ -74,5 +76,54 @@ function SchemaControls({ schema, values, onChange }) {
     </>
   )
 }
+
+// Validate only descriptor members consumed by these controls, not JSON Schema.
+const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+const implemented = (type) => ['boolean', 'string', 'integer', 'number'].includes(type)
+function matchesType(value, type) {
+  if (type === 'integer') return Number.isInteger(value)
+  if (type === 'number') return typeof value === 'number' && Number.isFinite(value)
+  return typeof value === type
+}
+function schemaContract(props, name, component = 'SchemaControls') {
+  const schema = props[name]
+  const fail = (detail) => new Error(`${component}.${name} ${detail}`)
+  if (schema == null) return null
+  if (!isRecord(schema)) return fail('must be a properties record')
+  for (const [key, field] of Object.entries(schema)) {
+    if (!isRecord(field)) return fail(`${key} must be a descriptor record`)
+    if (field.type != null && typeof field.type !== 'string') return fail(`${key}.type must be a string`)
+    if (!implemented(field.type)) continue
+    if (field.title != null && typeof field.title !== 'string') return fail(`${key}.title must be a string`)
+    if (field.default != null && !matchesType(field.default, field.type))
+      return fail(`${key}.default must match ${field.type}`)
+    if (field.type === 'integer' || field.type === 'number') {
+      for (const bound of ['minimum', 'maximum']) {
+        if (field[bound] != null && (typeof field[bound] !== 'number' || !Number.isFinite(field[bound])))
+          return fail(`${key}.${bound} must be finite`)
+      }
+    }
+    if (
+      field.type === 'string' &&
+      field.enum != null &&
+      (!Array.isArray(field.enum) || !field.enum.every((entry) => typeof entry === 'string'))
+    )
+      return fail(`${key}.enum must be a string array`)
+  }
+  return null
+}
+function valuesContract(props, name, component = 'SchemaControls') {
+  const values = props[name]
+  if (values == null) return null
+  if (!isRecord(values)) return new Error(`${component}.${name} must be a values record`)
+  const siblingError = schemaContract(props, 'schema', component)
+  if (siblingError) return new Error(`${component}.${name} requires valid schema: ${siblingError.message}`)
+  for (const [key, field] of Object.entries(props.schema ?? {})) {
+    if (implemented(field.type) && values[key] != null && !matchesType(values[key], field.type))
+      return new Error(`${component}.${name}.${key} must match ${field.type}`)
+  }
+  return null
+}
+SchemaControls.propTypes = { schema: schemaContract, values: valuesContract, onChange: optionalFunction }
 
 export { SchemaControls }

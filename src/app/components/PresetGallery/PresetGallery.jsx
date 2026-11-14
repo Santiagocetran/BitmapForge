@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { requiredColorStrings } from './presetPropValidators.js'
 import { BUILT_IN_PRESETS } from '../../data/builtInPresets.js'
 import { usePresetStore } from '../../store/usePresetStore.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
@@ -13,6 +14,8 @@ function ColorSwatches({ colors }) {
     </div>
   )
 }
+
+ColorSwatches.propTypes = { colors: requiredColorStrings }
 
 function applyPreset(preset) {
   useProjectStore.setState({ colors: preset.settings.colors })

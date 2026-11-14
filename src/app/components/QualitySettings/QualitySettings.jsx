@@ -1,3 +1,4 @@
+import * as contracts from '../../utils/uiPropValidators.js'
 import { useState } from 'react'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
@@ -5,7 +6,7 @@ import { InfoTooltip } from '../ui/InfoTooltip.jsx'
 import { pluginRegistry } from '../../../engine/plugins/PluginRegistry.js'
 import { CHAR_RAMP_LABELS } from '../../../engine/renderers/AsciiRenderer.js'
 
-function QualitySettings() {
+function QualitySettings({ advancedOpen: controlledAdvanced, onAdvancedOpenChange } = {}) {
   const pixelSize = useProjectStore((state) => state.pixelSize)
   const ditherType = useProjectStore((state) => state.ditherType)
   const invert = useProjectStore((state) => state.invert)
@@ -60,7 +61,9 @@ function QualitySettings() {
   const randomizeSeed = useProjectStore((state) => state.randomizeSeed)
   const setSeed = useProjectStore((state) => state.setSeed)
 
-  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [localAdvanced, setLocalAdvanced] = useState(false)
+  const advancedOpen = controlledAdvanced ?? localAdvanced
+  const setAdvancedOpen = onAdvancedOpenChange ?? setLocalAdvanced
 
   const isAscii = renderMode === 'ascii'
   const isHalftone = renderMode === 'halftone'
@@ -598,4 +601,8 @@ function QualitySettings() {
   )
 }
 
+QualitySettings.propTypes = {
+  advancedOpen: contracts.optionalBoolean,
+  onAdvancedOpenChange: contracts.optionalFunction
+}
 export { QualitySettings }

@@ -1,4 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
+import { optionalFunction, requiredBoolean, requiredFunction } from '../../utils/uiPropValidators.js'
 
 const SHORTCUTS = [
   { keys: 'Ctrl + Z', description: 'Undo' },
@@ -8,12 +9,16 @@ const SHORTCUTS = [
   { keys: '?', description: 'Show this help' }
 ]
 
-function ShortcutsModal({ open, onOpenChange }) {
+function ShortcutsModal({ open, onOpenChange, onCloseAutoFocus }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
+        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/60" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          onCloseAutoFocus={onCloseAutoFocus}
+          className="fixed left-1/2 top-1/2 z-[70] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl"
+        >
           <Dialog.Title className="mb-4 text-sm font-semibold text-zinc-100">Keyboard Shortcuts</Dialog.Title>
           <table className="w-full text-xs">
             <tbody>
@@ -36,4 +41,5 @@ function ShortcutsModal({ open, onOpenChange }) {
   )
 }
 
+ShortcutsModal.propTypes = { open: requiredBoolean, onOpenChange: requiredFunction, onCloseAutoFocus: optionalFunction }
 export { ShortcutsModal }

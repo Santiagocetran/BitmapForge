@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { useProjectStore } from '../store/useProjectStore.js'
 import { captureFrames, getFrameCount } from '../utils/framesProvider.js'
 import { saveProjectFile } from '../utils/projectFile.js'
@@ -257,11 +257,43 @@ const FORMAT_HANDLERS = {
   }
 }
 
+// Recognize only this producer's bounded busy messages, never arbitrary shared
+// save/load completion text. Keep the presenter in sync with all format stages.
+export function isExportProgressMessage(message) {
+  if (typeof message !== 'string') return false
+  return Object.values(FORMAT_HANDLERS).some(({ startMessage }) => {
+    if (message === startMessage) return true
+    const prefix = `${startMessage.replace(/…$/, '')} `
+    if (!message.startsWith(prefix)) return false
+    const percentage = message.slice(prefix.length)
+    return /^(?:100|[1-9]?\d)%$/.test(percentage)
+  })
+}
+
 function useExport(sceneManagerRef) {
   const setStatus = useProjectStore((state) => state.setStatus)
   const abortRef = useRef(null)
+  const generation = useRef(0)
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+      // This is an operation counter, not a DOM ref; invalidate the latest run.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      generation.current++
+      if (abortRef.current) {
+        abortRef.current.abort()
+        abortRef.current = null
+        // Release only this producer's busy flag; a remounted owner must not
+        // inherit an export that can no longer complete.
+        setStatus({ exporting: false, message: '' })
+      }
+    }
+  }, [setStatus])
 
   async function executeExport(formatId, options = {}) {
+    if (!alive.current || abortRef.current) return
     const handler = FORMAT_HANDLERS[formatId]
     if (!handler) throw new Error(`Unknown export format: ${formatId}`)
 
@@ -271,8 +303,10 @@ function useExport(sceneManagerRef) {
     const state = getState()
     const controller = new AbortController()
     abortRef.current = controller
+    const run = ++generation.current
+    const current = () => alive.current && generation.current === run && !controller.signal.aborted
 
-    setStatus({ exporting: true, message: handler.startMessage })
+    setStatus({ exporting: true, error: '', message: handler.startMessage })
     try {
       const { blob, filename } = await handler.execute({
         manager,
@@ -280,31 +314,40 @@ function useExport(sceneManagerRef) {
         signal: controller.signal,
         ...options,
         onProgress: (i, total) =>
+          current() &&
           setStatus({
             exporting: true,
             message: `${handler.startMessage.replace(/…$/, '')} ${Math.round((i / total) * 100)}%`
           })
       })
+      if (!current()) return
       downloadBlob(blob, filename)
-      setStatus({ exporting: false, message: handler.successMessage })
+      setStatus({ exporting: false, error: '', message: handler.successMessage })
     } catch (error) {
+      if (!current()) return
       console.error('[BitmapForge] Export error:', error)
-      setStatus({ exporting: false, error: friendlyExportError(error) })
+      setStatus({ exporting: false, message: '', error: friendlyExportError(error) })
+    } finally {
+      if (generation.current === run) abortRef.current = null
     }
   }
 
   function cancelExport() {
+    generation.current++
     abortRef.current?.abort()
-    setStatus({ exporting: false, message: 'Export cancelled.' })
+    abortRef.current = null
+    setStatus({ exporting: false, error: '', message: 'Export cancelled.' })
   }
 
   async function saveProject() {
+    if (!alive.current) return
+    setStatus({ message: '', error: '' })
     try {
       await saveProjectFile(getState())
-      setStatus({ message: 'Project saved as .bitmapforge file.' })
+      if (alive.current) setStatus({ error: '', message: 'Project saved as .bitmapforge file.' })
     } catch (error) {
       console.error('[BitmapForge] Save error:', error)
-      setStatus({ error: friendlyExportError(error) })
+      if (alive.current) setStatus({ message: '', error: friendlyExportError(error) })
     }
   }
 

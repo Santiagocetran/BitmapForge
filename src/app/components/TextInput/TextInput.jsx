@@ -1,5 +1,4 @@
 import { useProjectStore } from '../../store/useProjectStore.js'
-import { FONT_LABELS } from '../../../engine/loaders/textGenerator.js'
 
 function TextInput() {
   const textContent = useProjectStore((state) => state.textContent)

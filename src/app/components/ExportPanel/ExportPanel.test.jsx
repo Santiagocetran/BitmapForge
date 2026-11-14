@@ -1,100 +1,67 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { useState } from 'react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ExportPanel } from './ExportPanel.jsx'
-
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
-vi.mock('../../context/SceneManagerContext.jsx', () => ({
-  useSceneManager: () => ({ current: null })
-}))
-
-const mockExportFns = {
-  exportAs: vi.fn(async () => {}),
-  saveProject: vi.fn(async () => {}),
-  cancelExport: vi.fn()
-}
-
-vi.mock('../../hooks/useExport.js', () => ({
-  useExport: vi.fn(() => mockExportFns)
-}))
-
-vi.mock('../../utils/projectFile.js', () => ({
-  loadProjectFile: vi.fn()
-}))
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function renderPanel() {
-  return render(<ExportPanel />)
-}
-
-/**
- * Click the primary "Export <Format>" button (identified by the w-full class).
- */
-function clickExportButton() {
-  const exportBtn = screen.getAllByRole('button').find((b) => b.classList.contains('w-full'))
-  fireEvent.click(exportBtn)
-}
-
-afterEach(() => {
-  cleanup()
-  vi.clearAllMocks()
-})
-
-// ─── Format buttons rendered ──────────────────────────────────────────────────
-
-describe('ExportPanel — format buttons', () => {
-  it('renders all 9 format buttons', () => {
-    renderPanel()
-    const formatLabels = ['APNG', 'GIF', 'Video', 'Sprite Sheet', 'CSS Anim', 'React', 'Web Comp', 'Embed', 'Code ZIP']
-    for (const label of formatLabels) {
-      expect(screen.getByRole('button', { name: label })).toBeDefined()
-    }
-  })
-
-  it('does not render removed formats', () => {
-    renderPanel()
-    expect(screen.queryByRole('button', { name: 'Lottie' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Single HTML' })).toBeNull()
-  })
-})
-
-// ─── Default selection ────────────────────────────────────────────────────────
-
-describe('ExportPanel — default state', () => {
-  it('APNG is selected by default', () => {
-    renderPanel()
-    const exportBtn = screen.getAllByRole('button').find((b) => b.classList.contains('w-full'))
-    expect(exportBtn.textContent).toContain('APNG')
-  })
-})
-
-// ─── Format routing ───────────────────────────────────────────────────────────
-
-const FORMAT_ROUTING = [
-  { label: 'APNG', formatId: 'apng' },
-  { label: 'GIF', formatId: 'gif' },
-  { label: 'Video', formatId: 'webm' },
-  { label: 'Sprite Sheet', formatId: 'spritesheet' },
-  { label: 'Code ZIP', formatId: 'zip' },
-  { label: 'React', formatId: 'react' },
-  { label: 'Web Comp', formatId: 'webcomponent' },
-  { label: 'CSS Anim', formatId: 'css' },
-  { label: 'Embed', formatId: 'embed' }
+import { optionalFunction } from '../../utils/uiPropValidators.js'
+afterEach(cleanup)
+const formats = [
+  ['APNG', 'apng'],
+  ['GIF', 'gif'],
+  ['Video', 'webm'],
+  ['Sprite Sheet', 'spritesheet'],
+  ['CSS Anim', 'css'],
+  ['React', 'react'],
+  ['Web Comp', 'webcomponent'],
+  ['Embed', 'embed'],
+  ['Code ZIP', 'zip']
 ]
-
-describe('ExportPanel — format routing', () => {
-  beforeEach(() => {
-    renderPanel()
+function Fixture({ route = () => {}, ...props }) {
+  const [selectedFormat, onSelectFormat] = useState('apng')
+  return (
+    <ExportPanel
+      selectedFormat={selectedFormat}
+      onSelectFormat={onSelectFormat}
+      exportSelected={() => route(selectedFormat)}
+      saveProject={() => {}}
+      loadProject={() => {}}
+      {...props}
+    />
+  )
+}
+Fixture.propTypes = { route: optionalFunction }
+describe('controlled ExportPanel', () => {
+  it('has nine native pressed controls and stable description association', () => {
+    render(<Fixture />)
+    expect(screen.getByRole('group', { name: 'Export format' })).toBeDefined()
+    expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(8)
+    const selected = screen.getByRole('button', { pressed: true })
+    expect(selected.textContent).toContain('APNG')
+    expect(document.getElementById(selected.getAttribute('aria-describedby')).textContent).toContain('Animated PNG')
+    fireEvent.click(selected)
+    expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(1)
   })
-
-  for (const { label, formatId } of FORMAT_ROUTING) {
-    it(`clicking "${label}" then Export calls exportAs('${formatId}')`, async () => {
-      fireEvent.click(screen.getByRole('button', { name: label }))
-      clickExportButton()
-      // Settle async microtasks from the onClick handler
-      await new Promise((r) => setTimeout(r, 0))
-      expect(mockExportFns.exportAs).toHaveBeenCalledWith(formatId)
-    })
-  }
+  it.each(formats)('routes %s through the selected identifier', (label, id) => {
+    const route = vi.fn()
+    render(<Fixture route={route} />)
+    fireEvent.click(screen.getByRole('button', { name: label }))
+    expect(screen.getByRole('button', { name: label }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: `Export ${label}` }))
+    expect(route).toHaveBeenCalledWith(id)
+  })
+  it('uses stable busy label and supports cancel without another status presenter', () => {
+    const cancelExport = vi.fn()
+    render(<Fixture exporting cancelExport={cancelExport} />)
+    expect(screen.getByRole('button', { name: 'Exporting…' }).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel export' }))
+    expect(cancelExport).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+  it('honors disabled reason and exposes keyboard-operable load button', () => {
+    render(<Fixture disabledReason="Image input cannot be embedded" />)
+    expect(screen.getByRole('button', { name: 'Export APNG' }).disabled).toBe(true)
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Load .bitmapforge' }))
+    expect(click).toHaveBeenCalledOnce()
+    click.mockRestore()
+  })
 })

@@ -1,4 +1,5 @@
 import * as Tooltip from '@radix-ui/react-tooltip'
+import { renderableChildren } from '../../utils/uiPropValidators.js'
 
 function InfoTooltip({ content }) {
   return (
@@ -39,5 +40,7 @@ function InfoTooltip({ content }) {
     </Tooltip.Root>
   )
 }
+
+InfoTooltip.propTypes = { content: renderableChildren }
 
 export { InfoTooltip }

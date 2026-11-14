@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useProjectStore } from '../../store/useProjectStore.js'
 
 const SIZE = 120
@@ -122,32 +122,35 @@ function GizmoCanvas() {
     drawGizmo(canvas, baseRotation.x, baseRotation.y, baseRotation.z)
   }, [baseRotation])
 
-  // Stable window-level drag handlers — update the ref each render so closures
+  // Stable window-level drag handlers — publish committed closures so listeners
   // always see the latest state without re-binding listeners.
   const handlersRef = useRef({ onMove: null, onUp: null })
 
-  handlersRef.current.onMove = (e) => {
-    const drag = dragStateRef.current
-    if (!drag.isDragging || !drag.startRot) return
+  useLayoutEffect(() => {
+    const onMove = (e) => {
+      const drag = dragStateRef.current
+      if (!drag.isDragging || !drag.startRot) return
 
-    const dx = (e.clientX - drag.startX) * DRAG_SENSITIVITY
-    const dy = (e.clientY - drag.startY) * DRAG_SENSITIVITY
+      const dx = (e.clientX - drag.startX) * DRAG_SENSITIVITY
+      const dy = (e.clientY - drag.startY) * DRAG_SENSITIVITY
 
-    let nx = drag.startRot.x - dy // up/down → X
-    let ny = drag.startRot.y + dx // left/right → Y
-    const nz = drag.startRot.z
+      let nx = drag.startRot.x - dy // up/down → X
+      let ny = drag.startRot.y + dx // left/right → Y
+      const nz = drag.startRot.z
 
-    if (e.shiftKey) {
-      nx = Math.round(nx / SNAP_RAD) * SNAP_RAD
-      ny = Math.round(ny / SNAP_RAD) * SNAP_RAD
+      if (e.shiftKey) {
+        nx = Math.round(nx / SNAP_RAD) * SNAP_RAD
+        ny = Math.round(ny / SNAP_RAD) * SNAP_RAD
+      }
+
+      setBaseRotation(nx, ny, nz)
     }
 
-    setBaseRotation(nx, ny, nz)
-  }
-
-  handlersRef.current.onUp = () => {
-    dragStateRef.current.isDragging = false
-  }
+    const onUp = () => {
+      dragStateRef.current.isDragging = false
+    }
+    handlersRef.current = { onMove, onUp }
+  })
 
   // Bind once — delegate to ref so listeners never need to be re-attached.
   useEffect(() => {

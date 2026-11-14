@@ -78,6 +78,65 @@ describe('buildExportConfig', () => {
     expect(config.effectOptions.renderMode).toBe('bitmap')
   })
 
+  it.each(['classic', 'blocks', 'dense', 'minimal'])(
+    'preserves named ASCII ramp %s and both colored modes',
+    (charRamp) => {
+      for (const asciiColored of [true, false]) {
+        const state = makeState({ renderMode: 'ascii', charRamp, asciiColored })
+        expect(buildExportConfig(state).effectOptions).toMatchObject({
+          renderMode: 'ascii',
+          charRamp,
+          asciiColored
+        })
+      }
+    }
+  )
+
+  it.each([undefined, null])('defaults absent/null legacy ASCII fields (%s)', (value) => {
+    const state = makeState({ charRamp: value, asciiColored: value })
+    expect(buildExportConfig(state).effectOptions).toMatchObject({ charRamp: 'classic', asciiColored: false })
+    expect(buildExportConfig(makeState()).effectOptions).toMatchObject({ charRamp: 'classic', asciiColored: false })
+  })
+
+  it.each(['unknown-ramp', ''])('leaves unknown ramp %j for the renderer fallback', (charRamp) => {
+    expect(buildExportConfig(makeState({ charRamp })).effectOptions.charRamp).toBe(charRamp)
+  })
+
+  it('changes only the two ASCII options and does not mutate the input', () => {
+    const state = makeState({ renderMode: 'ascii', charRamp: 'dense', asciiColored: false })
+    const before = structuredClone(state)
+    Object.freeze(state.colors)
+    Object.freeze(state.animationEffects)
+    Object.freeze(state)
+    const { charRamp, asciiColored, ...options } = buildExportConfig(state).effectOptions
+    expect({ charRamp, asciiColored }).toEqual({ charRamp: 'dense', asciiColored: false })
+    expect(options).toEqual({
+      colors: state.colors,
+      pixelSize: 3,
+      ditherType: 'bayer4x4',
+      invert: false,
+      minBrightness: 0.05,
+      backgroundColor: '#0a0a0a',
+      animationDuration: 2500,
+      fadeVariant: 'cascade',
+      renderMode: 'ascii'
+    })
+    const { effectOptions: _effectOptions, ...rest } = buildExportConfig(state)
+    expect(rest).toEqual({
+      modelFileName: null,
+      useFadeInOut: state.useFadeInOut,
+      animationEffects: state.animationEffects,
+      animationPreset: state.animationPreset,
+      animationSpeed: state.animationSpeed,
+      showPhaseDuration: state.showPhaseDuration,
+      lightDirection: state.lightDirection,
+      baseRotation: state.baseRotation,
+      rotateOnShow: state.rotateOnShow,
+      showPreset: state.showPreset
+    })
+    expect(state).toEqual(before)
+  })
+
   it('is a pure function — calling twice returns equivalent objects', () => {
     const state = makeState()
     const c1 = buildExportConfig(state)

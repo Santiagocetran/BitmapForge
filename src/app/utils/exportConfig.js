@@ -21,7 +21,9 @@ function buildExportConfig(state) {
       backgroundColor: state.backgroundColor,
       animationDuration: state.animationDuration,
       fadeVariant: state.fadeVariant,
-      renderMode: state.renderMode ?? 'bitmap'
+      renderMode: state.renderMode ?? 'bitmap',
+      charRamp: state.charRamp ?? 'classic',
+      asciiColored: state.asciiColored ?? false
     },
     useFadeInOut: state.useFadeInOut,
     animationEffects: state.animationEffects,

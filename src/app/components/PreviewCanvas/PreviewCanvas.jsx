@@ -122,18 +122,7 @@ function PreviewCanvas() {
   } = useProjectStore(useShallow(selectInputSource))
   const isLoading = useProjectStore((state) => state.status.loading)
   const statusError = useProjectStore((state) => state.status.error)
-  const setStatus = useProjectStore((state) => state.setStatus)
   const setModel = useProjectStore((state) => state.setModel)
-
-  const handleDismissError = useCallback(() => {
-    if (inputType === 'model') {
-      setModel(null)
-    }
-    setStatus({ error: '' })
-  }, [inputType, setModel, setStatus])
-
-  const errorCtaLabel =
-    inputType === 'model' ? 'Upload different file' : inputType === 'image' ? 'Upload different image' : 'Dismiss'
 
   const handleLoadDemo = useCallback(async () => {
     const res = await fetch('/models/david_head.glb')
@@ -146,6 +135,12 @@ function PreviewCanvas() {
     const manager = sceneManagerRef.current
     if (!manager) return
     let cancelled = false
+    function cancelLoad() {
+      cancelled = true
+      // Shape/empty replacement may not start another asynchronous load.
+      // Retire only this producer's busy flag, never the export flag/message.
+      if (useProjectStore.getState().status.loading) useProjectStore.getState().setStatus({ loading: false })
+    }
 
     applyActiveScale(manager, useProjectStore.getState())
 
@@ -155,65 +150,59 @@ function PreviewCanvas() {
           manager.disposeModel()
           return
         }
-        useProjectStore.getState().setStatus({ loading: true, error: '' })
+        useProjectStore.getState().setStatus({ loading: true, error: '', message: '' })
         manager
           .loadModel(model.file)
           .then(() => {
             if (!cancelled && sceneManagerRef.current === manager) {
-              useProjectStore.getState().setStatus({ loading: false, message: 'Model loaded.' })
+              useProjectStore.getState().setStatus({ loading: false, error: '', message: 'Model loaded.' })
             }
           })
           .catch((error) => {
             if (!cancelled && sceneManagerRef.current === manager) {
-              useProjectStore.getState().setStatus({ loading: false, error: error.message })
+              useProjectStore.getState().setStatus({ loading: false, error: error.message, message: '' })
             }
           })
-        return () => {
-          cancelled = true
-        }
+        return cancelLoad
       }
       case 'shape':
         manager.loadShape(shapeType, shapeParams)
         break
       case 'text': {
-        useProjectStore.getState().setStatus({ loading: true, error: '' })
+        useProjectStore.getState().setStatus({ loading: true, error: '', message: '' })
         manager
           .loadText(textContent, { fontFamily, fontSize, extrudeDepth, bevelEnabled, letterSpacing })
           .then(() => {
             if (!cancelled && sceneManagerRef.current === manager) {
-              useProjectStore.getState().setStatus({ loading: false, message: '' })
+              useProjectStore.getState().setStatus({ loading: false, error: '', message: '' })
             }
           })
           .catch((error) => {
             if (!cancelled && sceneManagerRef.current === manager) {
-              useProjectStore.getState().setStatus({ loading: false, error: error.message })
+              useProjectStore.getState().setStatus({ loading: false, error: error.message, message: '' })
             }
           })
-        return () => {
-          cancelled = true
-        }
+        return cancelLoad
       }
       case 'image': {
         if (!imageSource) {
           manager.disposeModel()
           return
         }
-        useProjectStore.getState().setStatus({ loading: true, error: '' })
+        useProjectStore.getState().setStatus({ loading: true, error: '', message: '' })
         manager
           .loadImage(imageSource)
           .then(() => {
             if (!cancelled && sceneManagerRef.current === manager) {
-              useProjectStore.getState().setStatus({ loading: false, message: 'Image loaded.' })
+              useProjectStore.getState().setStatus({ loading: false, error: '', message: 'Image loaded.' })
             }
           })
           .catch((error) => {
             if (!cancelled && sceneManagerRef.current === manager) {
-              useProjectStore.getState().setStatus({ loading: false, error: error.message })
+              useProjectStore.getState().setStatus({ loading: false, error: error.message, message: '' })
             }
           })
-        return () => {
-          cancelled = true
-        }
+        return cancelLoad
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,30 +227,6 @@ function PreviewCanvas() {
       {isLoading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-zinc-950/60">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-emerald-400" />
-        </div>
-      )}
-      {statusError && !isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950/85 px-6">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-8 w-8 shrink-0 text-red-400"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p className="text-center text-sm text-red-300">{statusError}</p>
-          <button
-            type="button"
-            onClick={handleDismissError}
-            className="rounded-md bg-zinc-800 px-4 py-1.5 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
-          >
-            {errorCtaLabel}
-          </button>
         </div>
       )}
       {inputType === 'model' && !model && !isLoading && !statusError && (

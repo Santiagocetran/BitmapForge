@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { renderableChildren } from '../../utils/uiPropValidators.js'
 
 class ErrorBoundary extends Component {
   state = { error: null }
@@ -26,5 +27,7 @@ class ErrorBoundary extends Component {
     return this.props.children
   }
 }
+
+ErrorBoundary.propTypes = { children: renderableChildren }
 
 export { ErrorBoundary }

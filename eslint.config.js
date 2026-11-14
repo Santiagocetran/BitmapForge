@@ -22,6 +22,7 @@ export default [
   reactPlugin.configs.flat['jsx-runtime'],
   reactHooks.configs.flat['recommended-latest'],
   eslintConfigPrettier,
+  { files: ['**/*.{js,jsx}'] },
   {
     languageOptions: {
       globals: globals.browser

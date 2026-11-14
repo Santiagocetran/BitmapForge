@@ -1,4 +1,5 @@
 import { createContext, useContext, useRef } from 'react'
+import { renderableChildren } from '../utils/uiPropValidators.js'
 
 const SceneManagerContext = createContext(null)
 
@@ -28,5 +29,7 @@ function useSceneManager() {
   }
   return ref
 }
+
+SceneManagerProvider.propTypes = { children: renderableChildren }
 
 export { SceneManagerProvider, useSceneManager }

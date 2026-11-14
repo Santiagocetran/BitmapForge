@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { disposeGroup } from './modelLoader.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 
@@ -47,7 +48,7 @@ async function getFont(fontFamily) {
  * positioned along the x-axis starting at x=0 (left-aligned).
  * Returns the meshes and the total line width.
  */
-function buildLineMeshes(line, font, fontSize, extrudeDepth, bevelEnabled, letterSpacing, material) {
+function buildLineMeshes(line, font, fontSize, extrudeDepth, bevelEnabled, letterSpacing, material, group) {
   const geomOpts = {
     font,
     size: fontSize,
@@ -68,12 +69,13 @@ function buildLineMeshes(line, font, fontSize, extrudeDepth, bevelEnabled, lette
     }
 
     const geometry = new TextGeometry(char, geomOpts)
+    const mesh = new THREE.Mesh(geometry, material)
+    group.add(mesh)
     geometry.computeBoundingBox()
     const bbox = geometry.boundingBox
     const charWidth = bbox.max.x - bbox.min.x
 
     // Position at the left edge of this char's slot; center within its bbox.
-    const mesh = new THREE.Mesh(geometry, material)
     mesh.position.x = xOffset - bbox.min.x
     xOffset += charWidth + letterSpacing
     meshes.push(mesh)
@@ -102,43 +104,53 @@ async function createTextGroup(text, options = {}) {
   const material = new THREE.MeshStandardMaterial({ color: 0xffffff })
   const group = new THREE.Group()
 
-  const lines = (text || 'Text').split('\n')
-  const lineHeight = fontSize * 1.3
+  try {
+    const lines = (text || 'Text').split('\n')
+    const lineHeight = fontSize * 1.3
 
-  // Build each line and track max width for horizontal centering.
-  const lineData = []
-  let maxWidth = 0
+    // Build each line and track max width for horizontal centering.
+    const lineData = []
+    let maxWidth = 0
 
-  for (const line of lines) {
-    const { meshes, totalWidth } = buildLineMeshes(
-      line,
-      font,
-      fontSize,
-      extrudeDepth,
-      bevelEnabled,
-      letterSpacing,
-      material
-    )
-    lineData.push({ meshes, totalWidth })
-    if (totalWidth > maxWidth) maxWidth = totalWidth
-  }
-
-  // Place lines: center each horizontally, stack downward.
-  const totalHeight = lineHeight * lines.length
-  const startY = totalHeight / 2 - fontSize / 2
-
-  lineData.forEach(({ meshes, totalWidth }, lineIndex) => {
-    const xShift = -totalWidth / 2
-    const yPos = startY - lineIndex * lineHeight
-
-    for (const mesh of meshes) {
-      mesh.position.x += xShift
-      mesh.position.y = yPos
-      group.add(mesh)
+    for (const line of lines) {
+      const { meshes, totalWidth } = buildLineMeshes(
+        line,
+        font,
+        fontSize,
+        extrudeDepth,
+        bevelEnabled,
+        letterSpacing,
+        material,
+        group
+      )
+      lineData.push({ meshes, totalWidth })
+      if (totalWidth > maxWidth) maxWidth = totalWidth
     }
-  })
 
-  return group
+    // Place lines: center each horizontally, stack downward.
+    const totalHeight = lineHeight * lines.length
+    const startY = totalHeight / 2 - fontSize / 2
+
+    lineData.forEach(({ meshes, totalWidth }, lineIndex) => {
+      const xShift = -totalWidth / 2
+      const yPos = startY - lineIndex * lineHeight
+
+      for (const mesh of meshes) {
+        mesh.position.x += xShift
+        mesh.position.y = yPos
+        group.add(mesh)
+      }
+    })
+
+    if (!group.children.length) material.dispose()
+    return group
+  } catch (error) {
+    // The shared material may exist even when no character geometry was built.
+    const hasMeshes = group.children.length > 0
+    disposeGroup(group)
+    if (!hasMeshes) material.dispose()
+    throw error
+  }
 }
 
 export { createTextGroup, getFont, FONT_LABELS }

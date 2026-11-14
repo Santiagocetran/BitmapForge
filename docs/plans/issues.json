@@ -1,0 +1,57 @@
+[
+  {
+    "number": 82,
+    "title": "UF-1 \u2014 Palette editing without double-click or drag dependence",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/82"
+  },
+  {
+    "number": 83,
+    "title": "UF-2 \u2014 Mobile settings drawer: modal focus and inactive background",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/83"
+  },
+  {
+    "number": 84,
+    "title": "UF-3 \u2014 Desktop disclosure, clearer Look heading, persistent export access",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/84"
+  },
+  {
+    "number": 85,
+    "title": "UF-4 \u2014 Explicit selected semantics for export formats",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/85"
+  },
+  {
+    "number": 86,
+    "title": "UF-5 \u2014 One status/error presentation, including inside the drawer",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/86"
+  },
+  {
+    "number": 87,
+    "title": "CO-1 \u2014 Curated source + look starters without replacing palette presets",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/87"
+  },
+  {
+    "number": 88,
+    "title": "CO-2 \u2014 Goal-oriented export choices backed by an actual capability matrix",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/88"
+  },
+  {
+    "number": 89,
+    "title": "CO-3 \u2014 Composed motion and visibility policy for live embeds",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/89"
+  },
+  {
+    "number": 90,
+    "title": "CO-4 \u2014 Validated custom ASCII ramps and a reproducible typography contract",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/90"
+  },
+  {
+    "number": 91,
+    "title": "CO-5 \u2014 Benchmark glyph rendering before authorizing an atlas/GPU change",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/91"
+  },
+  {
+    "number": 92,
+    "title": "CO-6 \u2014 Experimental edge-aware and source-color ASCII, independently gated",
+    "url": "https://github.com/Santiagocetran/BitmapForge/issues/92"
+  }
+]

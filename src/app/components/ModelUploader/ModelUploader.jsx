@@ -1,4 +1,5 @@
 import { useDropzone } from 'react-dropzone'
+import { optionalBoolean } from '../../utils/uiPropValidators.js'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { BTN } from '../../styles/buttonStyles.js'
 
@@ -101,5 +102,7 @@ function ModelUploader({ compact = false }) {
     </div>
   )
 }
+
+ModelUploader.propTypes = { compact: optionalBoolean }
 
 export { ModelUploader }
