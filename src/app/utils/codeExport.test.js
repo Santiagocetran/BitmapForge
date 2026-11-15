@@ -297,6 +297,40 @@ describe('buildCodeZip — generated sizing and page lifetime', () => {
   })
 })
 
+describe('buildCodeZip — production model packaging', () => {
+  it('preserves exact model bytes in both static-host and Vite public entries', async () => {
+    const bytes = new Uint8Array([0, 255, 128, 13, 10, 65, 0, 254])
+    const zip = await getCodeZip({
+      ...BASE_STATE,
+      model: { name: 'fixture.stl', file: new Blob([bytes], { type: 'model/stl' }) }
+    })
+    const original = zip.file('BitmapForge-export/models/fixture.stl')
+    const production = zip.file('BitmapForge-export/public/models/fixture.stl')
+    expect(original).not.toBeNull()
+    expect(production).not.toBeNull()
+    expect(await original.async('uint8array')).toEqual(bytes)
+    expect(await production.async('uint8array')).toEqual(bytes)
+    expect(await production.async('uint8array')).toEqual(await original.async('uint8array'))
+    expect(await zip.file('BitmapForge-export/animation.js').async('string')).toContain("fetch('./models/fixture.stl')")
+  })
+
+  it.each([null, { name: 'fixture.stl' }])('emits no model payload without a supplied file (%s)', async (model) => {
+    const zip = await getCodeZip({ ...BASE_STATE, model })
+    expect(Object.values(zip.files).filter((entry) => !entry.dir && entry.name.includes('/models/'))).toEqual([])
+  })
+
+  it('retains default Vite configuration and scripts with the patched Vite dependency floor', async () => {
+    const zip = await getCodeZip()
+    const pkg = JSON.parse(await zip.file('BitmapForge-export/package.json').async('string'))
+    expect(pkg.scripts).toEqual({ dev: 'vite', build: 'vite build', preview: 'vite preview' })
+    expect(pkg.dependencies).toEqual({ three: '^0.182.0' })
+    expect(pkg.devDependencies).toEqual({ vite: '^7.3.7' })
+    expect(await zip.file('BitmapForge-export/vite.config.js').async('string')).toBe(
+      "import { defineConfig } from 'vite'\nexport default defineConfig({})\n"
+    )
+  })
+})
+
 describe('buildCodeZip — with model', () => {
   const MODEL_NAME = 'tank.stl'
   const stateWithModel = {

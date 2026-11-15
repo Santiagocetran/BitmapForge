@@ -1,10 +1,25 @@
 /* eslint-disable react/prop-types -- Test picker callback fixture. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { StrictMode, createElement } from 'react'
+import { KeyboardSensor, PointerSensor } from '@dnd-kit/core'
 import { ColorPalette, normalizePaletteHex } from './ColorPalette.jsx'
 import { useProjectStore } from '../../store/useProjectStore.js'
 import { usePresetStore } from '../../store/usePresetStore.js'
 
+const contexts = vi.hoisted(() => ({ latest: null }))
+// Observe the props boundary but render the actual DndContext and real sensors.
+// Layout's separate integration suite has no dnd wrapper at all.
+vi.mock('@dnd-kit/core', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    DndContext: (props) => {
+      contexts.latest = props
+      return createElement(actual.DndContext, props)
+    }
+  }
+})
 const picker = vi.hoisted(() => ({ onChange: null }))
 vi.mock('react-colorful', () => ({
   HexColorPicker: ({ onChange }) => {
@@ -16,7 +31,11 @@ beforeEach(() => {
   useProjectStore.setState({ colors: ['#111111', '#222222', '#111111'] })
   usePresetStore.setState({ customPresets: [] })
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+})
 const colors = () => useProjectStore.getState().colors
 function open(index = 1) {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^Edit color ${index}:`) }))
@@ -171,5 +190,323 @@ describe('palette transactions', { timeout: 20000 }, () => {
     const deletion = screen.getByRole('button', { name: 'Delete palette My palette' })
     fireEvent.click(deletion)
     expect(usePresetStore.getState().customPresets).toHaveLength(0)
+  })
+})
+
+describe('H1 native sensor lifetime', () => {
+  const handle = () => screen.getByRole('button', { name: 'Reorder color 2' })
+  const key = (code, node = handle()) => fireEvent.keyDown(node, { code, key: code === 'Space' ? ' ' : code })
+  const drain = () => act(() => vi.advanceTimersByTime(0))
+  const pointer = (type, node = document, x = 0) => {
+    const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, button: 0 })
+    Object.defineProperty(event, 'isPrimary', { value: true })
+    fireEvent(node, event)
+    return event
+  }
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.spyOn(Element.prototype, 'getClientRects').mockReturnValue([{}])
+  })
+  it('keeps full Escape/parent/collapse history owned with exact zero cancellation writes', () => {
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    const writes = vi.fn()
+    const unsubscribe = useProjectStore.subscribe((next, old) => {
+      if (next.colors !== old.colors) writes()
+    })
+    try {
+      for (const ending of ['Escape', 'parent', 'collapse', 'parent']) {
+        handle().focus()
+        key('Space')
+        expect(handle().getAttribute('aria-pressed')).toBe('true')
+        expect(interactionRef.current.isKeyboardDragging()).toBe(true)
+        drain()
+        if (ending === 'Escape') key('Escape')
+        else
+          act(() => {
+            interactionRef.current.cancel()
+            interactionRef.current.cancel()
+          })
+        expect(interactionRef.current.isKeyboardDragging()).toBe(false)
+        expect(handle().getAttribute('aria-pressed')).not.toBe('true')
+        expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+        expect(writes).not.toHaveBeenCalled()
+      }
+    } finally {
+      unsubscribe()
+    }
+  })
+  it.each(['cancel', 'unmount'])('blocks deferred keyboard registration after same-turn %s', (ending) => {
+    const interactionRef = { current: null }
+    const view = render(<ColorPalette interactionRef={interactionRef} />)
+    key('Space')
+    const add = vi.spyOn(document, 'addEventListener')
+    if (ending === 'cancel') act(() => interactionRef.current.cancel())
+    else view.unmount()
+    drain()
+    expect(add.mock.calls.filter(([type]) => type === 'keydown')).toEqual([])
+    const event = new KeyboardEvent('keydown', { code: 'Space', bubbles: true, cancelable: true })
+    fireEvent(document, event)
+    expect(event.defaultPrevented).toBe(false)
+    expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+  })
+  it('retires distance-pending pointer and releases the next pointer and keyboard pickup', () => {
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    pointer('pointerdown', handle())
+    expect(handle().getAttribute('aria-pressed')).not.toBe('true')
+    act(() => interactionRef.current.cancel())
+    pointer('pointermove', document, 40)
+    expect(handle().getAttribute('aria-pressed')).not.toBe('true')
+    pointer('pointerup')
+    pointer('pointerdown', handle())
+    pointer('pointermove', document, 40)
+    expect(handle().getAttribute('aria-pressed')).toBe('true')
+    act(() => interactionRef.current.cancel())
+    key('Space')
+    expect(interactionRef.current.isKeyboardDragging()).toBe(true)
+    act(() => interactionRef.current.cancel())
+    expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+  })
+  // Observe real constructor dispatch; all native behavior remains call-through.
+  function observeSensor(Native) {
+    const instances = []
+    const attach = Native.prototype.attach
+    vi.spyOn(Native.prototype, 'attach').mockImplementation(function (...args) {
+      instances.push(this)
+      return attach.apply(this, args)
+    })
+    return instances
+  }
+  it('guards captured pending pointer work after retirement and newer activation', () => {
+    const instances = observeSensor(PointerSensor)
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    pointer('pointerdown', handle())
+    const old = instances[0]
+    act(() => interactionRef.current.cancel())
+    pointer('pointerdown', handle())
+    pointer('pointermove', document, 40)
+    const current = instances[1]
+    expect(handle().getAttribute('aria-pressed')).toBe('true')
+    const event = new MouseEvent('pointermove', { clientX: 80, cancelable: true })
+    const writes = vi.fn()
+    const unsubscribe = useProjectStore.subscribe((next, previous) => {
+      if (next.colors !== previous.colors) writes()
+    })
+    try {
+      act(() => {
+        old.handleStart()
+        old.handleMove(event)
+        old.handleCancel()
+        old.props.onStart({ x: 80, y: 0 })
+        old.props.onMove({ x: 80, y: 0 })
+        old.props.onCancel()
+      })
+      expect(event.defaultPrevented).toBe(false)
+      expect(old.activated).toBe(false)
+      expect(current.props.paletteSession.generation.session).toBe(current.props.paletteSession)
+      expect(handle().getAttribute('aria-pressed')).toBe('true')
+      expect(writes).not.toHaveBeenCalled()
+      expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+      act(() => interactionRef.current.cancel())
+    } finally {
+      unsubscribe()
+    }
+  })
+  it('keeps natural terminal delivery eligible before deferred registration drains', async () => {
+    const instances = observeSensor(KeyboardSensor)
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    key('Space')
+    const sensor = instances[0]
+    expect(sensor.props.paletteSession.generation.session).toBe(sensor.props.paletteSession)
+    const add = vi.spyOn(document, 'addEventListener')
+    act(() => sensor.handleCancel(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true })))
+    expect(interactionRef.current.isKeyboardDragging()).toBe(false)
+    drain()
+    expect(add.mock.calls.filter(([type]) => type === 'keydown')).toEqual([])
+    await act(async () => {})
+    expect(document.activeElement).toBe(handle())
+    key('Space')
+    expect(interactionRef.current.isKeyboardDragging()).toBe(true)
+  })
+  it('rejects captured old context completion without clearing ownership or writing order', () => {
+    const instances = observeSensor(KeyboardSensor)
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    key('Space')
+    drain()
+    const old = contexts.latest
+    const activatorEvent = instances[0].props.event
+    act(() => interactionRef.current.cancel())
+    key('Space')
+    drain()
+    const writes = vi.fn()
+    const unsubscribe = useProjectStore.subscribe((next, previous) => {
+      if (next.colors !== previous.colors) writes()
+    })
+    try {
+      act(() => old.onDragEnd({ active: { id: 'color-1' }, over: { id: 'color-0' }, activatorEvent }))
+      expect(writes).not.toHaveBeenCalled()
+      expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+      expect(interactionRef.current.isKeyboardDragging()).toBe(true)
+      act(() => old.onDragCancel({ activatorEvent }))
+      act(() => old.onDragStart({ active: { id: 'color-1' }, activatorEvent }))
+      expect(interactionRef.current.isKeyboardDragging()).toBe(true)
+      expect(handle().getAttribute('aria-pressed')).toBe('true')
+      act(() => interactionRef.current.cancel())
+    } finally {
+      unsubscribe()
+    }
+  })
+  it('subsequent real keyboard drop writes exactly once and focuses the moved swatch', async () => {
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    key('Space')
+    drain()
+    act(() => interactionRef.current.cancel())
+    const writes = vi.fn()
+    const unsubscribe = useProjectStore.subscribe((next, previous) => {
+      if (next.colors !== previous.colors) writes()
+    })
+    try {
+      key('Space')
+      drain()
+      // jsdom's tied zero rectangles resolve to the first item. Native keyboard
+      // drop still traverses dnd-kit and the real store; browser geometry is separate.
+      key('Space')
+      await act(async () => {})
+      expect(writes).toHaveBeenCalledTimes(1)
+      expect(colors()).toEqual(['#222222', '#111111', '#111111'])
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: /^Edit color 1:/ }))
+      expect(interactionRef.current.isKeyboardDragging()).toBe(false)
+    } finally {
+      unsubscribe()
+    }
+  })
+  it('isolates captured old native entries and callbacks from new keyboard ownership', () => {
+    const instances = observeSensor(KeyboardSensor)
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    key('Space')
+    drain()
+    const old = instances[0]
+    act(() => interactionRef.current.cancel())
+    key('Space')
+    drain()
+    const current = instances[1]
+    const writes = vi.fn()
+    const unsubscribe = useProjectStore.subscribe((next, previous) => {
+      if (next.colors !== previous.colors) writes()
+    })
+    const focus = document.activeElement
+    const event = new KeyboardEvent('keydown', { code: 'Space', cancelable: true })
+    try {
+      act(() => {
+        old.handleKeyDown(event)
+        old.handleStart()
+        old.handleMove(event, { x: 100, y: 100 })
+        old.handleCancel(event)
+        old.props.onStart({ x: 100, y: 100 })
+        old.props.onMove({ x: 100, y: 100 })
+        old.props.onEnd()
+        old.props.onCancel()
+      })
+      expect(event.defaultPrevented).toBe(false)
+      expect(interactionRef.current.isKeyboardDragging()).toBe(true)
+      expect(current.props.paletteSession.generation.session).toBe(current.props.paletteSession)
+      expect(handle().getAttribute('aria-pressed')).toBe('true')
+      expect(document.activeElement).toBe(focus)
+      expect(writes).not.toHaveBeenCalled()
+      expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+      act(() => interactionRef.current.cancel())
+      expect(interactionRef.current.isKeyboardDragging()).toBe(false)
+    } finally {
+      unsubscribe()
+    }
+  })
+  it.each(['pending', 'active', 'keyboard'])(
+    'retires %s teardown in StrictMode and preserves newer handle publication',
+    (phase) => {
+      const instances = observeSensor(phase === 'keyboard' ? KeyboardSensor : PointerSensor)
+      const interactionRef = { current: null }
+      const view = render(
+        <StrictMode>
+          <ColorPalette interactionRef={interactionRef} />
+        </StrictMode>
+      )
+      if (phase === 'keyboard') key('Space')
+      else {
+        pointer('pointerdown', handle())
+        if (phase === 'active') pointer('pointermove', document, 40)
+      }
+      const old = instances[0]
+      expect(old).toBeDefined()
+      const newerHandle = {}
+      interactionRef.current = newerHandle
+      view.unmount()
+      expect(interactionRef.current).toBe(newerHandle)
+      expect(old.props.paletteSession.retired).toBe(true)
+      expect(old.props.paletteSession.resourcesOpen).toBe(false)
+      const add = vi.spyOn(document, 'addEventListener')
+      drain()
+      expect(add.mock.calls.filter(([type]) => type === 'keydown')).toEqual([])
+      const event = new KeyboardEvent('keydown', { code: 'Space', cancelable: true })
+      fireEvent(document, event)
+      pointer('pointermove', document, 80)
+      pointer('pointerup')
+      expect(event.defaultPrevented).toBe(false)
+      expect(colors()).toEqual(['#111111', '#222222', '#111111'])
+    }
+  )
+  it('handles constructor-time reentrant retirement before keyboard attach continues', () => {
+    const interactionRef = { current: null }
+    const start = KeyboardSensor.prototype.handleStart
+    const instances = []
+    vi.spyOn(KeyboardSensor.prototype, 'handleStart').mockImplementation(function (...args) {
+      instances.push(this)
+      const result = start.apply(this, args)
+      interactionRef.current.cancel()
+      return result
+    })
+    render(<ColorPalette interactionRef={interactionRef} />)
+    const add = vi.spyOn(document, 'addEventListener')
+    key('Space')
+    drain()
+    expect(instances[0].props.paletteSession.retired).toBe(true)
+    expect(add.mock.calls.filter(([type]) => type === 'keydown')).toEqual([])
+    expect(interactionRef.current.isKeyboardDragging()).toBe(false)
+    expect(handle().getAttribute('aria-pressed')).not.toBe('true')
+  })
+  it.each(['active', 'drop-tail'])('immediately releases document click during %s retirement', (phase) => {
+    const interactionRef = { current: null }
+    render(<ColorPalette interactionRef={interactionRef} />)
+    pointer('pointerdown', handle())
+    pointer('pointermove', document, 40)
+    expect(handle().getAttribute('aria-pressed')).toBe('true')
+    const rail = document.createElement('button')
+    document.body.append(rail)
+    const click = vi.fn()
+    rail.addEventListener('click', click)
+    try {
+      if (phase === 'drop-tail') {
+        pointer('pointerup')
+        fireEvent.click(rail)
+        expect(click).not.toHaveBeenCalled()
+      }
+      rail.addEventListener('pointerdown', () => interactionRef.current.cancel(), { capture: true })
+      fireEvent.pointerDown(rail)
+      fireEvent.click(rail)
+      expect(click).toHaveBeenCalledTimes(1)
+      pointer('pointerdown', handle())
+      pointer('pointermove', document, 40)
+      act(() => vi.advanceTimersByTime(50))
+      fireEvent.click(rail)
+      expect(click).toHaveBeenCalledTimes(1)
+      act(() => interactionRef.current.cancel())
+    } finally {
+      rail.remove()
+    }
   })
 })

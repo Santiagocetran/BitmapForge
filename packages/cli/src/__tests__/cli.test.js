@@ -1,30 +1,14 @@
 /* global process, Buffer */
-/**
- * CLI unit tests for packages/cli/src/index.js and server.js
- *
- * Strategy:
- * - Tests 1 & 2 (exit cases): dynamically import index.js after setting
- *   process.argv, spy on process.exit to capture the exit code.
- * - Tests 3 & 4 (fs interaction): use a top-level configurable fs mock so
- *   Vitest's hoisting can apply it. A module-level control object is mutated
- *   per test to configure behavior.
- * - Test 5 (server paths): directly compute paths using the same logic as
- *   server.js and check existsSync.
+/** Historical assertions retained; dispatch imports now await operation and cleanup.
+ * Mocks only prove ownership branches, not encoded-artifact or OS cleanup acceptance.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
+import { runChild, LEGACY_CHILD_DEADLINE_MS, LEGACY_TEST_TIMEOUT_MS } from './cli-integration-helpers.js'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
-
-// Suppress unhandled rejections caused by __cliExit throws from stale floating
-// promises (old test imports that call process.exit after the test completes).
-process.on('unhandledRejection', (reason) => {
-  if (reason && typeof reason === 'object' && reason.__cliExit) return
-  // Re-throw all other unhandled rejections so Vitest catches real bugs
-  throw reason
-})
 
 // ---------------------------------------------------------------------------
 // Configurable fs/promises mock (top-level so Vitest hoisting works)
@@ -101,67 +85,32 @@ vi.mock('../server.js', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Run the CLI by setting process.argv and dynamically importing index.js.
- * Returns a promise that resolves with { exitCode, stderr, stdout } once
- * process.exit() is called (or after the given timeout).
- */
-function runCli(argv, timeoutMs = 4000) {
-  return new Promise((resolveTest, rejectTest) => {
-    vi.resetModules()
-
-    const stderrChunks = []
-    const stdoutChunks = []
-
-    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
-      stderrChunks.push(String(chunk))
-      return true
-    })
-    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
-      stdoutChunks.push(String(chunk))
-      return true
-    })
-
-    let settled = false
-    const timer = setTimeout(() => {
-      if (settled) return
-      settled = true
-      cleanup()
-      rejectTest(new Error(`runCli timed out. stderr: ${stderrChunks.join('')}`))
-    }, timeoutMs)
-
-    function cleanup() {
-      clearTimeout(timer)
-      exitSpy.mockRestore()
-      stderrSpy.mockRestore()
-      stdoutSpy.mockRestore()
-    }
-
-    function settle(result) {
-      if (settled) return
-      settled = true
-      cleanup()
-      resolveTest(result)
-    }
-
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
-      // Capture state before settling (settle may restore mocks)
-      const capturedStderr = stderrChunks.join('')
-      const capturedStdout = stdoutChunks.join('')
-      settle({ exitCode: code, stderr: capturedStderr, stdout: capturedStdout })
-      // Throw to stop execution in render()/batch(). The __cliExit marker
-      // means the global unhandledRejection handler above will suppress it
-      // when it fires from stale floating promises after a test completes.
-      throw Object.assign(new Error(`process.exit(${code})`), { exitCode: code, __cliExit: true })
-    })
-
-    process.argv = ['node', 'bitmapforge', ...argv]
-
-    import('../index.js').catch((e) => {
-      if (e?.__cliExit) return
-      settle({ exitCode: null, stderr: stderrChunks.join(''), stdout: stdoutChunks.join(''), error: e })
-    })
+/** Await the CLI module's top-level dispatch, restoring argv and exitCode. */
+async function runCli(argv) {
+  vi.resetModules()
+  const previousArgv = process.argv
+  const previousExitCode = process.exitCode
+  const stderrChunks = [],
+    stdoutChunks = []
+  const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+    stderrChunks.push(String(chunk))
+    return true
   })
+  const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+    stdoutChunks.push(String(chunk))
+    return true
+  })
+  process.argv = ['node', 'bitmapforge', ...argv]
+  process.exitCode = undefined
+  try {
+    await import('../index.js')
+    return { exitCode: process.exitCode || 0, stderr: stderrChunks.join(''), stdout: stdoutChunks.join('') }
+  } finally {
+    process.argv = previousArgv
+    process.exitCode = previousExitCode
+    stderrSpy.mockRestore()
+    stdoutSpy.mockRestore()
+  }
 }
 
 afterEach(() => {
@@ -179,7 +128,7 @@ afterEach(() => {
 
 describe('render: missing file → exit 1', () => {
   it('exits with code 1 and writes error to stderr', async () => {
-    // readFileImpl is null → real fs.readFile is used → file not found → exit(1)
+    // readFileImpl is null: real read failure becomes a settled nonzero dispatch.
     const result = await runCli(['render', '/nonexistent/path/xyz-does-not-exist-abc.bforge'])
     expect(result.exitCode).toBe(1)
     expect(result.stderr).toMatch(/cannot read file/)
@@ -212,39 +161,9 @@ describe('render: creates missing output directory', () => {
       throw new Error(`Unexpected binary readFile for ${p}`)
     }
 
-    // The render will complete successfully (puppeteer mock returns ok:true).
-    // process.exit won't be called on success; runCli will time out.
-    // We handle this by also resolving on stdout (render completion).
     const outPath = '/some/new/output-dir/output.apng'
-
-    await new Promise((res) => {
-      vi.resetModules()
-
-      vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-      vi.spyOn(process.stdout, 'write').mockImplementation((_chunk) => {
-        // stdout written = render completed successfully
-        vi.restoreAllMocks()
-        res(undefined)
-        return true
-      })
-
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
-        exitSpy.mockRestore()
-        vi.restoreAllMocks()
-        res(undefined)
-        throw Object.assign(new Error(`exit(${code})`), { __cliExit: true })
-      })
-
-      process.argv = ['node', 'bitmapforge', 'render', '/fake/project.bforge', '--out', outPath]
-
-      import('../index.js').catch((e) => {
-        if (e?.__cliExit) return
-        res(undefined)
-      })
-
-      // Safety fallback: resolve after 3s regardless
-      setTimeout(res, 3000)
-    })
+    const result = await runCli(['render', '/fake/project.bforge', '--out', outPath])
+    expect(result.exitCode).toBe(0)
 
     // Verify mkdir was called with the correct path and options
     expect(fsMockControl.mkdirCalls.length).toBeGreaterThan(0)
@@ -271,39 +190,8 @@ describe('batch: filters only .bforge files', () => {
       throw new Error(`Unexpected binary read for ${p}`)
     }
 
-    await new Promise((res) => {
-      vi.resetModules()
-
-      vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
-      let stdoutCount = 0
-      vi.spyOn(process.stdout, 'write').mockImplementation(() => {
-        stdoutCount++
-        // Batch processes 2 files → 2 stdout writes → resolve after both
-        if (stdoutCount >= 2) {
-          vi.restoreAllMocks()
-          res(undefined)
-        }
-        return true
-      })
-
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
-        exitSpy.mockRestore()
-        vi.restoreAllMocks()
-        res(undefined)
-        throw Object.assign(new Error(`exit(${code})`), { __cliExit: true })
-      })
-
-      process.argv = ['node', 'bitmapforge', 'batch', '/fake/dir']
-
-      import('../index.js').catch((e) => {
-        if (e?.__cliExit) return
-        res(undefined)
-      })
-
-      // Safety fallback
-      setTimeout(res, 3000)
-    })
+    const result = await runCli(['batch', '/fake/dir'])
+    expect(result.exitCode).toBe(0)
 
     // Should have processed exactly 2 .bforge files, not c.txt
     const bforgeReads = processedPaths.filter((p) => p.endsWith('.bforge'))
@@ -375,46 +263,53 @@ describe('server.js: asset paths resolve to existing files on disk', () => {
 // ---------------------------------------------------------------------------
 
 describe.skipIf(!process.env.INTEGRATION)('integration', () => {
-  it('renders a shape .bforge to valid APNG', async () => {
-    const { spawn } = await import('child_process')
-    const { mkdtemp, rm } = await import('fs/promises')
-    const { join } = await import('path')
-    const { tmpdir } = await import('os')
+  it(
+    'renders a shape .bforge to valid APNG',
+    async () => {
+      // Preserve the historical 60s outer budget: 40s child + 16s containment + 4s assertions/rm.
+      // Explicit owner disposition for P11 only; stage-2 children retain the default 60s deadline.
+      const { mkdtemp, rm } = await import('fs/promises')
+      const { join } = await import('path')
+      const { tmpdir } = await import('os')
 
-    const tmpDir = await mkdtemp(join(tmpdir(), 'bitmapforge-test-'))
-    const outFile = join(tmpDir, 'out.apng')
-    const fixture = resolve(__dirname, 'fixtures/shape.bforge')
-    const indexJs = resolve(__dirname, '../../src/index.js')
+      const tmpDir = await mkdtemp(join(tmpdir(), 'bitmapforge-test-'))
+      const outFile = join(tmpDir, 'out.apng')
+      const fixture = resolve(__dirname, 'fixtures/shape.bforge')
+      const indexJs = resolve(__dirname, '../../src/index.js')
 
-    try {
-      await new Promise((res, rej) => {
-        const proc = spawn(process.execPath, [indexJs, 'render', fixture, '--format', 'apng', '--out', outFile], {
-          env: { ...process.env, CI: '1' }
-        })
-        proc.on('close', (code) => {
-          if (code === 0) res(undefined)
-          else rej(new Error(`CLI exited with code ${code}`))
-        })
-      })
+      try {
+        const result = await runChild(
+          process.execPath,
+          [indexJs, 'render', fixture, '--format', 'apng', '--out', outFile],
+          {
+            deadlineMs: LEGACY_CHILD_DEADLINE_MS,
+            cwd: tmpDir,
+            env: { ...process.env, CI: '1', TMPDIR: tmpDir }
+          }
+        )
+        expect(result.failure, JSON.stringify(result)).toBeNull()
+        expect(result.code, result.stderr).toBe(0)
 
-      const { readFile } = await import('fs/promises')
-      const data = await readFile(outFile)
+        const { readFile } = await import('fs/promises')
+        const data = await readFile(outFile)
 
-      // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
-      expect(data[0]).toBe(0x89)
-      expect(data[1]).toBe(0x50)
-      expect(data[2]).toBe(0x4e)
-      expect(data[3]).toBe(0x47)
-      expect(data[4]).toBe(0x0d)
-      expect(data[5]).toBe(0x0a)
-      expect(data[6]).toBe(0x1a)
-      expect(data[7]).toBe(0x0a)
+        // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+        expect(data[0]).toBe(0x89)
+        expect(data[1]).toBe(0x50)
+        expect(data[2]).toBe(0x4e)
+        expect(data[3]).toBe(0x47)
+        expect(data[4]).toBe(0x0d)
+        expect(data[5]).toBe(0x0a)
+        expect(data[6]).toBe(0x1a)
+        expect(data[7]).toBe(0x0a)
 
-      // Must contain acTL chunk (APNG animation control chunk)
-      const str = data.toString('latin1')
-      expect(str).toContain('acTL')
-    } finally {
-      await rm(tmpDir, { recursive: true, force: true })
-    }
-  }, 60000)
+        // Must contain acTL chunk (APNG animation control chunk)
+        const str = data.toString('latin1')
+        expect(str).toContain('acTL')
+      } finally {
+        await rm(tmpDir, { recursive: true, force: true })
+      }
+    },
+    LEGACY_TEST_TIMEOUT_MS
+  )
 })

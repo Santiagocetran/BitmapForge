@@ -1,0 +1,99 @@
+# Bounded QA harness repair — R1–R7
+
+## Checkpoint: implemented, offline-verified, independent re-review required
+
+No browser or server was launched, package installed, OS repaired or application source changed. CLI owns the active serial browser lane. This document is the only repository file owned by this repair. External changes live under `QA=/home/agent/.hermes/profiles/gloin/cache/scratch/bitmapforge-hardening-qa`.
+
+Authority remains the accepted `qa-plan.md` (`e16077ff9230c40e278e523b16c599447f4a8d84e9421a4440473a6f3e603396`), its ACCEPT revision audit, and the implementation audit's REVISE/R1–R7. This is not independent acceptance or permission to rerun. The R7 literal landmark-versus-group conflict below requires a bounded written disposition and independent review before any browser rerun. No assertion was relaxed to resolve it.
+
+## Repair map
+
+| Finding                                 | Changed external implementation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Offline proof / outstanding real gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 structured console attribution       | `lib/runtime.mjs`, `lib/repair-contracts.mjs`: serialize console handles in their realm, retaining Error name/message/stack, capture operation synchronously on arrival, drain pending collection before final evaluation and diagnostics. Only error-level exact `[BitmapForge] Export error:` plus exactly one `Error` argument with exact sentinel is allowed while the injected APNG operation is armed. A second sentinel error, wrong/missing message/prefix/operation, other console error, pageerror or collection failure remains unexpected.                                                                                                                                | Positive/negative structure and delayed-resolution-across-restoration helper tests pass. Historical Firefox arguments did not expose their messages; no retroactive whitelist or pass is claimed. Fresh real Firefox D/N plus Chromium controls remain required.                                                                                                                                                                                                                                                                               |
+| R2 explicit show phase                  | `lib/artifacts.mjs`, `specs/ui-smoke.spec.mjs`: derive timing from real saved settings and the frozen `AnimationEngine.getLoopDurationMs` / `seekTo`, `framesProvider.captureFrames`, APNG encoder contracts. Assert unchanged defaults, full frame count, exact encoded delay, infinite loop count, dimensions, variation and meaningful **show-phase** frame. Retain timing/selection and all original per-frame metrics.                                                                                                                                                                                                                                                           | Fully decode both retained real a02 APNGs. Both have 181 frames, 62 ms encoded delays, 11,222 ms encoded sum; derived physical loop 11,283.185307179585 ms, show indices 41–140 inclusive, meaningful selected index 41. UPNG millisecond quantization explains the summed-delay difference. A deliberate decoded-pixel mutation preserving real meaningful fade content but blanking all show frames fails. Offline checks are diagnostics, not fresh artifact acceptance.                                                                    |
+| R3 missing negatives                    | `lib/ui.mjs`: before/after empty Image selection compare real Save payload/settings, Source-type Image selection, empty native file list/drop-area state/no Replace, invitation, empty-artwork screenshot hash and no alert, before return-to-cube. `lib/contracts.mjs`: positively exercise the actual header Help action, then click its measured center underneath the exposed N backdrop. Compare Help state, chooser/download counts and URL, preserving dismissal and opener restoration. S still has no invented exposed backdrop. No app event listener or store import is added.                                                                                             | Silent source/settings mutations and background Help forwarding without a download are rejected by helper tests. Actual Q1.image.D/N and Q2.N/S must execute later. Geometry fails explicitly if the known real target is not above the sheet; arbitrary empty coordinates are not substituted.                                                                                                                                                                                                                                                |
+| R4 exact notice / failure-safe evidence | `specs/ui-smoke.spec.mjs`: exact `Project saved as .bitmapforge file.` and `Project loaded.`; explicit old-saved-text absence after loading, same node/one scoped owner, no unchanged-content mutations across moves or Help suspension. Mutation records including undelivered observer records, connection/identity, ancestor hidden/inert/aria-hidden state and checkpoints are written in `finally`, including the known first-Help failure. Capture failure is retained without replacing the original assertion.                                                                                                                                                                | Concatenated stale/current text, replacement, duplicate owner and mutation negative fixtures fail. Help's accessible-role absence remains unchanged. Actual baseline Help isolation still fails and prevents verification of later resume/latest delivery; not waived.                                                                                                                                                                                                                                                                         |
+| R5 reducer / reconciliation             | `reduce.mjs`, `run.mjs`, pure helpers: latest prerequisite selected per phase/engine, explicit start chronology with deterministic natural attempt fallback (`a2` before `a10`); histories retained and transitions idempotent. Discovery/report identity includes runner ID/project/title/case, uniqueness is enforced, full 33-ID smoke discovery cannot be filtered away. Missing/partial/unparseable/interrupted reports preserve explicit pending cells and nonzero command gates. Equal-size unequal sets, duplicate identities, missing/extra IDs, missing server telemetry, source/harness drift cannot yield a green command.                                                | Retained reports yield exact original 198 keys/counts; reducer executable in a private copy is byte-idempotent. Interrupted fixture exits 1 with not-run cells, not invented terminal results. Latest blocked→pass without smoke becomes not run; inverse stays blocked. `QA_PREREQUISITE_RUN` permits a **read-only preflight-only** reference into the frozen run for a new run root; old smoke passes are not imported. Direct offline invocation produced 198 cells: 165 not run / 33 blocked, preserving WebKit's original evidence path. |
+| R6 scanner / server truth               | `lib/axe.mjs`, accessibility spec, runtime and runner persist scanner injection/inventory/evaluation entry, completion/exception and separate runner terminal classification. An outer cancellation still has a durable stage; scanner-only incomplete evaluation/injection is blocked. UI setup and supplemental DOM failures remain failures, including DOM soft failures and outer DOM timeout. `server-supervisor.mjs`, `lib/server-telemetry.mjs` observe actual child exit and close, PID/code/signal and bounded shutdown. Server records actual bounded close completion/error separately from pre-close manifest. Missing/abnormal exit or close cannot mean clean shutdown. | Stage/exception/unresolved-evaluation fixtures pass; valid results/violations do not become scanner blocks. Normal/abnormal/missing-close helper tests and actual non-server Node child exit 0/7 observations pass. Original close failure retained; hung close rejects. No real Vite shutdown acceptance was attempted: the new supervisor must be exercised after slot release. Original readiness/90-second acceptance budgets and runner tracing remain unchanged.                                                                         |
+| R7 supplemental semantics               | `lib/axe.mjs`, pure helpers explicitly inventory named main/navigation, actual Editor tasks group, all four named task regions, named Preview, native headings/title, one pressed task, ID/IDREF, accessible button names, selected format/description, invalid association, isolation/Tab sequence, and **scoped textual notice status/error** ownership (excluding unrelated dnd live regions).                                                                                                                                                                                                                                                                                     | Missing-name/wrong-role/wrong-owner negatives fail. Strict IDREF checks are unchanged. Actual source has an **unnamed `<main>`** and **`role="group" aria-label="Editor tasks"`**, not a navigation landmark. The executable literal named-main/navigation assertions retain this as failure; no role/name was fabricated. See disposition below.                                                                                                                                                                                              |
+
+## R7 disposition requiring independent review — STOP before rerun
+
+`Layout.jsx:305` supplies a named task **group**; `:422` supplies an unnamed main. Task sections `:328–344` are named through their headings; Preview `:446` is explicitly named. The accepted plan literally requires named main/navigation/task/preview regions. A named group cannot be reported as a named navigation landmark. This repair therefore inventories and checks both the actual group semantics and the unchanged literal landmark requirements, retaining failures and an explicit diagnostic disposition.
+
+The parent/reviewer must decide whether to retain the literal stronger landmark policy (requiring a separately planned application change), or commission an explicitly amended policy and fresh accepted baseline. **No policy revision is approved here.** Do not silently equate group/navigation, waive main naming, reinterpret a strict supplemental failure as an axe/WCAG defect, or edit production semantics inside this harness repair. The new browser baseline remains gated on this written disposition/re-review and CLI slot release.
+
+## Verifiable repair artifacts and frozen identity
+
+External `QA/repairs/r1-r7/` contains:
+
+- `before/`: preserved pre-repair harness source/manifests; its canonical executable map matches the a02 hash exactly.
+- `repair.diff`: complete source diff including new helpers, supervisor and tests (15 changed/new executable files).
+- `harness-freeze.json`: sorted 28-file executable map using the unchanged `run.mjs` identity algorithm, complete **62-file** manifest including isolated supplier/tooling files with bytes/SHA-256, and unchanged frozen smoke inventory.
+- `verification.json`, `syntax.json`, `nonbrowser-command.json`, `nonbrowser-tests.log`, `verify.py`: reproducible actual offline checks/output. The verifier never invokes browser/server entrypoints.
+- `prerequisite-reference-check/`: direct offline preflight-reference reducer diagnostic; no smoke passes imported.
+
+New executable harness SHA-256: `3bc6339908cdf83d541aebeb57df0510665a2d5dfd6d5560645d9afbc5af21dc`.
+
+Complete harness/supplier manifest SHA-256: `dc84c8c3db0ac44d6ebfa50e66b469855dbbdb48274fc40498c0a7ff3e3c30d4`.
+
+Repair diff SHA-256: `96913b4e868b05f92740339194777f64c9e5053f49c3817fd1db9b1831678a4a`.
+
+Executed:
+
+```sh
+python3 "$QA/repairs/r1-r7/verify.py"
+# Syntax: 27 modules, exit 0.
+# node --test "$QA/harness/tests/repair.test.mjs": 13 tests, 13 pass, 0 fail,
+# 0 cancelled/skipped/todo, exit 0; actual latest duration 28442.906616 ms.
+```
+
+The verifier revalidated **all 1,171 retained evidence entries** (size and SHA-256), old a02 executable hash `4e749ad91dab7e973bc595766d9fc072bd2fa89e9e3c11c986514a601cd64aa3`, and all **170 relevant source/dependency hashes**. a01/a02, their failed statuses, original ledgers/matrix and evidence manifest were not edited or reclassified. Original matrix remains **38 pass / 28 fail / 33 blocked / 99 not run**. No final phase ran. Helper/negative fixtures and offline decodes contribute **zero new acceptance passes**.
+
+**Concurrent-owner readback:** after that 170-file verification checkpoint, final `git status` showed app-owner changes to `src/app/components/Layout/Layout.test.jsx`, `src/app/components/ui/StatusNotice.test.jsx`, and untracked `Layout.hardening.test.jsx`, alongside the known CLI work. QA did not edit them. The 170-file equality claim is pinned to the executed verification checkpoint, not a claim that another owner's checkout remains frozen afterward. Current harness/supplier files and all 1,171 original evidence entries were checked again and still match. Historical source/ASCII commands below remain gated on the parent's correct unchanged source snapshot; they must fail the existing historical-source gate rather than misattribute changed-source results to baseline.
+
+One optional additional test-source insertion for the new prerequisite-reference branch encountered a tool approval gate and was not applied. The branch was instead exercised by the separately recorded direct offline reducer command above; the frozen suite remains the 13 actually executed tests. No pending edit is part of this frozen hash.
+
+## Unchanged application findings and ownership
+
+- **Desktop drag after collapse/reveal and Help notice accessible-role isolation remain demonstrated application failures**, pending separately planned/accepted actual-app fixes. This repair does not remediate either app defect. Resume/latest notice checks remain behind Help isolation.
+- **Shape/Text remain sparse real renders below the accepted occupancy/entropy gates**, not blank/missing-font proof. No fixture, animation, palette, framing or quality threshold was changed. Diagnosis and an accepted app/policy plan remain separate.
+- **Q7 closed-popover IDREF remains the literal supplemental-policy failure**, not fourteen axe violations or automatic WCAG/user-impact proof. No exclusion or force-mount repair was made. All prior axe scans retain their zero violations **and incompletes/manual-unverified** classifications.
+- WebKit's missing native library remains blocked; no environment repair or substitute browser is authorized. Broad built/source/ASCII remain discovery-only/pending. Final's 99 cells remain not run until the accepted immutable final build and fresh Chromium handoff are supplied.
+
+## Exact remaining browser commands — NOT executed; gated
+
+Use a **new run root**, never the frozen original root or `baseline.sh` (which hardcodes that old root). Run each command separately after independent re-review, R7 disposition, renewed parent cache/build handoff and CLI's explicit slot release. Stop and diagnose unexpected failures; these are new immutable attempts, not retries. The cache below is the historical baseline handoff and must be explicitly reconfirmed by the parent before use.
+
+```sh
+export QA=/home/agent/.hermes/profiles/gloin/cache/scratch/bitmapforge-hardening-qa
+export NODE24=/home/agent/.npm/_npx/17533ff5f2b7389f/node_modules/.bin/node
+export QA_RUN="$QA/runs/baseline-550842c-harness-r1-r7"
+export QA_PHASE=baseline
+export QA_DIST=/home/agent/BitmapForge-hardening-research/baseline/dist
+export QA_CHROMIUM_CACHE="$QA/browsers/parent-baseline-pw-1.59.1"
+export QA_HARNESS_HASH=3bc6339908cdf83d541aebeb57df0510665a2d5dfd6d5560645d9afbc5af21dc
+lane() {
+  local engine="$1" lane="$2" attempt="$3" port=5291
+  local cache="$QA/browsers/pw-1.59.1"
+  if [ "$engine" = chromium ]; then cache="$QA_CHROMIUM_CACHE"; fi
+  if [ "$lane" = source-chromium ]; then port=5293; fi
+  env QA_ENGINE="$engine" QA_LANE="$lane" QA_ATTEMPT="$attempt" QA_PORT="$port" \
+    PLAYWRIGHT_BROWSERS_PATH="$cache" "$NODE24" "$QA/harness/run.mjs"
+}
+lane chromium preflight a03
+lane firefox preflight a03
+lane chromium smoke a03
+lane firefox smoke a03
+lane chromium trace-probe a03  # expected intentional failure; never a product pass
+python3 "$QA/tools/inspect_trace.py" "$QA_RUN/baseline/trace-probe/chromium/a03"
+lane chromium built-chromium a01
+lane chromium source-chromium a01
+lane chromium ascii-chromium a01
+QA_PREREQUISITE_RUN="$QA/runs/baseline-550842c-stage1" \
+  "$NODE24" "$QA/harness/reduce.mjs" "$QA_RUN"
+"$NODE24" "$QA/harness/summarize.mjs" "$QA_RUN"
+```
+
+The read-only prerequisite reference preserves WebKit's real historical block without launching it or importing old smoke passes. Available engines still require complete fresh 33-case smoke results under this reviewed hash before any comparison. The parent may reconcile its exact independently retained ASCII lane instead of duplicate execution only under the accepted evidence-sharing contract. No WebKit smoke or final command is authorized by this checkpoint. Final commands cannot be fully specified until the parent supplies the immutable final target, source identity and fresh-cache handoff.

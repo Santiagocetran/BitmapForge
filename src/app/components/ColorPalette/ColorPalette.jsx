@@ -27,6 +27,174 @@ export function normalizePaletteHex(value) {
   return null
 }
 
+// Private runtime adapter for @dnd-kit/core 6.3.1. Its constructors dispatch
+// attach(), keyboard attach defers listeners.add, and pointer detach schedules
+// documentListeners.removeAll. Run compatibility tests on dependency updates.
+function sensorLive(sensor) {
+  const session = sensor.props.paletteSession
+  return !session.retired && !session.finished && !session.generation.retired
+}
+
+function sensorProps(props, kind) {
+  const session = {
+    generation: props.options.generation,
+    activatorEvent: props.event,
+    kind,
+    retired: false,
+    finished: false,
+    delivering: false
+  }
+  const wrapped = { ...props, paletteSession: session }
+  for (const name of ['onStart', 'onMove', 'onPending', 'onAbort']) {
+    wrapped[name] = (...args) => {
+      if (sensorLive(session.adapter) || (name === 'onAbort' && session.retiring)) props[name]?.(...args)
+    }
+  }
+  for (const name of ['onEnd', 'onCancel']) {
+    wrapped[name] = (...args) => {
+      if (!sensorLive(session.adapter) && !(name === 'onCancel' && session.retiring && !session.finished)) return
+      session.finished = true
+      session.delivering = true
+      try {
+        return props[name](...args)
+      } finally {
+        session.delivering = false
+        if (session.generation.session === session) session.generation.session = null
+      }
+    }
+  }
+  return wrapped
+}
+
+function attachSensor(sensor) {
+  const session = sensor.props.paletteSession
+  session.adapter = sensor
+  session.resourcesOpen = true
+  session.generation.session = session
+  for (const manager of [sensor.listeners, sensor.windowListeners, sensor.documentListeners].filter(Boolean)) {
+    const add = manager.add.bind(manager)
+    manager.add = (type, listener, options) => {
+      // Native pointer sensors share the same click stopper. Give each manager
+      // its own identity so an old 50ms cleanup cannot remove a newer listener.
+      if (session.resourcesOpen) add(type, (...args) => listener(...args), options)
+    }
+  }
+  if (sensor.documentListeners) {
+    session.generation.tails.add(session)
+    const removeAll = sensor.documentListeners.removeAll.bind(sensor.documentListeners)
+    sensor.documentListeners.removeAll = () => {
+      removeAll()
+      session.generation.tails.delete(session)
+    }
+  }
+}
+
+function retireSensor(session) {
+  session.retired = true
+  if (!session.finished) {
+    session.retiring = true
+    try {
+      if (session.kind === 'pointer') PointerSensor.prototype.handleCancel.call(session.adapter)
+      else {
+        session.adapter.detach()
+        session.adapter.props.onCancel()
+      }
+    } finally {
+      session.retiring = false
+    }
+  }
+  // Preserve natural drop click suppression, but release forced retirement now.
+  session.adapter.documentListeners?.removeAll()
+}
+
+class PaletteKeyboardSensor extends KeyboardSensor {
+  constructor(props) {
+    super(sensorProps(props, 'keyboard'))
+  }
+  attach() {
+    attachSensor(this)
+    super.attach()
+  }
+  detach() {
+    this.props.paletteSession.resourcesOpen = false
+    super.detach()
+  }
+  handleStart(...args) {
+    if (sensorLive(this)) super.handleStart(...args)
+  }
+  handleKeyDown(...args) {
+    if (sensorLive(this)) super.handleKeyDown(...args)
+  }
+  handleMove(...args) {
+    if (sensorLive(this)) super.handleMove(...args)
+  }
+  handleEnd(...args) {
+    if (sensorLive(this)) super.handleEnd(...args)
+  }
+  handleCancel(...args) {
+    if (sensorLive(this)) super.handleCancel(...args)
+  }
+}
+
+class PalettePointerSensor extends PointerSensor {
+  constructor(props) {
+    super(sensorProps(props, 'pointer'))
+  }
+  attach() {
+    attachSensor(this)
+    super.attach()
+  }
+  detach() {
+    this.props.paletteSession.resourcesOpen = false
+    super.detach()
+  }
+  handleStart(...args) {
+    if (sensorLive(this)) super.handleStart(...args)
+  }
+  handlePending(...args) {
+    if (sensorLive(this)) super.handlePending(...args)
+  }
+  handleMove(...args) {
+    if (sensorLive(this)) super.handleMove(...args)
+  }
+  handleEnd(...args) {
+    if (sensorLive(this)) super.handleEnd(...args)
+  }
+  handleCancel(...args) {
+    if (sensorLive(this)) super.handleCancel(...args)
+  }
+  handleKeydown(...args) {
+    if (sensorLive(this)) super.handleKeydown(...args)
+  }
+  removeTextSelection(...args) {
+    if (sensorLive(this)) super.removeTextSelection(...args)
+  }
+}
+
+for (const [Adapter, Native] of [
+  [PaletteKeyboardSensor, KeyboardSensor],
+  [PalettePointerSensor, PointerSensor]
+]) {
+  Adapter.activators = Native.activators.map(({ eventName, handler }) => ({
+    eventName,
+    handler: (event, options, context) => !options.generation.retired && handler(event, options, context)
+  }))
+}
+
+function paletteGeneration(id = 0) {
+  return { id, retired: false, session: null, tails: new Set() }
+}
+
+function retireGeneration(generation) {
+  const needsReset = !!generation.session && !generation.retired
+  if (needsReset) generation.retired = true
+  const sessions = new Set(generation.tails)
+  if (generation.session) sessions.add(generation.session)
+  for (const session of sessions) session.retired = true
+  for (const session of sessions) retireSensor(session)
+  return needsReset
+}
+
 function focusableWithin(root) {
   return [...root.querySelectorAll('button, input, select, textarea, a[href], [tabindex]')].filter(
     (node) => node.tabIndex >= 0 && !node.disabled && !node.closest('[hidden], [inert]') && node.getClientRects().length
@@ -240,7 +408,9 @@ function ColorPalette({
   const [editToken, setEditToken] = useState(null)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState(false)
-  const [epoch, setEpoch] = useState(0)
+  const [generation, setGeneration] = useState(paletteGeneration)
+  const generationRef = useRef(generation)
+  generationRef.current = generation
   const transaction = useRef(null)
   const ownWrite = useRef(false)
   const revision = useRef(0)
@@ -254,8 +424,8 @@ function ColorPalette({
   const cancelRef = useRef(null)
   const fieldId = useId()
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(PalettePointerSensor, { generation, activationConstraint: { distance: 8 } }),
+    useSensor(PaletteKeyboardSensor, { generation, coordinateGetter: sortableKeyboardCoordinates })
   )
   function focusItem(index, handle = false) {
     const generation = ++focusGenerationRef.current
@@ -275,22 +445,25 @@ function ColorPalette({
     ++focusGenerationRef.current
     setEditing(null)
     setError(false)
-    if (resetDrag && dragRef.current !== null) {
+    if (resetDrag) {
       dragRef.current = null
-      setEpoch((value) => value + 1)
+      keyboardDrag.current = false
+      const current = generationRef.current
+      if (retireGeneration(current)) setGeneration(paletteGeneration(current.id + 1))
     }
     if (restoreFocus && index !== undefined) focusItem(index)
   }
   cancelRef.current = cancel
   useEffect(() => {
     const generation = focusGenerationRef
-    if (interactionRef)
-      interactionRef.current = {
-        cancel: (options) => cancelRef.current(options),
-        // Radix observes Escape in capture before the keyboard sensor cancels.
-        // The drawer must defer dismissal, not stop propagation to that sensor.
-        isKeyboardDragging: () => dragRef.current !== null && keyboardDrag.current
-      }
+    if (generationRef.current.retired) setGeneration(paletteGeneration(generationRef.current.id + 1))
+    const handle = {
+      cancel: (options) => cancelRef.current(options),
+      // Radix observes Escape in capture before the keyboard sensor cancels.
+      // The drawer must defer dismissal, not stop propagation to that sensor.
+      isKeyboardDragging: () => dragRef.current !== null && keyboardDrag.current
+    }
+    if (interactionRef) interactionRef.current = handle
     const unsubscribe = useProjectStore.subscribe((next, previous) => {
       if (next.colors === previous.colors) return
       revision.current++
@@ -300,7 +473,7 @@ function ColorPalette({
         ownWrite.current = false
         if (transaction.current) transaction.current.revision = revision.current
       } else {
-        const index = transaction.current?.index ?? dragRef.current
+        const index = transaction.current?.index ?? dragRef.current?.index
         const hadFocus =
           contentRef.current?.contains(document.activeElement) ||
           triggers.current.some(
@@ -315,7 +488,10 @@ function ColorPalette({
       transaction.current = null
       dragRef.current = null
       ++generation.current
-      if (interactionRef) interactionRef.current = null
+      keyboardDrag.current = false
+      retireGeneration(generationRef.current)
+      generationRef.current.retired = true
+      if (interactionRef?.current === handle) interactionRef.current = null
     }
   }, [interactionRef])
   useEffect(() => {
@@ -378,6 +554,19 @@ function ColorPalette({
     write((state) => state.setColors(arrayMove(current, from, to)))
     focusItem(to)
   }
+  function ownedDrag(event) {
+    const owned = dragRef.current
+    if (
+      !owned ||
+      owned.generation !== generation ||
+      generation.retired ||
+      owned.session.retired ||
+      !owned.session.delivering ||
+      owned.activatorEvent !== event.activatorEvent
+    )
+      return null
+    return owned
+  }
   const ids = colors.map((_, index) => `color-${index}`)
   return (
     <section className="min-w-0 space-y-3" aria-label="Color palette editor">
@@ -391,27 +580,37 @@ function ColorPalette({
           editor.
         </p>
         <DndContext
-          key={epoch}
+          key={generation.id}
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={({ active, activatorEvent }) => {
+            const session = generation.session
+            if (
+              !session ||
+              generation.retired ||
+              session.retired ||
+              session.finished ||
+              session.activatorEvent !== activatorEvent
+            )
+              return
             cancel({ resetDrag: false })
-            keyboardDrag.current = activatorEvent.type === 'keydown'
-            dragRef.current = ids.indexOf(active.id)
+            keyboardDrag.current = session.kind === 'keyboard'
+            dragRef.current = { session, generation, activatorEvent, index: ids.indexOf(active.id) }
           }}
-          onDragCancel={() => {
-            const index = dragRef.current
+          onDragCancel={(event) => {
+            const owned = ownedDrag(event)
+            if (!owned) return
             dragRef.current = null
-            if (index !== null) focusItem(index, true)
+            keyboardDrag.current = false
+            focusItem(owned.index, true)
           }}
-          onDragEnd={({ active, over }) => {
-            const index = ids.indexOf(active.id)
-            if (dragRef.current === null) return
-            if (over) move(index, ids.indexOf(over.id))
-            else {
-              dragRef.current = null
-              focusItem(index, true)
-            }
+          onDragEnd={(event) => {
+            const owned = ownedDrag(event)
+            if (!owned) return
+            dragRef.current = null
+            keyboardDrag.current = false
+            if (event.over) move(owned.index, ids.indexOf(event.over.id))
+            else focusItem(owned.index, true)
           }}
           accessibility={{ restoreFocus: false }}
         >
