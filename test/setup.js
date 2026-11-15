@@ -1,5 +1,12 @@
 import { vi } from 'vitest'
 
+// Node 26's native localStorage getter shadows jsdom's browser storage in Vitest.
+// Bind the real per-window implementation; never use Node's disk-backed storage.
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: globalThis.jsdom.window.localStorage
+})
+
 // Mock Three.js to prevent WebGL import-time crashes in jsdom
 vi.mock('three', () => {
   class Vector3 {

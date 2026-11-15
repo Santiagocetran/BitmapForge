@@ -9,7 +9,7 @@
 - `export-decode`: the dedicated export decode/archive suite, not just root Vitest.
 - `browser`: Chromium plus OS dependencies, the existing `export.visual.spec.js` suite against the downloaded production build, and freshly extracted Code/CSS archives as covered by that suite. A separate CI config disables server reuse, requires a free strict port and forbids focused tests. Revision and SHA-256 manifest checks precede serving the build; Playwright waits for HTTP readiness. Evidence uploads run after failures too.
 
-Each isolated job uses Node 20 and root `npm ci` against the committed workspace lock. There are no additional workspace `npm install` calls. Puppeteer's browser download is disabled because the CLI unit tests mock Puppeteer; the optional `INTEGRATION=1` CLI render test is **not** claimed as a passing browser gate. Playwright installs its own real browser. Existing checkout/setup/upload actions stay on v4; the matching artifact download action is v4. Deployment CLI is explicitly pinned to `vercel@65.15.0` (declares Node >=20), outside the workspace dependency tree.
+Each isolated job selects Node 24 through `.nvmrc` and uses root `npm ci` against the committed workspace lock. There are no additional workspace `npm install` calls. Puppeteer's browser download is disabled because the CLI unit tests mock Puppeteer; the optional `INTEGRATION=1` CLI render test is **not** claimed as a passing browser gate. Playwright installs its own real browser. Existing checkout/setup/upload actions stay on v4; the matching artifact download action is v4. Deployment CLI is explicitly pinned to `vercel@65.15.0` (declares Node >=20), outside the workspace dependency tree.
 
 ## Build identity is not deployment identity
 
