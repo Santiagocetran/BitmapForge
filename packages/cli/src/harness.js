@@ -1,14 +1,31 @@
 import { SceneManager, parseProjectData } from '/headless.js'
 
-// Load upng dynamically (served as a classic script from the local server)
+// Classic UPNG captures window.pako at evaluation time: insertion order matters.
+const scriptLoads = new Map()
+async function loadScript(url, valid) {
+  if (valid()) return
+  if (!scriptLoads.has(url)) {
+    const loading = new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.onload = () => (valid() ? resolve() : reject(new Error(`Missing required global from ${url}`)))
+      script.onerror = () => reject(new Error(`Failed to load ${url}`))
+      document.head.appendChild(script)
+    })
+    scriptLoads.set(url, loading)
+  }
+  try {
+    await scriptLoads.get(url)
+    if (!valid()) throw new Error(`Missing required global from ${url}`)
+  } catch (error) {
+    scriptLoads.delete(url)
+    throw error
+  }
+}
 async function loadUpng() {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = '/upng.js'
-    script.onload = () => resolve(window.UPNG)
-    script.onerror = reject
-    document.head.appendChild(script)
-  })
+  await loadScript('/pako.js', () => typeof window.pako?.deflate === 'function')
+  await loadScript('/upng.js', () => typeof window.UPNG?.encode === 'function')
+  return window.UPNG
 }
 
 async function captureFrames(manager, frameCount) {
@@ -26,6 +43,8 @@ async function captureFrames(manager, frameCount) {
       // animation phase (fadeIn/show/fadeOut) and rotation — matching the live preview
       manager.renderAtTime((i / frameCount) * loopMs)
 
+      const sourceCanvas = manager.getCanvas()
+      if (!sourceCanvas) throw new Error('No preview canvas available')
       const ctx = sourceCanvas.getContext('2d')
       const imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
       frames.push(imageData)
@@ -68,38 +87,104 @@ async function encodeWebm(manager, frameCount, fps) {
   const ctx = offscreen.getContext('2d')
 
   const chunks = []
-  const stream = offscreen.captureStream(fps)
-  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
-  recorder.ondataavailable = (e) => {
+  let stream,
+    recorder,
+    paused = false,
+    failure,
+    result,
+    stopTimer,
+    frameTimer
+  let eventError,
+    stopped = false,
+    settleEvent
+  // Always fulfills: recorder errors cannot become unhandled rejections mid-loop.
+  const event = new Promise((resolve) => {
+    settleEvent = resolve
+  })
+  const onStop = () => {
+    stopped = true
+    settleEvent()
+  }
+  const onError = (e) => {
+    eventError = e.error || new Error('MediaRecorder error')
+    settleEvent()
+  }
+  const onData = (e) => {
     if (e.data.size > 0) chunks.push(e.data)
   }
-
-  const loopMs = manager.getLoopDurationMs()
-  const frameDuration = loopMs / frameCount
-
-  recorder.start()
-  manager.pauseLoop()
-  try {
-    for (let i = 0; i < frameCount; i++) {
-      manager.renderAtTime((i / frameCount) * loopMs)
-      ctx.drawImage(sourceCanvas, 0, 0, width, height)
-      await new Promise((r) => setTimeout(r, frameDuration))
-    }
-  } finally {
-    manager.resumeLoop()
+  async function stopRecording() {
+    if (!recorder || recorder.state === 'inactive') return
+    recorder.stop()
+    await Promise.race([
+      event,
+      new Promise((_, reject) => {
+        stopTimer = setTimeout(() => reject(new Error('MediaRecorder stop timed out after 5000ms')), 5000)
+      })
+    ])
+    if (eventError) throw eventError
   }
-
-  recorder.stop()
-  await new Promise((r) => {
-    recorder.onstop = r
-  })
-
-  const blob = new Blob(chunks, { type: 'video/webm' })
-  const buf = await blob.arrayBuffer()
-  return { base64: btoa(String.fromCharCode(...new Uint8Array(buf))), mimeType: 'video/webm' }
+  try {
+    stream = offscreen.captureStream(fps)
+    recorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
+    recorder.addEventListener('dataavailable', onData)
+    recorder.addEventListener('stop', onStop)
+    recorder.addEventListener('error', onError)
+    const loopMs = manager.getLoopDurationMs()
+    const frameDuration = loopMs / frameCount
+    recorder.start()
+    manager.pauseLoop()
+    paused = true
+    for (let i = 0; i < frameCount; i++) {
+      if (eventError) throw eventError
+      if (stopped) throw new Error('MediaRecorder stopped before capture completed')
+      manager.renderAtTime((i / frameCount) * loopMs)
+      const sourceCanvas = manager.getCanvas()
+      if (!sourceCanvas) throw new Error('No preview canvas available')
+      ctx.drawImage(sourceCanvas, 0, 0, width, height)
+      await Promise.race([
+        event,
+        new Promise((resolve) => {
+          frameTimer = setTimeout(resolve, frameDuration)
+        })
+      ])
+      clearTimeout(frameTimer)
+      if (eventError) throw eventError
+      if (stopped) throw new Error('MediaRecorder stopped before capture completed')
+    }
+    await stopRecording()
+    const blob = new Blob(chunks, { type: 'video/webm' })
+    const buf = await blob.arrayBuffer()
+    result = { base64: btoa(String.fromCharCode(...new Uint8Array(buf))), mimeType: 'video/webm' }
+  } catch (error) {
+    failure = error
+  } finally {
+    // No cleanup failure may prevent the remaining owner attempts.
+    const cleanup = async (fn) => {
+      try {
+        await fn()
+      } catch (error) {
+        failure = failure ? new Error(`${failure.message}; cleanup: ${error.message}`) : error
+      }
+    }
+    await cleanup(stopRecording)
+    clearTimeout(stopTimer)
+    clearTimeout(frameTimer)
+    if (recorder) {
+      recorder.removeEventListener('dataavailable', onData)
+      recorder.removeEventListener('stop', onStop)
+      recorder.removeEventListener('error', onError)
+    }
+    if (paused) await cleanup(() => manager.resumeLoop())
+    if (stream) {
+      for (const track of stream.getTracks()) await cleanup(() => track.stop())
+    }
+  }
+  if (failure) throw failure
+  return result
 }
 
 window.__bitmapForgeRender = async function (opts) {
+  let manager, result, failure
   try {
     const { projectJson, format, fps = 12, width, height } = opts
     const { settings, modelData, inputType } = parseProjectData(projectJson)
@@ -110,7 +195,7 @@ window.__bitmapForgeRender = async function (opts) {
     container.style.width = w + 'px'
     container.style.height = h + 'px'
 
-    const manager = new SceneManager(container, { ...settings })
+    manager = new SceneManager(container, { ...settings })
     // DPR hardcoded to 1 for deterministic output across machines
     manager.setSize(w, h)
 
@@ -152,9 +237,18 @@ window.__bitmapForgeRender = async function (opts) {
       mimeType = 'image/png'
     }
 
-    manager.dispose()
-    return { ok: true, base64, mimeType }
+    result = { ok: true, base64, mimeType }
   } catch (err) {
-    return { ok: false, error: err.message || String(err) }
+    failure = err.message || String(err)
+  } finally {
+    if (manager) {
+      try {
+        manager.dispose()
+      } catch (err) {
+        const message = err.message || String(err)
+        failure = failure ? `${failure}; dispose: ${message}` : `Dispose failed: ${message}`
+      }
+    }
   }
+  return failure ? { ok: false, error: failure } : result
 }

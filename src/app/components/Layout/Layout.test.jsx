@@ -459,6 +459,10 @@ describe('responsive Layout integration with real PreviewCanvas', () => {
     )
     act(() => useProjectStore.getState().setStatus({ message: 'Latest completion' }))
     expect(notice.textContent).toBe('Project saved')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('status', { hidden: true })).toBe(notice)
+    expect(notice.parentElement.hidden).toBe(true)
+    expect(notice.parentElement.hasAttribute('inert')).toBe(true)
     view.rerender(
       <SceneManagerProvider>
         <Layout />

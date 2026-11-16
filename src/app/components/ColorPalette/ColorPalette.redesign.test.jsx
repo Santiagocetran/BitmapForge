@@ -216,6 +216,34 @@ describe('compact palette browser and name lifetime', () => {
     )
     expect(document.activeElement).toBe(owner)
   })
+  it('preserves controlled drafts and root through hide/cancel/reveal before focus jobs drain', () => {
+    const jobs = []
+    vi.spyOn(globalThis, 'queueMicrotask').mockImplementation((job) => jobs.push(job))
+    const interactionRef = { current: null }
+    render(
+      <>
+        <button>Owner</button>
+        <div>
+          <ColorPalette interactionRef={interactionRef} palettesOpen presetSaveOpen presetDraft="Keep draft" />
+        </div>
+      </>
+    )
+    const root = screen.getByRole('region', { name: 'Color palette editor' })
+    const name = screen.getByLabelText('Palette name')
+    fireEvent.click(button(/^Edit color 2:/))
+    fireEvent.keyDown(screen.getByLabelText('Hex color'), { key: 'Escape' })
+    root.parentElement.hidden = true
+    act(() => interactionRef.current.cancel({ restoreFocus: false }))
+    root.parentElement.hidden = false
+    const owner = button('Owner')
+    owner.focus()
+    act(() => jobs.splice(0).forEach((job) => job()))
+    expect(screen.getByRole('region', { name: 'Color palette editor' })).toBe(root)
+    expect(screen.getByLabelText('Palette name')).toBe(name)
+    expect(name.value).toBe('Keep draft')
+    expect(button('Browse palettes').getAttribute('aria-expanded')).toBe('true')
+    expect(document.activeElement).toBe(owner)
+  })
   it('directly validates the optional controlled metadata', () => {
     for (const key of ['palettesOpen', 'presetSaveOpen']) {
       expect(ColorPalette.propTypes[key]({}, key)).toBeNull()

@@ -75,6 +75,7 @@ fetch('./models/${modelName}')
   if (state.model?.file) {
     const modelsFolder = root.folder('models')
     modelsFolder.file(state.model.name, state.model.file)
+    root.folder('public/models').file(state.model.name, state.model.file)
   }
 
   root.file(
@@ -86,7 +87,7 @@ fetch('./models/${modelName}')
         type: 'module',
         scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview' },
         dependencies: { three: '^0.182.0' },
-        devDependencies: { vite: '^7.2.4' }
+        devDependencies: { vite: '^7.3.7' }
       },
       null,
       2

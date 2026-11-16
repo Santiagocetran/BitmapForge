@@ -15,6 +15,65 @@ async function flush() {
   await act(async () => {})
 }
 
+describe('Help presentation isolation', () => {
+  it.each(['success', 'error'])(
+    'isolates a retained %s without delivering or mutating hidden content',
+    async (kind) => {
+      status('retained success', kind === 'error' ? 'retained error' : '')
+      const view = render(<StatusNotice />)
+      await flush()
+      const node = screen.getByRole('status')
+      const wrapper = node.parentElement
+      const alert = screen.queryByRole('alert')
+      const dismiss = screen.queryByRole('button', { name: 'Dismiss error' })
+      const text = wrapper.textContent
+      const records = []
+      const observer = new MutationObserver((batch) => records.push(...batch))
+      observer.observe(wrapper, { subtree: true, childList: true, characterData: true, attributes: true })
+      const subscribe = vi.spyOn(useProjectStore, 'subscribe')
+      try {
+        view.rerender(<StatusNotice suspended />)
+        act(() => {
+          status('hidden intermediate', 'hidden obsolete error')
+          status('newest success', 'newest error')
+        })
+        await flush()
+        expect(wrapper.textContent).toBe(text)
+        expect(wrapper.querySelector('[role="status"]')).toBe(node)
+        expect(wrapper.querySelector('[role="alert"]')).toBe(alert)
+        expect(wrapper.querySelector('button')).toBe(dismiss)
+        expect(subscribe).not.toHaveBeenCalled()
+        expect(wrapper.hidden).toBe(true)
+        expect(wrapper.hasAttribute('inert')).toBe(true)
+        expect(screen.queryByRole('status')).toBeNull()
+        expect(screen.queryByRole('alert')).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Dismiss error' })).toBeNull()
+        expect(screen.getByRole('status', { hidden: true })).toBe(node)
+        records.push(...observer.takeRecords())
+        expect(
+          records.every(
+            (record) =>
+              record.type === 'attributes' &&
+              record.target === wrapper &&
+              ['hidden', 'inert'].includes(record.attributeName)
+          )
+        ).toBe(true)
+        expect(node.getAttribute('aria-live')).toBe('polite')
+        view.rerender(<StatusNotice />)
+        await flush()
+        expect(wrapper.hidden).toBe(false)
+        expect(wrapper.hasAttribute('inert')).toBe(false)
+        expect(screen.getByRole('status')).toBe(node)
+        expect(screen.getByRole('alert').textContent).toContain('newest error')
+        expect(wrapper.textContent).not.toContain('retained')
+        expect(wrapper.textContent).not.toContain('obsolete')
+      } finally {
+        observer.disconnect()
+      }
+    }
+  )
+})
+
 describe('postcommit external subscription', () => {
   it('does not apply a delivered but uncommitted obsolete React update after suspension', async () => {
     status('committed')
@@ -30,7 +89,8 @@ describe('postcommit external subscription', () => {
       flushSync(() => view.rerender(<StatusNotice suspended />))
     })
     await flush()
-    expect(screen.getByRole('status').textContent).toBe('committed')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('status', { hidden: true }).textContent).toBe('committed')
   })
   it('first commits empty with preloaded status and catches a pre-subscription change', async () => {
     status('preloaded')
@@ -88,8 +148,10 @@ describe('postcommit external subscription', () => {
     act(() => {
       for (const job of jobs.splice(0)) job()
     })
-    expect(screen.getByRole('alert').textContent).toContain('old error')
-    expect(screen.getByRole('status').textContent).toBe('')
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('alert', { hidden: true }).textContent).toContain('old error')
+    expect(screen.getByRole('status', { hidden: true }).textContent).toBe('')
     act(() => {
       status('hidden one')
       status('hidden two', 'hidden error')
@@ -112,7 +174,8 @@ describe('postcommit external subscription', () => {
     act(() => {
       for (const job of jobs.splice(0)) job()
     })
-    expect(screen.getByRole('status').textContent).toBe('')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('status', { hidden: true }).textContent).toBe('')
     status('latest')
     view.rerender(<StatusNotice />)
     if (ending === 'suspend') view.rerender(<StatusNotice suspended />)
@@ -120,8 +183,10 @@ describe('postcommit external subscription', () => {
     act(() => {
       for (const job of jobs.splice(0)) job()
     })
-    if (ending === 'suspend') expect(screen.getByRole('status').textContent).toBe('')
-    else expect(screen.queryByRole('status')).toBeNull()
+    if (ending === 'suspend') {
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(screen.getByRole('status', { hidden: true }).textContent).toBe('')
+    } else expect(screen.queryByRole('status')).toBeNull()
   })
   it('isolates two StrictMode instances and unsubscribes discarded and unmounted lifetimes', async () => {
     const unsubscribe = []
@@ -212,7 +277,8 @@ describe('one status presentation', () => {
     useProjectStore.setState({ status: { error: '', message: '', exporting: false, loading: false } })
     const view = render(<StatusNotice suspended />)
     act(() => useProjectStore.getState().setStatus({ message: 'latest completion' }))
-    expect(screen.getByRole('status').textContent).toBe('')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('status', { hidden: true }).textContent).toBe('')
     view.rerender(<StatusNotice />)
     await act(async () => {})
     expect(screen.getByRole('status').textContent).toBe('latest completion')

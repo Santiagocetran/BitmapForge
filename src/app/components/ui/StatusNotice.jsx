@@ -44,7 +44,7 @@ export function StatusNotice({ suspended = false }) {
   }, [suspended])
   const dismiss = () => useProjectStore.getState().setStatus({ error: '', message: '' })
   return (
-    <div className="bf-notice">
+    <div className="bf-notice" hidden={suspended} inert={suspended}>
       <div
         role="status"
         aria-live="polite"

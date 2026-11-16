@@ -15,17 +15,18 @@ const ASSETS = {
     file: resolve(REPO_ROOT, 'node_modules/three/build/three.module.js'),
     type: 'application/javascript'
   },
-  '/upng.js': { file: resolve(REPO_ROOT, 'node_modules/upng-js/upng.js'), type: 'application/javascript' },
+  '/upng.js': { file: resolve(REPO_ROOT, 'node_modules/upng-js/UPNG.js'), type: 'application/javascript' },
+  '/pako.js': { file: resolve(REPO_ROOT, 'node_modules/pako/dist/pako.min.js'), type: 'application/javascript' },
+  '/three.core.js': {
+    file: resolve(REPO_ROOT, 'node_modules/three/build/three.core.js'),
+    type: 'application/javascript'
+  },
   '/harness.html': { file: resolve(PKG_ROOT, 'src/harness.html'), type: 'text/html' },
   '/harness.js': { file: resolve(PKG_ROOT, 'src/harness.js'), type: 'application/javascript' }
 }
 
-// Only verify built/external assets that must exist at startup.
-// harness.html and harness.js are created in a later task (TASK-005).
-const VERIFY_ROUTES = ['/headless.js', '/three.module.js', '/upng.js']
-
 async function verifyAssets() {
-  for (const route of VERIFY_ROUTES) {
+  for (const route of Object.keys(ASSETS)) {
     const { file } = ASSETS[route]
     try {
       await access(file)
@@ -39,7 +40,7 @@ export async function start() {
   await verifyAssets()
 
   const server = http.createServer(async (req, res) => {
-    const asset = ASSETS[req.url]
+    const asset = Object.hasOwn(ASSETS, req.url) ? ASSETS[req.url] : null
     if (!asset) {
       res.writeHead(404)
       res.end('Not found')
@@ -55,13 +56,15 @@ export async function start() {
     }
   })
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    server.once('error', reject)
     server.listen(0, '127.0.0.1', () => {
+      server.removeListener('error', reject)
       const { port } = server.address()
       resolve({
         port,
         url: `http://127.0.0.1:${port}`,
-        close: () => new Promise((res) => server.close(res))
+        close: () => new Promise((res, rej) => server.close((error) => (error ? rej(error) : res())))
       })
     })
   })
